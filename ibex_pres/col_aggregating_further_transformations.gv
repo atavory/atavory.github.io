@@ -1,0 +1,23 @@
+digraph G {
+    rankdir="LR"
+
+
+	X0 -> connect0;
+    X1 -> connect0;
+    connect0 -> SelectKBest;
+    connect0 -> PCA;
+    SelectKBest -> connect1;
+    PCA -> connect1;
+    connect1 -> RandomForestRegressor;
+    RandomForestRegressor -> feature_importances_ [style=dashed];
+
+	X0 [shape=parallelogram];
+	X1 [shape=parallelogram];
+    connect0 [shape=point];
+    connect1 [shape=point];
+    SelectKBest [shape=rectangle];
+    PCA [shape=rectangle];
+    RandomForestRegressor [shape=rectangle];
+    feature_importances_ [shape=rectangle, style=dashed];
+}
+
