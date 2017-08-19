@@ -118,6 +118,10 @@ ul.outline ul{
     list-style-type: none;
 }
 
+h3.baddy {
+    color: red;
+}
+
 div.baddyshown {
     border:2px solid red;
 } 

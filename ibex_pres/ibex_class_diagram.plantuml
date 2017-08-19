@@ -1,0 +1,36 @@
+@startuml
+
+skinparam monochrome true
+skinparam shadowing false
+
+skinparam package {
+    FontColor #777777
+    BorderColor lightgrey
+}
+
+package "Plotting" {
+    [seaborn]
+    [bokeh]
+    [matplotlib]
+}
+
+package "Machine Learning" {
+    [sklearn]
+    [**ibex**]
+}
+
+package "Data Structures" {
+    [numpy]
+    [pandas]
+}
+
+[sklearn] -> [numpy] : interfaced by
+[matplotlib] -> [numpy] : interfaced by
+[pandas] ..> [numpy] : implemented over
+[seaborn] -> [pandas] : interfaced by
+[bokeh] -> [pandas] : interfaced by
+[seaborn] ..-> [matplotlib] : implemented over
+[**ibex**] -> [pandas] : interfaced by
+[**ibex**] ..-> [sklearn] : implemented over
+
+@enduml
