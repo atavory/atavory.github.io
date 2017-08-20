@@ -6,8 +6,7 @@ small, strike, strong, sub, sup, tt, var,
 b, u, i, center,
 dl, dt, dd, ol, ul, li,
 fieldset, form, label, legend,
-table, caption, tbody, tfoot, thead, tr, th, td,
-article, aside, canvas, details, embed, 
+caption, article, aside, canvas, details, embed, 
 figure, figcaption, footer, header, hgroup, 
 menu, nav, output, ruby, section, summary,
 time, mark, audio, video {
@@ -38,11 +37,52 @@ q:before, q:after {
 }
 
 table {
-    border-collapse: collapse;
-    border-spacing: 0;
+    border: 1px solid black;
+    border-collapse: true;
+    text-align: center; 
 }
 
+td.roni {
+    background: grey;
+}
 
+td.yarden {
+    background: lightgrey;
+}
+
+td.anat {
+    background: darkgrey;
+}
+
+td.frozen {
+    background: repeating-linear-gradient(
+        45deg,
+        white,
+        white 5px,
+        grey 5px,
+        grey 10px
+        );
+}
+
+td.shrek {
+    background: repeating-linear-gradient(
+        135deg,
+        white,
+        white 5px,
+        grey 5px,
+        grey 10px
+        );
+}
+
+td.mulan {
+    background: repeating-linear-gradient(
+        90deg,
+        white,
+        white 5px,
+        grey 5px,
+        grey 10px
+        );
+}
 
 * { margin: 0; padding: 0; }
 
