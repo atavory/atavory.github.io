@@ -9,13 +9,14 @@ skinparam artifact {
     BorderColor lightgrey
 }
 
-database X0
-database X1
+rectangle X0
+rectangle X1
 interface " " as c0
 rectangle SelectKBest
 rectangle PCA
 interface " " as c1
 rectangle RandomForestRegressor
+artifact feature_importances_
 X0 --> c0
 X1 --> c0 
 c0 --> SelectKBest
@@ -23,5 +24,6 @@ c0 --> PCA
 SelectKBest --> c1
 PCA --> c1
 c1 --> RandomForestRegressor
+RandomForestRegressor -[#lightgrey]-> feature_importances_
 
 @enduml

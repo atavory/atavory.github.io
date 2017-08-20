@@ -39,7 +39,13 @@ q:before, q:after {
 table {
     border: 1px solid black;
     border-collapse: true;
-    text-align: center; 
+    text-align: left; 
+}
+
+table.data {
+    border: 1px solid black;
+    border-collapse: true;
+    text-align: left; 
 }
 
 td.roni {
