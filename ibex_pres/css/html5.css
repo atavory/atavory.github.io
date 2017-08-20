@@ -36,16 +36,19 @@ q:before, q:after {
     content: none;
 }
 
-table {
-    border: 1px solid black;
+table:not(.data){
+    border: 1px solid darkgrey;
     border-collapse: true;
     text-align: left; 
+    width: 1100px;
+    margin-top: 20px;
+    margin-bottom: 20px;
 }
 
 table.data {
     border: 1px solid black;
     border-collapse: true;
-    text-align: left; 
+    text-align: center; 
 }
 
 td.roni {
@@ -165,6 +168,14 @@ ul.outline ul{
 }
 
 h3.baddy {
+    color: red;
+}
+
+th.baddy {
+    color: red;
+}
+
+span.baddy {
     color: red;
 }
 
