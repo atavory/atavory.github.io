@@ -3,25 +3,24 @@
 skinparam monochrome true
 skinparam shadowing false
 
-skinparam package {
-    FontColor #777777
-    BorderColor lightgrey
+skinparam rectangle {
+	borderColor lightGrey
 }
 
-package "Plotting" {
-    [seaborn]
-    [bokeh]
-    [matplotlib]
+rectangle "" <<Plotting>> {
+    component seaborn
+    component bokeh
+    rectangle matplotlib
 }
 
-package "Machine Learning" {
-    [sklearn]
+rectangle "" <<Machine Learning>> {
     [**ibex**]
+    rectangle sklearn
 }
 
-package "Data Structures" {
-    [numpy]
-    [pandas]
+rectangle "" <<Data Structures>> {
+    component pandas
+    rectangle numpy
 }
 
 [sklearn] -> [numpy] : interfaced by
