@@ -5,11 +5,7 @@ skinparam shadowing false
 
 left to right direction
 
-skinparam rectangle {
-    BorderColor<<input>> Red
-}
-
-rectangle "" <<input>> {
+frame "" <<input>> {
     cloud X
 }
 rectangle SelectKBest

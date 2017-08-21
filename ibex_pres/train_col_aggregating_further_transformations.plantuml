@@ -5,11 +5,7 @@ skinparam shadowing false
 
 left to right direction
 
-skinparam rectangle {
-    BorderColor<<input>> Red
-}
-
-rectangle "" <<input>> {
+frame "" <<input>> {
     database X0
     database X1
     interface " " as c0

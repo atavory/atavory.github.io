@@ -18,6 +18,12 @@ time, mark, audio, video {
     vertical-align: baseline;
 }
 
+div.sol-layer {
+    border: 1px solid black;
+    width: 1000px;
+    height: 1000px;
+}
+
 /* HTML5 display-role reset for older browsers */
 article, aside, details, figcaption, figure, 
 footer, header, hgroup, menu, nav, section {
