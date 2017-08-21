@@ -5,11 +5,13 @@ skinparam shadowing false
 
 left to right direction
 
-skinparam artifact {
-    BorderColor lightgrey
+skinparam rectangle {
+    BorderColor<<input>> Red
 }
 
-cloud X
+rectangle "" <<input>> {
+    cloud X
+}
 rectangle SelectKBest
 rectangle PCA
 interface " " as c1
