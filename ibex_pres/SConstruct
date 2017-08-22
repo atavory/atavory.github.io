@@ -1,0 +1,9 @@
+import glob
+import os
+
+
+PlantUMLBuilder = Builder(action = 'java -jar /usr/share/plantuml/plantuml.jar -tpng $SOURCE -o generated/')
+env = Environment(BUILDERS = {'PlantUMLBuilder' : PlantUMLBuilder})
+for f_name in glob.glob('*.plantuml'):
+    env.PlantUMLBuilder(os.path.splitext(f_name)[0] + '.png', f_name)
+env.Program('index.html')
