@@ -4,6 +4,7 @@ import os
 
 PlantUMLBuilder = Builder(action = 'java -jar -Djava.awt.headless=true plantuml.jar -tpng $SOURCE -o generated/')
 env = Environment(BUILDERS = {'PlantUMLBuilder' : PlantUMLBuilder})
+
 for f_name in glob.glob('*.plantuml'):
-    env.PlantUMLBuilder(os.path.splitext(f_name)[0] + '.png', f_name)
-env.Program('index.html')
+    src, target = f_name, os.path.join('generated', os.path.splitext(f_name)[0] + '.png')
+    env.PlantUMLBuilder(target, src)

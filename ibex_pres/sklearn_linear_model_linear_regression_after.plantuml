@@ -1,0 +1,31 @@
+@startuml
+
+skinparam monochrome true
+skinparam shadowing false
+
+rectangle "PDLinearRegression" {
+
+}
+
+package sklearn {
+
+    package linear_model {
+
+        rectangle sklearn.linear_model.LinearRegression as lhs {
+
+        }
+    }
+}
+
+package ibex {
+
+    rectangle ibex.FrameMixin as rhs {
+
+    }
+
+}
+
+PDLinearRegression ..> lhs
+PDLinearRegression ..> rhs
+
+@enduml

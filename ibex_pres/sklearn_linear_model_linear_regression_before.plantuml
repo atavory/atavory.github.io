@@ -1,0 +1,30 @@
+@startuml
+
+skinparam monochrome true
+skinparam shadowing false
+
+skinparam package<<trans>> {
+    borderColor Transparent
+    backgroundColor Transparent
+    fontColor Transparent
+    stereotypeFontColor Transparent
+}
+
+skinparam rectangle<<transB>> {
+    borderColor white
+    backgroundColor Transparent
+    fontColor Transparent
+    stereotypeFontColor Transparent
+}
+
+package sklearn {
+
+    package linear_model {
+
+        rectangle sklearn.linear_model.LinearRegression as lhs {
+
+        }
+    }
+}
+
+@enduml

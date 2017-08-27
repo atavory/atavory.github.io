@@ -180,34 +180,8 @@ $(document).ready(function(){
 				</div>
             </div>
 
-            <div id="outline-intro-1" class="step slide" data-x="2700" data-y="0" data-scale="1">
-                <h2>Outline</h2>
-
-                <ul class="outline">
-                    <li class="current">Motivation
-
-                    <ul>
-                        <li class="other">Example: Concatenate & Manipulate Columns</li>
-
-                        <li class="current">Example: Long-To-Pivot + Merge Non-negative Matrix Factorization</li>
-
-                        <li class="other">Example: Nested Feature Union &amp; Pipelining</li>
-
-                        <li class="other">Main Points</li>
-                    </ul>
-
-                    </li>
-
-                    <li class="other">User Perspective</li>
-
-                    <li class="other">Internals</li>
-
-                    <li class="other">Conclusions</li>
-                </ul>
-            </div>
-
             <div class="step slide" data-x="2700" data-y="30", data-z="10", data-scale="0.01">
-                <h2>Long-To-Pivot + Merge Non-negative Matrix Factorization</h2>
+                <h2>Example 2: Latent Factor Features</h2>
 				<div class="smaller">
 					<table class="data" style="display: inline-block">
 					<tr>
@@ -266,8 +240,7 @@ $(document).ready(function(){
             </div>
 
             <div class="step slide" data-x="2700" data-y="40", data-z="10", data-scale="0.01">
-                <h2>NMF Data Manipulation: Long-To-Pivot + Merge</h2>
-                <p>Original Long Format</p>
+                <h3>Original</h3>
 				<div class="smaller">
 					<table class="data">
 					<tr>
@@ -326,7 +299,7 @@ $(document).ready(function(){
 
             <div class="step slide" data-x="2708" data-y="39.3", data-z="10", data-scale="0.01">
                 <div style="align: center">
-                    <p>Pivot</p>
+                    <h3>Pivot</h3>
                     <div class="smaller">
                         <table class="data">
                         <tr>
@@ -359,7 +332,7 @@ $(document).ready(function(){
             </div>
 
             <div class="step slide" data-x="2714" data-y="39.4", data-z="10", data-scale="0.01">
-                <p>NMF Decomposition</p>
+                <h3>NMF Decomh3osition</h3>
                 <div>
                     <div class="smaller" style="display: inline-block">
                         <table class="data">
@@ -416,7 +389,7 @@ $(document).ready(function(){
             </div>
 
             <div class="step slide" data-x="2700" data-y="47", data-z="10", data-scale="0.01">
-                <p>Merge With Long Format</p>
+                <h3>Merge With Long Format</h3>
 				<div class="smaller">
 					<table class="data">
 					<tr>
@@ -503,7 +476,7 @@ $(document).ready(function(){
 				</div>
             </div>
             <div class="step slide" data-x="2700" data-y="56", data-z="10", data-scale="0.01">
-                <h2 class="baddy">Performing The Munging</h2>
+                <h3 class="baddy">Performing The Munging</h3>
                 <ul>
                     <li>How to actually perform the pivots + merge?</li>
                     <li class="substep">Is <span class="baddy">this</span> really data?
@@ -564,32 +537,6 @@ $(document).ready(function(){
                     </li>
                 </ul>
             </div>
-
-            <div id="outline-intro-2" class="step slide" data-x="4000" data-y="0" data-scale="1">
-                <h2>Outline</h2>
-
-                <ul class="outline">
-                    <li class="current">Motivation
-
-                    <ul>
-                        <li class="other">Example: Concatenate & Manipulate Columns</li>
-
-                        <li class="other">Example: Long-To-Pivot + Merge Non-negative Matrix Factorization</li>
-
-                        <li class="current">Example: Nested Feature Union &amp; Pipelining</li>
-
-                        <li class="other">Main Points</li>
-                    </ul>
-
-                    </li>
-
-                    <li class="other">User Perspective</li>
-
-                    <li class="other">Internals</li>
-
-                    <li class="other">Conclusions</li>
-                </ul>
-            </div>
             <div id="outline-intro-3" class="step slide" data-x="5300" data-y="0" data-scale="1">
                 <h2>Outline</h2>
 
@@ -597,11 +544,7 @@ $(document).ready(function(){
                     <li class="current">Motivation
 
                     <ul>
-                        <li class="other">Example: Concatenate & Manipulate Columns</li>
-
-                        <li class="other">Example: Long-To-Pivot + Merge Non-negative Matrix Factorization</li>
-
-                        <li class="other">Example: Nested Feature Union &amp; Pipelining</li>
+                        <li class="other">Examples</li>
 
                         <li class="current">Main Points</li>
                     </ul>
@@ -730,20 +673,36 @@ $(document).ready(function(){
                 <h2>Mixin + Adapter</h2>
                 <img src="generated/ibex_layer_0.png", width="400px", height="300px">
             </div>
-            <div class="step slide" data-x="6700" data-y="37", data-z="10", data-scale="0.01">
-                <div class="smaller">
-                    <pre class='brush: python; gutter: false; toolbar: false'>
-                    from ibex import frame
+            <div class="step slide" data-x="6700" data-y="35", data-z="10", data-scale="0.01">
+                <div class="abs-box base">
+                    <div class="abs-box smaller">
+                        <div>
+                            <img src="generated/sklearn_linear_model_linear_regression_before.png", width="400px", height="300px"/>
+                            <pre class='brush: python; gutter: true; toolbar: false'>
+                            from ibex import frame
 
-                    PdLinearRegression = frame(sklearn.linear_model.LinearRegression)
+                            PdLinearRegression = frame(sklearn.linear_model.LinearRegression)
 
-                    PdLinearRegression().fit(X, y)
-                    </pre>
+                            PdLinearRegression().fit(X, y)
+                            </pre>
+                        </div>
+                    </div>
+                    <div class="abs-box substep smaller">
+                        <div>
+                            <img src="generated/sklearn_linear_model_linear_regression_after.png", width="400px", height="300px"/>
+                            <pre class='brush: python; gutter: true; toolbar: false; highlight: [3]'>
+                            from ibex import frame
+
+                            PdLinearRegression = frame(sklearn.linear_model.LinearRegression)
+
+                            PdLinearRegression().fit(X, y)
+                            </pre>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="step slide sol-layer" data-x="6707" data-y="27", data-z="0", data-scale="0.01", data-rotate-x="30">
                 <h2>Auto-Wrapping</h2>
-                <img src="generated/ibex_layer_1_sklearn_preprocessing.png", width="400px", height="300px"/>
                 <img src="generated/ibex_layer_1_sklearn_linear_model.png", width="400px", height="300px"/>
                 <img src="generated/ibex_layer_1_xgboost.png", width="400px", height="300px"/>
                 <img src="generated/ibex_layer_1_tensorflow.png", width="400px", height="300px"/>

@@ -5,8 +5,16 @@ skinparam shadowing false
 
 
 package ibex {
-	rectangle frame
-}
 
+    rectangle FrameMixin {
+
+    }
+
+    storage frame {
+
+    }
+
+    frame ..> FrameMixin  
+}
 
 @enduml
