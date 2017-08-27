@@ -603,7 +603,7 @@ $(document).ready(function(){
                         <div class="smaller">
                             <table class="data">
                                 <tr>
-                                    <th></th>
+                                    <td></td>
                                     <th>sepal length (cm)</th>
                                     <th>sepal width (cm)</th>
                                     <th>petal length (cm)</th>
@@ -673,32 +673,25 @@ $(document).ready(function(){
                 <h2>Mixin + Adapter</h2>
                 <img src="generated/ibex_layer_0.png", width="400px", height="300px">
             </div>
-            <div class="step slide" data-x="6700" data-y="35", data-z="10", data-scale="0.01">
-                <div class="abs-box base">
-                    <div class="abs-box smaller">
-                        <div>
-                            <img src="generated/sklearn_linear_model_linear_regression_before.png", width="400px", height="300px"/>
-                            <pre class='brush: python; gutter: true; toolbar: false'>
-                            from ibex import frame
+            <div class="step slide" data-x="6700" data-y="39", data-z="10", data-scale="0.01">
+                <h3>Wrapping</h3>
+                <div class="smaller">
+                    <pre class='brush: python; gutter: true; toolbar: false; highlight: [3]'>
+                    from ibex import frame
 
-                            PdLinearRegression = frame(sklearn.linear_model.LinearRegression)
+                    PdLinearRegression = frame(sklearn.linear_model.LinearRegression)
+                    </pre>
+                    <img src="generated/sklearn_linear_model_linear_regression_after.png", width="400px", height="300px"/>
+                </div>
+            </div>
+            <div class="step slide" data-x="6700" data-y="48", data-z="10", data-scale="0.01">
+                <h3>Use</h3>
 
-                            PdLinearRegression().fit(X, y)
-                            </pre>
-                        </div>
-                    </div>
-                    <div class="abs-box substep smaller">
-                        <div>
-                            <img src="generated/sklearn_linear_model_linear_regression_after.png", width="400px", height="300px"/>
-                            <pre class='brush: python; gutter: true; toolbar: false; highlight: [3]'>
-                            from ibex import frame
-
-                            PdLinearRegression = frame(sklearn.linear_model.LinearRegression)
-
-                            PdLinearRegression().fit(X, y)
-                            </pre>
-                        </div>
-                    </div>
+                <div class="smaller">
+                    <pre class='brush: python; gutter: false; toolbar: false; highlight: [3]'>
+                    PdLinearRegression().fit(X, y)
+                    </pre>
+                    <img src="generated/sklearn_linear_model_linear_regression_after.png", width="400px", height="300px"/>
                 </div>
             </div>
             <div class="step slide sol-layer" data-x="6707" data-y="27", data-z="0", data-scale="0.01", data-rotate-x="30">

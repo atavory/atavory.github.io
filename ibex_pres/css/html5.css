@@ -44,7 +44,7 @@ q:before, q:after {
 
 table:not(.data){
     border: 1px solid darkgrey;
-    border-collapse: true;
+    border-collapse: collapse;
     text-align: left; 
     width: 1100px;
 }
@@ -55,12 +55,12 @@ table.data {
     text-align: center; 
 }
 
-th.data {
+table.data th {
     border-collapse: collapse;
     border: 2px solid black;
 }
 
-td.data {
+table.data td {
     border-collapse: collapse;
     border: 1px solid black;
 }
