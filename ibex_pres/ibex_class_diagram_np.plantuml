@@ -7,18 +7,18 @@ skinparam rectangle {
 	borderColor lightGrey
 }
 
-rectangle "" <<Plotting>> {
+rectangle " " <<Plotting>> {
     rectangle seaborn
     rectangle bokeh
     component matplotlib
 }
 
-rectangle "" <<Machine Learning>> {
+rectangle " " <<Machine Learning>> {
     rectangle ibex
     component sklearn
 }
 
-rectangle "" <<Data Structures>> {
+rectangle " " <<Data Structures>> {
     rectangle pandas
     component numpy
 }
@@ -26,10 +26,10 @@ rectangle "" <<Data Structures>> {
 [sklearn] -> [numpy] : interfaced by
 [matplotlib] -> [numpy] : interfaced by
 [pandas] ..> [numpy] : implemented over
-[seaborn] -> [pandas] : interfaced by
-[bokeh] -> [pandas] : interfaced by
+[seaborn] ..> [pandas] : interfaced by
+[bokeh] ..> [pandas] : interfaced by
 [seaborn] ..-> [matplotlib] : implemented over
-ibex -> [pandas] : interfaced by
+ibex ..> [pandas] : interfaced by
 ibex ..-> [sklearn] : implemented over
 
 @enduml

@@ -5,7 +5,7 @@ skinparam shadowing false
 
 left to right direction
 
-frame "" <<input>> {
+frame " " <<input>> {
     cloud X
 }
 rectangle SelectKBest
