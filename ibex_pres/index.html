@@ -1,35 +1,32 @@
 <!DOCTYPE html>
-
 <html lang="en">
-    <head>
-        <meta name="generator" content="HTML Tidy for Linux (vers 25 March 2009), see www.w3.org">
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=1024">
-        <meta name="apple-mobile-web-app-capable" content="yes">
+<head>
+    <meta name="generator" content="HTML Tidy for HTML5 for Mac OS X version 5.4.0">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=1024">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Ibex</title>
+    <meta name="description" content="Ibex">
+    <meta name="author" content="Ami Tavory">
+    <link href="css/html5.css" rel="stylesheet" type="text/css">
+    <link href="css/shThemeDefault.css" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="css/css-tooltips.css" type="text/css">
+    <link rel="shortcut icon" type="x-icon" href="images/logo.ico">
+    <style type="text/css">
 
-        <title>Ibex</title>
-        <meta name="description" content="Ibex">
-        <meta name="author" content="Ami Tavory">
-        <link href="css/html5.css" rel="stylesheet" type="text/css">
-        <link href="css/shThemeDefault.css" rel="stylesheet" type="text/css">
-        <link rel="stylesheet" href="css/css-tooltips.css" type="text/css">
-        <link rel="shortcut icon" type="x-icon" href="images/logo.ico">
-        <style type="text/css">
-
-.stackcontainer{
+    .stackcontainer{
     margin: 100px 0 10px 0;
-}
+    }
 
-  #copy_if_stack{
+    #copy_if_stack{
       width: 850px; 
       height: 120px;
-  }
+    }
 
-        </style>
-        <script src="js/jquery-3.2.1.min.js" type="text/javascript">
-        </script>
-        <script type="text/javascript">
-$(document).ready(function(){
+    </style>
+    <script src="js/jquery-3.2.1.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+    $(document).ready(function(){
     document.addEventListener('impress:stepenter', function(event){
         if(event.target.id.search('outline') != -1)
         {
@@ -39,53 +36,43 @@ $(document).ready(function(){
     document.addEventListener('impress:stepleave', function(event){
         $(".other").fadeTo("slow", 1);
     }, false);
-});
-        </script>
-    </head>
-
-    <body class="impress-not-supported">
-        <div class="fallback-message">
-            <p>Your browser <b>doesn't support the features required</b> by impress.js, so you are presented with a simplified version of this presentation.</p>
-
-            <p>For the best experience please use the latest <b>Chrome</b>, <b>Safari</b> or <b>Firefox</b> browser.</p>
+    });
+    </script>
+</head>
+<body class="impress-not-supported">
+    <div class="fallback-message">
+        <p>Your browser <b>doesn&#39;t support the features required</b> by impress.js, so you are presented with a simplified
+        version of this presentation.</p>
+        <p>For the best experience please use the latest <b>Chrome</b>, <b>Safari</b> or <b>Firefox</b> browser.</p>
+    </div>
+    <div id="impress">
+        <div class="step slide" data-x="0" data-y="0" data-scale="1" style=
+        "background: url(&#39;images/logo.jpeg&#39;); background-repeat: no-repeat">
+            <h1>Ibex</h1>
+            <h2>Making Scikit-Learn Run On Top Of Pandas</h2>
+            <h3>Ami Tavory, Shahar Azulay, Tali Raveh-Sadka</h3>
         </div>
-
-        <div id="impress">
-            <div class="step slide" data-x="0" data-y="0" data-scale="1" style="background: url('images/logo.jpeg'); background-repeat: no-repeat">
-                <h1>Ibex</h1>
-                <h2>Making Scikit-Learn Run On Top Of Pandas</h2>
-
-                <h3>Ami Tavory, Shahar Azulay, Tali Raveh-Sadka</h3>
-            </div>
-
-            <div id="outline-intro" class="step slide" data-x="1400" data-y="0" data-scale="1">
-                <h2>Outline</h2>
-
-                <ul class="outline">
-                    <li class="current">Motivation
-
+        <div id="outline-intro" class="step slide" data-x="1400" data-y="0" data-scale="1">
+            <h2>Outline</h2>
+            <ul class="outline">
+                <li class="current">Motivation
                     <ul>
                         <li class="current">Examples</li>
-
                         <li class="other">Main Points</li>
                     </ul>
-
-                    </li>
-                    <li class="other">User Perspective</li>
-
-                    <li class="other">Internals</li>
-
-                    <li class="other">Conclusions</li>
-                </ul>
-            </div>
-            <div class="step slide" data-x="1400" data-y="30", data-z="10", data-scale="0.01">
-                <h2>Example 1: Concatenate &amp; Manipulate Columns</h2>
-                <img src="generated/col_aggregating_further_transformations.png">
-            </div>
-            <div class="step slide" data-x="1400" data-y="32", data-z="10", data-scale="0.01">
-                <div class="abs-box base">
-                    <div class="abs-box substep smaller">
-                        <pre class='brush: python; gutter: true; toolbar: false highlight: [1]'>
+                </li>
+                <li class="other">User Perspective</li>
+                <li class="other">Internals</li>
+                <li class="other">Conclusions</li>
+            </ul>
+        </div>
+        <div class="step slide" data-x="1400" data-y="30" data-z="10" data-scale="0.01">
+        <h2>Example 1: Concatenate &amp; Manipulate Columns</h2><img src=
+        "generated/col_aggregating_further_transformations.png"></div>
+        <div class="step slide" data-x="1400" data-y="32" data-z="10" data-scale="0.01">
+            <div class="abs-box base">
+                <div class="abs-box substep smaller">
+                    <pre class='brush: python; gutter: true; toolbar: false highlight: [1]'>
                         X = np.c_[X0, X1]
 
                         features = make_union(SelectKBest(k=1), PCA(n_components=2))
@@ -95,9 +82,9 @@ $(document).ready(function(){
 
                         prd.fit(X, y)
                         </pre>
-                    </div>
-                    <div class="abs-box substep smaller">
-                        <pre class='brush: python; gutter: true; toolbar: false highlight: [3, 4, 5, 6]'>
+                </div>
+                <div class="abs-box substep smaller">
+                    <pre class='brush: python; gutter: true; toolbar: false highlight: [3, 4, 5, 6]'>
                         X = np.c_[X0, X1]
 
                         features = make_union(SelectKBest(k=1), PCA(n_components=2))
@@ -107,9 +94,9 @@ $(document).ready(function(){
 
                         prd.fit(X, y)
                         </pre>
-                    </div>
-                    <div class="abs-box substep smaller">
-                        <pre class='brush: python; gutter: true; toolbar: false highlight: [8]'>
+                </div>
+                <div class="abs-box substep smaller">
+                    <pre class='brush: python; gutter: true; toolbar: false highlight: [8]'>
                         X = np.c_[X0, X1]
 
                         features = make_union(SelectKBest(k=1), PCA(n_components=2))
@@ -119,189 +106,178 @@ $(document).ready(function(){
 
                         prd.fit(X, y)
                         </pre>
-                    </div>
                 </div>
             </div>
-
-            <div class="step slide" data-x="1400" data-y="36", data-z="10", data-scale="0.01">
-                <div class="abs-box base">
-                    <div class="abs-box substep smaller">
-                        <pre class='brush: python; gutter: false; toolbar: false'>
-                        >>> X0
+        </div>
+        <div class="step slide" data-x="1400" data-y="36" data-z="10" data-scale="0.01">
+            <div class="abs-box base">
+                <div class="abs-box substep smaller">
+                    <pre class='brush: python; gutter: false; toolbar: false'>
+                        &gt;&gt;&gt; X0
                         array([[23.2, 21.8], ..., ..., ..., ])
                         </pre>
-                    </div>
-
-                    <div class="abs-box substep smaller">
-                        <pre class='brush: python; gutter: false; toolbar: false'>
-                        >>> X1
+                </div>
+                <div class="abs-box substep smaller">
+                    <pre class='brush: python; gutter: false; toolbar: false'>
+                        &gt;&gt;&gt; X1
                         array([[9, 8, 78], ..., ..., ..., ])
                         </pre>
-                    </div>
-
-                    <div class="abs-box substep smaller">
-                        <pre class='brush: python; gutter: false; toolbar: false'>
-                        >>> X
+                </div>
+                <div class="abs-box substep smaller">
+                    <pre class='brush: python; gutter: false; toolbar: false'>
+                        &gt;&gt;&gt; X
                         array([[21.8, 0.3, 9.8], ..., ..., ..., ])
                         </pre>
-                    </div>
-
-                    <div class="abs-box substep smaller">
-                        <pre class='brush: python; gutter: false; toolbar: false'>
-                        >>> prd.feature_importances_
+                </div>
+                <div class="abs-box substep smaller">
+                    <pre class='brush: python; gutter: false; toolbar: false'>
+                        &gt;&gt;&gt; prd.feature_importances_
                         array([0.1, 0.3, 0.7])
                         </pre>
-                    </div>
                 </div>
             </div>
-            <div class="step slide" data-x="1414" data-y="37", data-z="10", data-scale="0.01">
-                <h3 class="baddy">Results Interpretability</h3>
-                <div class="smaller">
-                    <img src="generated/col_aggregating_further_transformations_with_feature_importances_.png">
-                    <pre class='brush: python; gutter: false; toolbar: false'>
-                    >>> prd.feature_importances_
+        </div>
+        <div class="step slide" data-x="1414" data-y="37" data-z="10" data-scale="0.01">
+            <h3 class="baddy">Results Interpretability</h3>
+            <div class="smaller">
+                <img src="generated/col_aggregating_further_transformations_with_feature_importances_.png">
+                <pre class='brush: python; gutter: false; toolbar: false'>
+                    &gt;&gt;&gt; prd.feature_importances_
                     array([0.1, 0.3, 0.7])
                     </pre>
-                </div>
-                <ul>
-                    <li class="substep">What do these numbers mean?</li>
-                    <li class="substep">Which original column does the first number represent?</li>
-                </ul>
             </div>
-            <div class="step slide" data-x="1414" data-y="47", data-z="10", data-scale="0.01">
-                <h3 class="baddy">Column Maintenance</h3>
-				<div class="substep">
-					<h4>Possible Train Scenario</h4>
-					<img src="generated/train_col_aggregating_further_transformations.png">
-				</div>
-				<div class="substep">
-					<h4>Possible Deployment Scenario</h4>
-					<img src="generated/deployment_col_aggregating_further_transformations.png">
-				</div>
+            <ul>
+                <li class="substep">What do these numbers mean?</li>
+                <li class="substep">Which original column does the first number represent?</li>
+            </ul>
+        </div>
+        <div class="step slide" data-x="1414" data-y="47" data-z="10" data-scale="0.01">
+            <h3 class="baddy">Column Maintenance</h3>
+            <div class="substep">
+            <h4>Possible Train Scenario</h4><img src="generated/train_col_aggregating_further_transformations.png"></div>
+            <div class="substep">
+            <h4>Possible Deployment Scenario</h4><img src=
+            "generated/deployment_col_aggregating_further_transformations.png"></div>
+        </div>
+        <div class="step slide" data-x="2700" data-y="30" data-z="10" data-scale="0.01">
+            <h2>Example 2: Latent Factor Features</h2>
+            <div class="smaller">
+            <table class="data" style="display: inline-block">
+                <tr>
+                    <th>User</th>
+                    <th>Movie</th>
+                    <th>Rating</th>
+                </tr>
+                <tr>
+                    <td class="roni">Roni</td>
+                    <td class="frozen">Frozen</td>
+                    <td class="rating">5</td>
+                </tr>
+                <tr>
+                    <td class="roni">Roni</td>
+                    <td class="mulan">Mulan</td>
+                    <td class="rating">4</td>
+                </tr>
+                <tr>
+                    <td class="yarden">Yarden</td>
+                    <td class="mulan">Mulan</td>
+                    <td class="rating">1</td>
+                </tr>
+                <tr>
+                    <td class="anat">Anat</td>
+                    <td class="mulan">Mulan</td>
+                    <td class="rating">1</td>
+                </tr>
+                <tr>
+                    <td class="anat">Anat</td>
+                    <td class="shrek">Shrek</td>
+                    <td class="rating">2</td>
+                </tr>
+                <tr>
+                    <td class="yarden">Yarden</td>
+                    <td class="shrek">Shrek</td>
+                    <td class="rating">3</td>
+                </tr>
+                <tr>
+                    <td class="yarden">Yarden</td>
+                    <td class="frozen">Frozen</td>
+                    <td class="rating">5</td>
+                </tr>
+                <tr>
+                    <td class="anat">Anat</td>
+                    <td class="frozen">Frozen</td>
+                    <td class="rating">5</td>
+                </tr>
+                <tr>
+                    <td class="roni">Roni</td>
+                    <td class="shrek">Shrek</td>
+                    <td class="rating">5</td>
+                </tr>
+            </table><img src="generated/grid_search_cv_nmf_random_forest_regressor.png" class="substep" style=
+            "display: inline-block"></div>
+        </div>
+        <div class="step slide" data-x="2700" data-y="40" data-z="10" data-scale="0.01">
+            <h3>Original</h3>
+            <div class="smaller">
+                <table class="data">
+                    <tr>
+                        <th>User</th>
+                        <th>Movie</th>
+                        <th>Rating</th>
+                    </tr>
+                    <tr>
+                        <td class="roni">Roni</td>
+                        <td class="frozen">Frozen</td>
+                        <td class="rating">5</td>
+                    </tr>
+                    <tr>
+                        <td class="roni">Roni</td>
+                        <td class="mulan">Mulan</td>
+                        <td class="rating">4</td>
+                    </tr>
+                    <tr>
+                        <td class="yarden">Yarden</td>
+                        <td class="mulan">Mulan</td>
+                        <td class="rating">1</td>
+                    </tr>
+                    <tr>
+                        <td class="anat">Anat</td>
+                        <td class="mulan">Mulan</td>
+                        <td class="rating">1</td>
+                    </tr>
+                    <tr>
+                        <td class="anat">Anat</td>
+                        <td class="shrek">Shrek</td>
+                        <td class="rating">2</td>
+                    </tr>
+                    <tr>
+                        <td class="yarden">Yarden</td>
+                        <td class="shrek">Shrek</td>
+                        <td class="rating">3</td>
+                    </tr>
+                    <tr>
+                        <td class="yarden">Yarden</td>
+                        <td class="frozen">Frozen</td>
+                        <td class="rating">5</td>
+                    </tr>
+                    <tr>
+                        <td class="anat">Anat</td>
+                        <td class="frozen">Frozen</td>
+                        <td class="rating">5</td>
+                    </tr>
+                    <tr>
+                        <td class="roni">Roni</td>
+                        <td class="shrek">Shrek</td>
+                        <td class="rating">5</td>
+                    </tr>
+                </table>
             </div>
-
-            <div class="step slide" data-x="2700" data-y="30", data-z="10", data-scale="0.01">
-                <h2>Example 2: Latent Factor Features</h2>
-				<div class="smaller">
-					<table class="data" style="display: inline-block">
-					<tr>
-						<th>User</th>
-						<th>Movie</th>
-						<th>Rating</th>
-					</tr>
-					<tr>
-						<td class="roni">Roni</td>
-						<td class="frozen">Frozen</td>
-						<td class="rating">5</td>
-					</tr>
-					<tr>
-						<td class="roni">Roni</td>
-						<td class="mulan">Mulan</td>
-						<td class="rating">4</td>
-					</tr>
-					<tr>
-						<td class="yarden">Yarden</td>
-						<td class="mulan">Mulan</td>
-						<td class="rating">1</td>
-					</tr>
-					<tr>
-						<td class="anat">Anat</td>
-						<td class="mulan">Mulan</td>
-						<td class="rating">1</td>
-					</tr>
-					<tr>
-						<td class="anat">Anat</td>
-						<td class="shrek">Shrek</td>
-						<td class="rating">2</td>
-					</tr>
-					<tr>
-						<td class="yarden">Yarden</td>
-						<td class="shrek">Shrek</td>
-						<td class="rating">3</td>
-					</tr>
-					<tr>
-						<td class="yarden">Yarden</td>
-						<td class="frozen">Frozen</td>
-						<td class="rating">5</td>
-					</tr>
-					<tr>
-						<td class="anat">Anat</td>
-						<td class="frozen">Frozen</td>
-						<td class="rating">5</td>
-					</tr>
-					<tr>
-						<td class="roni">Roni</td>
-						<td class="shrek">Shrek</td>
-						<td class="rating">5</td>
-					</tr>
-					</table>
-                    <img src="generated/grid_search_cv_nmf_random_forest_regressor.png" class="substep" style="display: inline-block">
-				</div>
-            </div>
-
-            <div class="step slide" data-x="2700" data-y="40", data-z="10", data-scale="0.01">
-                <h3>Original</h3>
-				<div class="smaller">
-					<table class="data">
-					<tr>
-						<th>User</th>
-						<th>Movie</th>
-						<th>Rating</th>
-					</tr>
-					<tr>
-						<td class="roni">Roni</td>
-						<td class="frozen">Frozen</td>
-						<td class="rating">5</td>
-					</tr>
-					<tr>
-						<td class="roni">Roni</td>
-						<td class="mulan">Mulan</td>
-						<td class="rating">4</td>
-					</tr>
-					<tr>
-						<td class="yarden">Yarden</td>
-						<td class="mulan">Mulan</td>
-						<td class="rating">1</td>
-					</tr>
-					<tr>
-						<td class="anat">Anat</td>
-						<td class="mulan">Mulan</td>
-						<td class="rating">1</td>
-					</tr>
-					<tr>
-						<td class="anat">Anat</td>
-						<td class="shrek">Shrek</td>
-						<td class="rating">2</td>
-					</tr>
-					<tr>
-						<td class="yarden">Yarden</td>
-						<td class="shrek">Shrek</td>
-						<td class="rating">3</td>
-					</tr>
-					<tr>
-						<td class="yarden">Yarden</td>
-						<td class="frozen">Frozen</td>
-						<td class="rating">5</td>
-					</tr>
-					<tr>
-						<td class="anat">Anat</td>
-						<td class="frozen">Frozen</td>
-						<td class="rating">5</td>
-					</tr>
-					<tr>
-						<td class="roni">Roni</td>
-						<td class="shrek">Shrek</td>
-						<td class="rating">5</td>
-					</tr>
-					</table>
-				</div>
-            </div>
-
-            <div class="step slide" data-x="2708" data-y="39.3", data-z="10", data-scale="0.01">
-                <div style="align: center">
-                    <h3>Pivot</h3>
-                    <div class="smaller">
-                        <table class="data">
+        </div>
+        <div class="step slide" data-x="2708" data-y="39.3" data-z="10" data-scale="0.01">
+            <div style="align: center">
+                <h3>Pivot</h3>
+                <div class="smaller">
+                    <table class="data">
                         <tr>
                             <td></td>
                             <th class="frozen">Frozen</th>
@@ -326,16 +302,15 @@ $(document).ready(function(){
                             <td>2</td>
                             <td>1</td>
                         </tr>
-                        </table>
-                    </div>
+                    </table>
                 </div>
             </div>
-
-            <div class="step slide" data-x="2714" data-y="39.4", data-z="10", data-scale="0.01">
-                <h3>NMF Decomh3osition</h3>
-                <div>
-                    <div class="smaller" style="display: inline-block">
-                        <table class="data">
+        </div>
+        <div class="step slide" data-x="2714" data-y="39.4" data-z="10" data-scale="0.01">
+            <h3>NMF Decomh3osition</h3>
+            <div>
+                <div class="smaller" style="display: inline-block">
+                    <table class="data">
                         <tr>
                             <th>User</th>
                             <th>user_0</th>
@@ -356,10 +331,10 @@ $(document).ready(function(){
                             <td class="anat">0.2</td>
                             <td class="anat">9.8</td>
                         </tr>
-                        </table>
-                    </div>
-                    <div class="smaller" style="display: inline-block">
-                        <table class="data">
+                    </table>
+                </div>
+                <div class="smaller" style="display: inline-block">
+                    <table class="data">
                         <tr>
                             <th>Movie</th>
                             <th>movie_0</th>
@@ -380,108 +355,105 @@ $(document).ready(function(){
                             <td class="mulan">12</td>
                             <td class="mulan">13</td>
                         </tr>
-                        </table>
-                    </div>
+                    </table>
                 </div>
             </div>
-
-            <div class="step slide" data-x="2700" data-y="40", data-z="10", data-scale="0.01">
+        </div>
+        <div class="step slide" data-x="2700" data-y="40" data-z="10" data-scale="0.01"></div>
+        <div class="step slide" data-x="2700" data-y="47" data-z="10" data-scale="0.01">
+            <h3>Merge With Long Format</h3>
+            <div class="smaller">
+                <table class="data">
+                    <tr>
+                        <th>User</th>
+                        <th>Movie</th>
+                        <th>user_0</th>
+                        <th>user_1</th>
+                        <th>movie_0</th>
+                        <th>movie_1</th>
+                    </tr>
+                    <tr>
+                        <td class="roni">Roni</td>
+                        <td class="frozen">Frozen</td>
+                        <td class="roni">0.1</td>
+                        <td class="roni">1.3</td>
+                        <td class="frozen">10</td>
+                        <td class="frozen">20</td>
+                    </tr>
+                    <tr>
+                        <td class="roni">Roni</td>
+                        <td class="mulan">Mulan</td>
+                        <td class="roni">0.1</td>
+                        <td class="roni">1.3</td>
+                        <td class="mulan">12</td>
+                        <td class="mulan">13</td>
+                    </tr>
+                    <tr>
+                        <td class="yarden">Yarden</td>
+                        <td class="mulan">Mulan</td>
+                        <td class="yarden">1.1</td>
+                        <td class="yarden">1.4</td>
+                        <td class="mulan">12</td>
+                        <td class="mulan">13</td>
+                    </tr>
+                    <tr>
+                        <td class="anat">Anat</td>
+                        <td class="mulan">Mulan</td>
+                        <td class="anat">0.2</td>
+                        <td class="anat">9.8</td>
+                        <td class="mulan">12</td>
+                        <td class="mulan">13</td>
+                    </tr>
+                    <tr>
+                        <td class="anat">Anat</td>
+                        <td class="shrek">Shrek</td>
+                        <td class="anat">0.2</td>
+                        <td class="anat">9.8</td>
+                        <td class="shrek">20.1</td>
+                        <td class="shrek">30.4</td>
+                    </tr>
+                    <tr>
+                        <td class="yarden">Yarden</td>
+                        <td class="shrek">Shrek</td>
+                        <td class="yarden">1.1</td>
+                        <td class="yarden">1.4</td>
+                        <td class="shrek">20.1</td>
+                        <td class="shrek">30.4</td>
+                    </tr>
+                    <tr>
+                        <td class="yarden">Yarden</td>
+                        <td class="frozen">Frozen</td>
+                        <td class="yarden">1.1</td>
+                        <td class="yarden">1.4</td>
+                        <td class="frozen">10</td>
+                        <td class="frozen">20</td>
+                    </tr>
+                    <tr>
+                        <td class="anat">Anat</td>
+                        <td class="frozen">Frozen</td>
+                        <td class="anat">0.2</td>
+                        <td class="anat">9.8</td>
+                        <td class="frozen">10</td>
+                        <td class="frozen">20</td>
+                    </tr>
+                    <tr>
+                        <td class="roni">Roni</td>
+                        <td class="shrek">Shrek</td>
+                        <td class="roni">0.1</td>
+                        <td class="roni">1.3</td>
+                        <td class="shrek">20.1</td>
+                        <td class="shrek">30.4</td>
+                    </tr>
+                </table>
             </div>
-
-            <div class="step slide" data-x="2700" data-y="47", data-z="10", data-scale="0.01">
-                <h3>Merge With Long Format</h3>
-				<div class="smaller">
-					<table class="data">
-					<tr>
-						<th>User</th>
-						<th>Movie</th>
-						<th>user_0</th>
-						<th>user_1</th>
-						<th>movie_0</th>
-						<th>movie_1</th>
-					</tr>
-					<tr>
-						<td class="roni">Roni</td>
-						<td class="frozen">Frozen</td>
-						<td class="roni">0.1</td>
-						<td class="roni">1.3</td>
-						<td class="frozen">10</td>
-						<td class="frozen">20</td>
-					</tr>
-					<tr>
-						<td class="roni">Roni</td>
-						<td class="mulan">Mulan</td>
-						<td class="roni">0.1</td>
-						<td class="roni">1.3</td>
-						<td class="mulan">12</td>
-						<td class="mulan">13</td>
-					</tr>
-					<tr>
-						<td class="yarden">Yarden</td>
-						<td class="mulan">Mulan</td>
-						<td class="yarden">1.1</td>
-						<td class="yarden">1.4</td>
-						<td class="mulan">12</td>
-						<td class="mulan">13</td>
-					</tr>
-					<tr>
-						<td class="anat">Anat</td>
-						<td class="mulan">Mulan</td>
-						<td class="anat">0.2</td>
-						<td class="anat">9.8</td>
-						<td class="mulan">12</td>
-						<td class="mulan">13</td>
-					</tr>
-					<tr>
-						<td class="anat">Anat</td>
-						<td class="shrek">Shrek</td>
-						<td class="anat">0.2</td>
-						<td class="anat">9.8</td>
-						<td class="shrek">20.1</td>
-						<td class="shrek">30.4</td>
-					</tr>
-					<tr>
-						<td class="yarden">Yarden</td>
-						<td class="shrek">Shrek</td>
-						<td class="yarden">1.1</td>
-						<td class="yarden">1.4</td>
-						<td class="shrek">20.1</td>
-						<td class="shrek">30.4</td>
-					</tr>
-					<tr>
-						<td class="yarden">Yarden</td>
-						<td class="frozen">Frozen</td>
-						<td class="yarden">1.1</td>
-						<td class="yarden">1.4</td>
-						<td class="frozen">10</td>
-						<td class="frozen">20</td>
-					</tr>
-					<tr>
-						<td class="anat">Anat</td>
-						<td class="frozen">Frozen</td>
-						<td class="anat">0.2</td>
-						<td class="anat">9.8</td>
-						<td class="frozen">10</td>
-						<td class="frozen">20</td>
-					</tr>
-					<tr>
-						<td class="roni">Roni</td>
-						<td class="shrek">Shrek</td>
-						<td class="roni">0.1</td>
-						<td class="roni">1.3</td>
-						<td class="shrek">20.1</td>
-						<td class="shrek">30.4</td>
-					</tr>
-					</table>
-				</div>
-            </div>
-            <div class="step slide" data-x="2700" data-y="56", data-z="10", data-scale="0.01">
-                <h3 class="baddy">Performing The Munging</h3>
-                <ul>
-                    <li>How to actually perform the pivots + merge?</li>
-                    <li class="substep">Is <span class="baddy">this</span> really data?
-                        <div class="smaller">
-                            <table class="data">
+        </div>
+        <div class="step slide" data-x="2700" data-y="56" data-z="10" data-scale="0.01">
+            <h3 class="baddy">Performing The Munging</h3>
+            <ul>
+                <li>How to actually perform the pivots + merge?</li>
+                <li class="substep">Is <span class="baddy">this</span> really data?
+                    <div class="smaller">
+                        <table class="data">
                             <tr>
                                 <th class="baddy">User</th>
                                 <th class="baddy">Movie</th>
@@ -532,191 +504,540 @@ $(document).ready(function(){
                                 <td class="shrek">Shrek</td>
                                 <td class="rating">5</td>
                             </tr>
-                            </table>
-                        </div> 
-                    </li>
-                </ul>
-            </div>
-            <div id="outline-intro-3" class="step slide" data-x="5300" data-y="0" data-scale="1">
-                <h2>Outline</h2>
-
-                <ul class="outline">
-                    <li class="current">Motivation
-
+                        </table>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <div id="outline-intro-3" class="step slide" data-x="5300" data-y="0" data-scale="1">
+            <h2>Outline</h2>
+            <ul class="outline">
+                <li class="current">Motivation
                     <ul>
                         <li class="other">Examples</li>
-
                         <li class="current">Main Points</li>
                     </ul>
-
-                    </li>
-
-                    <li class="other">User Perspective</li>
-
-                    <li class="other">Internals</li>
-
-                    <li class="other">Conclusions</li>
-                </ul>
-            </div>
-            <div class="step slide" data-x="5300" data-y="30", data-z="10", data-scale="0.01">
-                <h2>1) Use Metadata</h2>
-                <div>
-                    <div style="display: inline-block; margin-right: 40px">
-                        <p>Numpy</p>
-                        <div class="smaller">
-                            <table class="data">
-                                <tr>
-                                    <td>5.1</td>
-                                    <td>3.5</td>
-                                    <td>1.4</td>
-                                    <td>0.2</td>
-                                </tr>
-                                <tr>
-                                    <td>4.9</td>
-                                    <td>3.0</td>
-                                    <td>1.4</td>
-                                    <td>0.2</td>
-                                </tr>
-                                <tr>
-                                    <td>4.7</td>
-                                    <td>3.2</td>
-                                    <td>1.3</td>
-                                    <td>0.2</td>
-                                </tr>
-                                <tr>
-                                    <td>4.6</td>
-                                    <td>3.1</td>
-                                    <td>1.5</td>
-                                    <td>0.2</td>
-                                </tr>
-                                <tr>
-                                    <td>5.0</td>
-                                    <td>3.6</td>
-                                    <td>1.4</td>
-                                    <td>0.2</td>
-                                </tr>
-                            </table>
-                        </div>
+                </li>
+                <li class="other">User Perspective</li>
+                <li class="other">Internals</li>
+                <li class="other">Conclusions</li>
+            </ul>
+        </div>
+        <div class="step slide" data-x="5300" data-y="30" data-z="10" data-scale="0.01">
+            <h2>1) Use Metadata</h2>
+            <div>
+                <div style="display: inline-block; margin-right: 40px">
+                    <p>Numpy</p>
+                    <div class="smaller">
+                        <table class="data">
+                            <tr>
+                                <td>5.1</td>
+                                <td>3.5</td>
+                                <td>1.4</td>
+                                <td>0.2</td>
+                            </tr>
+                            <tr>
+                                <td>4.9</td>
+                                <td>3.0</td>
+                                <td>1.4</td>
+                                <td>0.2</td>
+                            </tr>
+                            <tr>
+                                <td>4.7</td>
+                                <td>3.2</td>
+                                <td>1.3</td>
+                                <td>0.2</td>
+                            </tr>
+                            <tr>
+                                <td>4.6</td>
+                                <td>3.1</td>
+                                <td>1.5</td>
+                                <td>0.2</td>
+                            </tr>
+                            <tr>
+                                <td>5.0</td>
+                                <td>3.6</td>
+                                <td>1.4</td>
+                                <td>0.2</td>
+                            </tr>
+                        </table>
                     </div>
-                    <div style="display: inline-block">
-                        <p style="text-align: center">Pandas</p>
-                        <div class="smaller">
-                            <table class="data">
-                                <tr>
-                                    <td></td>
-                                    <th>sepal length (cm)</th>
-                                    <th>sepal width (cm)</th>
-                                    <th>petal length (cm)</th>
-                                    <th>petal width (cm)</th>
-                                </tr>
-                                <tr>
-                                    <th>0</th>
-                                    <td>5.1</td>
-                                    <td>3.5</td>
-                                    <td>1.4</td>
-                                    <td>0.2</td>
-                                </tr>
-                                <tr>
-                                    <th>1</th>
-                                    <td>4.9</td>
-                                    <td>3.0</td>
-                                    <td>1.4</td>
-                                    <td>0.2</td>
-                                </tr>
-                                <tr>
-                                    <th>2</th>
-                                    <td>4.7</td>
-                                    <td>3.2</td>
-                                    <td>1.3</td>
-                                    <td>0.2</td>
-                                </tr>
-                                <tr>
-                                    <th>3</th>
-                                    <td>4.6</td>
-                                    <td>3.1</td>
-                                    <td>1.5</td>
-                                    <td>0.2</td>
-                                </tr>
-                                <tr>
-                                    <th>4</th>
-                                    <td>5.0</td>
-                                    <td>3.6</td>
-                                    <td>1.4</td>
-                                    <td>0.2</td>
-                                </tr>
-                            </table>
-                        </div>
+                </div>
+                <div style="display: inline-block">
+                    <p style="text-align: center">Pandas</p>
+                    <div class="smaller">
+                        <table class="data">
+                            <tr>
+                                <td></td>
+                                <th>sepal length (cm)</th>
+                                <th>sepal width (cm)</th>
+                                <th>petal length (cm)</th>
+                                <th>petal width (cm)</th>
+                            </tr>
+                            <tr>
+                                <th>0</th>
+                                <td>5.1</td>
+                                <td>3.5</td>
+                                <td>1.4</td>
+                                <td>0.2</td>
+                            </tr>
+                            <tr>
+                                <th>1</th>
+                                <td>4.9</td>
+                                <td>3.0</td>
+                                <td>1.4</td>
+                                <td>0.2</td>
+                            </tr>
+                            <tr>
+                                <th>2</th>
+                                <td>4.7</td>
+                                <td>3.2</td>
+                                <td>1.3</td>
+                                <td>0.2</td>
+                            </tr>
+                            <tr>
+                                <th>3</th>
+                                <td>4.6</td>
+                                <td>3.1</td>
+                                <td>1.5</td>
+                                <td>0.2</td>
+                            </tr>
+                            <tr>
+                                <th>4</th>
+                                <td>5.0</td>
+                                <td>3.6</td>
+                                <td>1.4</td>
+                                <td>0.2</td>
+                            </tr>
+                        </table>
                     </div>
                 </div>
             </div>
-            <div class="step slide" data-x="5300" data-y="37", data-z="10", data-scale="0.01">
-                <h2>Ibex - Pandas Adapters For Scikit-Learn</h2>
-                <img src="images/logo.jpeg">
-            </div>
-            <div id="outline-intro-4" class="step slide" data-x="6700" data-y="0" data-scale="1">
-                <h2>Outline</h2>
-
-                <ul class="outline">
-                    <li class="other">Motivation</li>
-
-                    <li class="current">User Perspective</li>
-
-                    <li class="other">Internals</li>
-
-                    <li class="other">Conclusions</li>
-                </ul>
-            </div>
-            <div class="step slide" data-x="6700" data-y="30", data-z="10", data-scale="0.01">
-                <h2>Layers</h2>
-            </div>
-            <div class="step slide sol-layer" data-x="6700" data-y="30", data-z="0", data-scale="0.01", data-rotate-x="30">
-                <h2>Mixin + Adapter</h2>
-                <img src="generated/ibex_layer_0.png", width="400px", height="300px">
-            </div>
-            <div class="step slide" data-x="6700" data-y="39", data-z="10", data-scale="0.01">
-                <h3>Wrapping</h3>
-                <div class="smaller">
-                    <pre class='brush: python; gutter: true; toolbar: false; highlight: [3]'>
+        </div>
+        <div class="step slide" data-x="5300" data-y="37" data-z="10" data-scale="0.01">
+        <h2>Ibex - Pandas Adapters For Scikit-Learn</h2><img src="images/logo.jpeg"></div>
+        <div id="outline-intro-4" class="step slide" data-x="6700" data-y="0" data-scale="1">
+            <h2>Outline</h2>
+            <ul class="outline">
+                <li class="other">Motivation</li>
+                <li class="current">User Perspective</li>
+                <li class="other">Internals</li>
+                <li class="other">Conclusions</li>
+            </ul>
+        </div>
+        <div class="step slide" data-x="6700" data-y="30" data-z="10" data-scale="0.01">
+            <h2>Layers</h2>
+        </div>
+        <div class="step slide sol-layer" data-x="6700" data-y="30" data-z="0" data-scale="0.01" data-rotate-x="30">
+        <h2>Mixin + Adapter</h2><img src="generated/ibex_layer_0.png" width="400px" height="300px"></div>
+        <div class="step slide" data-x="6700" data-y="39" data-z="10" data-scale="0.01">
+            <h3>Wrapping</h3>
+            <div class="smaller">
+            <pre class='brush: python; gutter: true; toolbar: false; highlight: [3]'>
                     from ibex import frame
 
                     PdLinearRegression = frame(sklearn.linear_model.LinearRegression)
-                    </pre>
-                    <img src="generated/sklearn_linear_model_linear_regression_after.png", width="400px", height="300px"/>
+                    </pre><img src="generated/sklearn_linear_model_linear_regression_after.png" width="400px" height=
+"300px"></div>
+        </div>
+        <div class="step slide" data-x="6700" data-y="47" data-z="10" data-scale="0.01">
+            <h3>Use</h3>
+            <div class="smaller">
+                <pre class='brush: python; gutter: false; toolbar: false'>
+import pandas as pd
+X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]})
+y = pd.Series([10, 20 , 30])
+            </pre>
+                <div style="width:30%; float: left">
+                    <table class="data">
+                        <caption>
+                            X
+                        </caption>
+                        <tr>
+                            <td></td>
+                            <th>a</th>
+                            <th>b</th>
+                        </tr>
+                        <tr>
+                            <th>0</th>
+                            <td>0</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <th>1</th>
+                            <td>2</td>
+                            <td>4</td>
+                        </tr>
+                        <tr>
+                            <th>2</th>
+                            <td>3</td>
+                            <td>6</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="width:30%; float: left">
+                    <table class="data">
+                        <caption>
+                            y
+                        </caption>
+                        <tr>
+                            <th>0</th>
+                            <td>10</td>
+                        </tr>
+                        <tr>
+                            <th>1</th>
+                            <td>20</td>
+                        </tr>
+                        <tr>
+                            <th>2</th>
+                            <td>30</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="width: 100%; margin-top: 240px">
+                    <pre class='brush: python; gutter: false; toolbar: false'>
+            PdLinearRegression().fit(X, y).predict(X)
+            </pre>
+                    <div style="width:30%; float: left">
+                        <table class="data"></table>
+                        <table class="data">
+                            <caption>
+                                y
+                            </caption>
+                            <tr>
+                                <th>0</th>
+                                <td>10</td>
+                            </tr>
+                            <tr>
+                                <th>1</th>
+                                <td>20</td>
+                            </tr>
+                            <tr>
+                                <th>2</th>
+                                <td>30</td>
+                            </tr>
+                        </table>
+                    </div>
                 </div>
             </div>
-            <div class="step slide" data-x="6700" data-y="48", data-z="10", data-scale="0.01">
-                <h3>Use</h3>
-
-                <div class="smaller">
-                    <pre class='brush: python; gutter: false; toolbar: false; highlight: [3]'>
-                    PdLinearRegression().fit(X, y)
-                    </pre>
-                    <img src="generated/sklearn_linear_model_linear_regression_after.png", width="400px", height="300px"/>
+        </div>
+        <div class="step slide" data-x="6700" data-y="55" data-z="10" data-scale="0.01">
+            <div class="smaller">
+                <pre class='brush: python; gutter: false; toolbar: false'>
+X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]})
+y = pd.Series([10, 20 , 30])
+            </pre>
+                <div style="width:30%; float: left">
+                    <table class="data">
+                        <caption>
+                            X
+                        </caption>
+                        <tr>
+                            <td></td>
+                            <th>a</th>
+                            <th>b</th>
+                        </tr>
+                        <tr>
+                            <th>0</th>
+                            <td>0</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <th>1</th>
+                            <td>2</td>
+                            <td>4</td>
+                        </tr>
+                        <tr>
+                            <th>2</th>
+                            <td>3</td>
+                            <td>6</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="width:30%; float: left">
+                    <table class="data">
+                        <caption>
+                            y
+                        </caption>
+                        <tr>
+                            <th>0</th>
+                            <td>10</td>
+                        </tr>
+                        <tr>
+                            <th>1</th>
+                            <td>20</td>
+                        </tr>
+                        <tr>
+                            <th>2</th>
+                            <td>30</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="width:40%; float: left">
+                    <table class="data" width="40%">
+                        <caption>
+                            X[[&#39;b&#39;, &#39;a&#39;]]
+                        </caption>
+                        <tr>
+                            <td></td>
+                            <th>b</th>
+                            <th>a</th>
+                        </tr>
+                        <tr>
+                            <th>0</th>
+                            <td>1</td>
+                            <td>0</td>
+                        </tr>
+                        <tr>
+                            <th>1</th>
+                            <td>4</td>
+                            <td>2</td>
+                        </tr>
+                        <tr>
+                            <th>2</th>
+                            <td>6</td>
+                            <td>3</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="width: 100%; margin-top: 240px">
+                    <pre class='brush: python; gutter: false; toolbar: false'>
+            PdLinearRegression().fit(X, y).predict(X[[&#39;b&#39;, &#39;a&#39;]])
+            </pre>
+                    <div style="width:30%; float: left">
+                        <table class="data"></table>
+                        <table class="data">
+                            <caption>
+                                y
+                            </caption>
+                            <tr>
+                                <th>0</th>
+                                <td>10</td>
+                            </tr>
+                            <tr>
+                                <th>1</th>
+                                <td>20</td>
+                            </tr>
+                            <tr>
+                                <th>2</th>
+                                <td>30</td>
+                            </tr>
+                        </table>
+                    </div>
                 </div>
             </div>
-            <div class="step slide sol-layer" data-x="6707" data-y="27", data-z="0", data-scale="0.01", data-rotate-x="30">
-                <h2>Auto-Wrapping</h2>
-                <img src="generated/ibex_layer_1_sklearn_linear_model.png", width="400px", height="300px"/>
-                <img src="generated/ibex_layer_1_xgboost.png", width="400px", height="300px"/>
-                <img src="generated/ibex_layer_1_tensorflow.png", width="400px", height="300px"/>
+        </div>
+        <div class="step slide" data-x="6700" data-y="63" data-z="10" data-scale="0.01">
+            <div class="smaller">
+                <pre class='brush: python; gutter: false; toolbar: false'>
+X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]})
+y = pd.Series([10, 20 , 30])
+X1 = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]}, index=[&#39;i&#39;, &#39;j&#39;, &#39;k&#39;])
+            </pre>
+                <div style="width:30%; float: left">
+                    <table class="data">
+                        <caption>
+                            X
+                        </caption>
+                        <tr>
+                            <td></td>
+                            <th>a</th>
+                            <th>b</th>
+                        </tr>
+                        <tr>
+                            <th>0</th>
+                            <td>0</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <th>1</th>
+                            <td>2</td>
+                            <td>4</td>
+                        </tr>
+                        <tr>
+                            <th>2</th>
+                            <td>3</td>
+                            <td>6</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="width:30%; float: left">
+                    <table class="data">
+                        <caption>
+                            y
+                        </caption>
+                        <tr>
+                            <th>0</th>
+                            <td>10</td>
+                        </tr>
+                        <tr>
+                            <th>1</th>
+                            <td>20</td>
+                        </tr>
+                        <tr>
+                            <th>2</th>
+                            <td>30</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="width:40%; float: left">
+                    <table class="data" width="40%">
+                        <caption>
+                            X1
+                        </caption>
+                        <tr>
+                            <td></td>
+                            <th>a</th>
+                            <th>b</th>
+                        </tr>
+                        <tr>
+                            <th>i</th>
+                            <td>0</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <th>j</th>
+                            <td>2</td>
+                            <td>4</td>
+                        </tr>
+                        <tr>
+                            <th>k</th>
+                            <td>3</td>
+                            <td>6</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="width: 100%; margin-top: 240px">
+                    <pre class='brush: python; gutter: false; toolbar: false'>
+            PdLinearRegression().fit(X, y).predict(X[[&#39;b&#39;, &#39;a&#39;]])
+            </pre>
+                    <div style="width:30%; float: left">
+                        <table class="data"></table>
+                        <table class="data">
+                            <caption>
+                                y
+                            </captionr
+                            <tr>
+                                <th>i</th>
+                                <td>10</td>
+                            </tr>
+                            <tr>
+                                <th>j</th>
+                                <td>20</td>
+                            </tr>
+                            <tr>
+                                <th>k</th>
+                                <td>30</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <div class="step slide" data-x="15300" data-y="37", data-z="10", data-scale="0.01">
-                <img src="generated/ibex_class_diagram_np.png">
+        </div>
+        <div class="step slide" data-x="6700" data-y="71" data-z="10" data-scale="0.01">
+            <div class="smaller" style=
+        "background: url(&#39;images/baddy_bg.png&#39;); background-repeat: no-repeat; background-position: 50% 20%;
+">
+                <pre class='brush: python; gutter: false; toolbar: false'>
+X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]}, index=[&#39;i&#39;, &#39;j&#39;, &#39;k&#39;])
+y = pd.Series([10, 20 , 30], index=[21, 22, 23])
+            </pre>
+                <div style="width:30%; float: left">
+                    <table class="data">
+                        <caption>
+                            X
+                        </caption>
+                        <tr>
+                            <td></td>
+                            <th>a</th>
+                            <th>b</th>
+                        </tr>
+                        <tr>
+                            <th>i</th>
+                            <td>0</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <th>j</th>
+                            <td>2</td>
+                            <td>4</td>
+                        </tr>
+                        <tr>
+                            <th>k</th>
+                            <td>3</td>
+                            <td>6</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="width:30%; float: left">
+                    <table class="data">
+                        <caption>
+                            y
+                        </caption>
+                        <tr>
+                            <th>21</th>
+                            <td>10</td>
+                        </tr>
+                        <tr>
+                            <th>22</th>
+                            <td>20</td>
+                        </tr>
+                        <tr>
+                            <th>23</th>
+                            <td>30</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="width: 100%; margin-top: 240px">
+                    <pre class='brush: python; gutter: false; toolbar: false'>
+            >>> PdLinearRegression().fit(X, y).predict(X[[&#39;b&#39;, &#39;a&#39;]])
+			---------------------------------------------------------------------------
+			ValueError                                Traceback (most recent call last)
+			<ipython-input-6-fa49ab10204d> in <module>()
+			----> 1 LinearRegression().fit(X, y)
+			...
+			--> 113                 **kwargs)
+			...
+			ValueError: Indexes do not match            
+            </pre>
+                </div>
             </div>
-            <div class="step slide" data-x="15300" data-y="44", data-z="10", data-scale="0.01">
-                <img src="generated/ibex_class_diagram_pandas.png">
-            </div>
-            <div class="step slide" data-x="15313" data-y="30", data-z="10", data-scale="0.01">
+</div>
+        <div class="step slide" data-x="6700" data-y="30" data-z="10" data-scale="0.01">
+        </div>
+            <div class="step slide sol-layer" data-x="6707" data-y="27" data-z="0" data-scale="0.01" data-rotate-x="30">
+            <h2>Auto-Wrapping</h2><img src="generated/ibex_layer_1_sklearn_linear_model.png" width="400px" height="300px">
+            <img src="generated/ibex_layer_1_xgboost.png" width="400px" height="300px"> <img src=
+            "generated/ibex_layer_1_tensorflow.png" width="400px" height="300px"></div>
+            <div class="step slide" data-x="15300" data-y="37" data-z="10" data-scale="0.01"><img src=
+            "generated/ibex_class_diagram_np.png"></div>
+            <div class="step slide" data-x="15300" data-y="44" data-z="10" data-scale="0.01"><img src=
+            "generated/ibex_class_diagram_pandas.png"></div>
+            <div class="step slide" data-x="15313" data-y="30" data-z="10" data-scale="0.01">
                 <h2>2) Alternative <i>Optional</i> Combination Notation</h2>
             </div>
-        </div><script src="js/shCore.js" type="text/javascript">
-    </script><script src="js/shBrushPython.js" type="text/javascript">
-    </script><script type="text/javascript">
-SyntaxHighlighter.all()
-    </script><script src="js/impress.js" type="text/javascript">
-    </script><script type="text/javascript">
-impress().init();
-    </script>
+        </div>
+        <script src="js/shCore.js" type="text/javascript"></script> 
+        <script src="js/shBrushPython.js" type="text/javascript"></script> 
+        <script type="text/javascript">
+
+
+
+
+
+
+        SyntaxHighlighter.all()
+        </script> 
+        <script src="js/impress.js" type="text/javascript"></script> 
+        <script type="text/javascript">
+
+
+
+
+
+
+        impress().init();
+        </script>
     </div>
-    </body>
+</body>
 </html>
