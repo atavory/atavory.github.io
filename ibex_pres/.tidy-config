@@ -1,6 +1,7 @@
 indent: auto
 indent-spaces: 4
 wrap: 130
+clean: 1
 markup: yes
 output-xml: no
 input-xml: no
