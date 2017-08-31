@@ -112,9 +112,22 @@
       <div class="step slide" data-scale="0.01" data-x="1400" data-y="32" data-z="10">
         <div class="abs-box base">
           <div class="abs-box substep smaller">
-            <pre class="brush: python; gutter: true; toolbar: false highlight: [1]">            X = np.c_[X0, X1]
+            <pre class="brush: python; gutter: true; toolbar: false highlight: [1]">            
+            X = np.c_[X0, X1]
 
-                                                                                                features = make_union(SelectKBest(k=1), PCA(n_components=2))
+            features = make_union(SelectKBest(k=1), PCA(n_components=2))
+            prd = make_pipeline(
+            features,
+            RandomForestRegressor())
+
+            prd.fit(X, y)
+            </pre>
+          </div>
+          <div class="abs-box substep smaller">
+            <pre class="brush: python; gutter: true; toolbar: false highlight: [3, 4, 5, 6]">            
+            X = np.c_[X0, X1]
+
+            features = make_union(SelectKBest(k=1), PCA(n_components=2))
             prd = make_pipeline(
             features,
             RandomForestRegressor())
@@ -123,20 +136,10 @@
                                                                                                 </pre>
           </div>
           <div class="abs-box substep smaller">
-            <pre class="brush: python; gutter: true; toolbar: false highlight: [3, 4, 5, 6]">            X = np.c_[X0, X1]
+            <pre class="brush: python; gutter: true; toolbar: false highlight: [8]">            
+            X = np.c_[X0, X1]
 
-                                                                                                features = make_union(SelectKBest(k=1), PCA(n_components=2))
-            prd = make_pipeline(
-            features,
-            RandomForestRegressor())
-
-            prd.fit(X, y)
-                                                                                                </pre>
-          </div>
-          <div class="abs-box substep smaller">
-            <pre class="brush: python; gutter: true; toolbar: false highlight: [8]">            X = np.c_[X0, X1]
-
-                                                                                                features = make_union(SelectKBest(k=1), PCA(n_components=2))
+            features = make_union(SelectKBest(k=1), PCA(n_components=2))
             prd = make_pipeline(
             features,
             RandomForestRegressor())
@@ -149,24 +152,28 @@
       <div class="step slide" data-scale="0.01" data-x="1400" data-y="36" data-z="10">
         <div class="abs-box base">
           <div class="abs-box substep smaller">
-            <pre class="brush: python; gutter: false; toolbar: false">            &gt;&gt;&gt; X0
-                                                                                                array([[23.2, 21.8], ..., ..., ..., ])
-                                                                                                </pre>
+            <pre class="brush: python; gutter: false; toolbar: false">            
+            &gt;&gt;&gt; X0
+            array([[23.2, 21.8], ..., ..., ..., ])
+            </pre>
           </div>
           <div class="abs-box substep smaller">
-            <pre class="brush: python; gutter: false; toolbar: false">            &gt;&gt;&gt; X1
-                                                                                                array([[9, 8, 78], ..., ..., ..., ])
-                                                                                                </pre>
+            <pre class="brush: python; gutter: false; toolbar: false">            
+            &gt;&gt;&gt; X1
+            array([[9, 8, 78], ..., ..., ..., ])
+            </pre>
           </div>
           <div class="abs-box substep smaller">
-            <pre class="brush: python; gutter: false; toolbar: false">            &gt;&gt;&gt; X
-                                                                                                array([[21.8, 0.3, 9.8], ..., ..., ..., ])
-                                                                                                </pre>
+            <pre class="brush: python; gutter: false; toolbar: false">            
+                &gt;&gt;&gt; X
+                array([[21.8, 0.3, 9.8], ..., ..., ..., ])
+                </pre>
           </div>
           <div class="abs-box substep smaller">
-            <pre class="brush: python; gutter: false; toolbar: false">            &gt;&gt;&gt; prd.feature_importances_
-                                                                                                array([0.1, 0.3, 0.7])
-                                                                                                </pre>
+            <pre class="brush: python; gutter: false; toolbar: false">            
+            &gt;&gt;&gt; prd.feature_importances_
+            array([0.1, 0.3, 0.7])
+            </pre>
           </div>
         </div>
       </div>
@@ -176,9 +183,10 @@
         </h3>
         <div class="smaller">
           <img src="generated/col_aggregating_further_transformations_with_feature_importances_.png"/>
-          <pre class="brush: python; gutter: false; toolbar: false">          &gt;&gt;&gt; prd.feature_importances_
-                                                                                array([0.1, 0.3, 0.7])
-                                                                                </pre>
+          <pre class="brush: python; gutter: false; toolbar: false">          
+          &gt;&gt;&gt; prd.feature_importances_
+          array([0.1, 0.3, 0.7])
+        </pre>
         </div>
         <ul>
           <li class="substep">
@@ -2014,9 +2022,10 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
           Combining Estimators
         </h3>
         <div class="smaller">
-          <pre class="brush: python; gutter: false; toolbar: false">        best = frame(sklearn.feature_selection.SelectKBest)(k=2)
-                                                                pca = frame(sklearn.decomposition.PCA)(n_components=2)
-        rf = frame(sklearn.ensemble.RandomForestRegressor)()
+          <pre class="brush: python; gutter: false; toolbar: false">        
+            best = frame(sklearn.feature_selection.SelectKBest)(k=2)
+            pca = frame(sklearn.decomposition.PCA)(n_components=2)
+            rf = frame(sklearn.ensemble.RandomForestRegressor)()
                                                                 </pre>
         </div>
         <ul>
@@ -2029,8 +2038,9 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
               make_pipeline
             </code>
             :
-            <pre class="brush: python; gutter: true; toolbar: false highlight: [2]">          sklearn.pipeline.make_pipeline(pca, rf)
-                                                                                pca | rf
+            <pre class="brush: python; gutter: true; toolbar: false highlight: [2]">          
+            sklearn.pipeline.make_pipeline(pca, rf)
+            pca | rf
                                                                                 </pre>
           </li>
           <li class="substep smaller">
@@ -2042,8 +2052,9 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
               make_union
             </code>
             :
-            <pre class="brush: python; gutter: true; toolbar: false highlight: [2]">          sklearn.pipeline.make_union(best, pca)
-                                                                                best + pca
+            <pre class="brush: python; gutter: true; toolbar: false highlight: [2]">          
+            sklearn.pipeline.make_union(best, pca)
+            best + pca
                                                                                 </pre>
           </li>
         </ul>
@@ -2051,7 +2062,8 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
       <div class="step slide" data-scale="0.01" data-x="4214" data-y="55" data-z="10">
         <img src="generated/col_aggregating_further_transformations.png"/>
         <div class="substep smaller">
-          <pre class="brush: python; gutter: false; toolbar: false ">        SelectKBest(k=1) + PCA(n_components=2) | RandomForestRegressor()
+          <pre class="brush: python; gutter: false; toolbar: false ">        
+          SelectKBest(k=1) + PCA(n_components=2) | RandomForestRegressor()
                                                                 </pre>
         </div>
       </div>
@@ -2189,8 +2201,9 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
           </table>
         </div>
         <div class="substep smaller">
-          <pre class="brush: python; gutter: false; toolbar: false ">      trn = PdPCA(n_components=2) + PdSelectKBest(k=1)
-                                                trn.fit(iris[features], iris['class']).transform(iris[features])
+          <pre class="brush: python; gutter: false; toolbar: false ">      
+            trn = PdPCA(n_components=2) + PdSelectKBest(k=1)
+            trn.fit(iris[features], iris['class']).transform(iris[features])
                                                 </pre>
           <table class="data">
             <thead>
@@ -2302,17 +2315,18 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
       </div>
       <div class="step slide" data-scale="0.01" data-x="4214" data-y="83.5" data-z="10">
         <div class="substep smaller">
-          <pre class="brush: python; gutter: true; toolbar: false ">        class UserMovieTransformer(
-                                                                                                base.BaseEstimator, base.EstimatorMixin,
-            ibex.FrameMixin):
+          <pre class="brush: python; gutter: true; toolbar: false ">        
+        class UserMovieTransformer(
+                base.BaseEstimator, base.EstimatorMixin,
+                ibex.FrameMixin):
 
             def fit(self, X, y): # X is a DataFrame
-            pd.pivot(
-            values=X.target,
-            index=X.user_id,
-            columns=X.item_id)
+                pd.pivot(
+                    values=X.target,
+                    index=X.user_id,
+                    columns=X.item_id)
 
-            ...
+                ...
                                                                 </pre>
         </div>
       </div>
