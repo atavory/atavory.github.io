@@ -65,19 +65,19 @@ table.data td {
     border: 1px solid black;
 }
 
-td.roni {
+.roni {
     background: grey;
 }
 
-td.yarden {
+.yarden {
     background: lightgrey;
 }
 
-td.anat {
+.anat {
     background: darkgrey;
 }
 
-td.frozen {
+.frozen {
     background: repeating-linear-gradient(
         45deg,
         white,
@@ -87,7 +87,7 @@ td.frozen {
         );
 }
 
-td.shrek {
+.shrek {
     background: repeating-linear-gradient(
         135deg,
         white,
@@ -97,7 +97,7 @@ td.shrek {
         );
 }
 
-td.mulan {
+.mulan {
     background: repeating-linear-gradient(
         90deg,
         white,
