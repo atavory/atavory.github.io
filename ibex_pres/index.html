@@ -46,18 +46,12 @@
     </style>
     <script src="js/jquery-3.2.1.min.js">
     </script>
-<script src="js/d3.v3.min.js"></script>
+<script src="js/d3.v4.js"></script>
     <script type="text/javascript">
       $(document).ready(function() {
         document.addEventListener('impress:stepenter', function(event) {
           if (event.target.id.search('outline') != -1) {
             $(".other").fadeTo("slow", 0.33);
-          }
-        }, false);
-        document.addEventListener('impress:stepenter', function(event) {
-          if (event.target.id.search('sklearn-classes-slide') != -1) {
-              console.log('moshe');
-              update();
           }
         }, false);
         document.addEventListener('impress:stepleave', function(event) {
@@ -2861,7 +2855,9 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
         </ul>
       </div>
       <div id="sklearn-classes-slide" class="step slide" data-scale="0.01" data-x="5600" data-y="30" data-z="10">
-          <div id="sklearn-classes">
+        <div  width="1024px" height="1200px">            
+            <svg id="sklearn-classes" width="1024px" height="1200px">
+            </svg>
           </div>
       </div>
       <div class="step slide" data-scale="0.01" data-x="15300" data-y="37" data-z="10">
@@ -2893,142 +2889,292 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
       impress().init();
     </script>
 <script>
+var svg = d3.select("#sklearn-classes"),
+    width = 700,
+    height = 700,
+    g = svg.append("g").attr("transform", "translate(" + (width / 2 + 40) + "," + (height / 2 + 90) + ")");
+    console.log(width, height);
 
-var width = 960,
-    height = 500,
-    root;
+var stratify = d3.stratify()
+    .parentId(function(d) { return d.id.substring(0, d.id.lastIndexOf(".")); });
 
-var force = d3.layout.force()
-    .linkDistance(80)
-    .charge(-120 / 0.5)
-    .gravity(.05 / 0.5)
-    .size([width, height])
-    .on("tick", tick);
+var tree = d3.tree()
+    .size([2 * Math.PI, 500])
+    .separation(function(a, b) { return (a.parent == b.parent ? 1 : 2) / a.depth; });
 
-var svg = d3.select("#sklearn-classes").append("svg")
-    .attr("width", width)
-    .attr("height", height);
+var data = [
+    {'id': 'sklearn', 'value': ''},
+    {'id': 'sklearn.calibration', 'value': ''},
+    {'id': 'sklearn.calibration.BaseEstimator', 'value': '1'},
+    {'id': 'sklearn.calibration.CalibratedClassifierCV', 'value': '1'},
+    {'id': 'sklearn.calibration.IsotonicRegression', 'value': '1'},
+    {'id': 'sklearn.calibration.LabelBinarizer', 'value': '1'},
+    {'id': 'sklearn.calibration.LabelEncoder', 'value': '1'},
+    {'id': 'sklearn.calibration.LinearSVC', 'value': '1'},
+    {'id': 'sklearn.calibration._SigmoidCalibration', 'value': '1'},
+    {'id': 'sklearn.cluster', 'value': ''},
+    {'id': 'sklearn.cluster.AffinityPropagation', 'value': '1'},
+    {'id': 'sklearn.cluster.AgglomerativeClustering', 'value': '1'},
+    {'id': 'sklearn.cluster.Birch', 'value': '1'},
+    {'id': 'sklearn.cluster.DBSCAN', 'value': '1'},
+    {'id': 'sklearn.cluster.FeatureAgglomeration', 'value': '1'},
+    {'id': 'sklearn.cluster.KMeans', 'value': '1'},
+    {'id': 'sklearn.cluster.MeanShift', 'value': '1'},
+    {'id': 'sklearn.cluster.MiniBatchKMeans', 'value': '1'},
+    {'id': 'sklearn.cluster.SpectralBiclustering', 'value': '1'},
+    {'id': 'sklearn.cluster.SpectralClustering', 'value': '1'},
+    {'id': 'sklearn.cluster.SpectralCoclustering', 'value': '1'},
+    {'id': 'sklearn.covariance', 'value': ''},
+    {'id': 'sklearn.covariance.EllipticEnvelope', 'value': '1'},
+    {'id': 'sklearn.covariance.EmpiricalCovariance', 'value': '1'},
+    {'id': 'sklearn.covariance.GraphLasso', 'value': '1'},
+    {'id': 'sklearn.covariance.GraphLassoCV', 'value': '1'},
+    {'id': 'sklearn.covariance.LedoitWolf', 'value': '1'},
+    {'id': 'sklearn.covariance.MinCovDet', 'value': '1'},
+    {'id': 'sklearn.covariance.OAS', 'value': '1'},
+    {'id': 'sklearn.covariance.ShrunkCovariance', 'value': '1'},
+    {'id': 'sklearn.cross_decomposition', 'value': ''},
+    {'id': 'sklearn.cross_decomposition.CCA', 'value': '1'},
+    {'id': 'sklearn.cross_decomposition.PLSCanonical', 'value': '1'},
+    {'id': 'sklearn.cross_decomposition.PLSRegression', 'value': '1'},
+    {'id': 'sklearn.cross_decomposition.PLSSVD', 'value': '1'},
+    {'id': 'sklearn.cross_validation', 'value': ''},
+    {'id': 'sklearn.datasets', 'value': ''},
+    {'id': 'sklearn.decomposition', 'value': ''},
+    {'id': 'sklearn.decomposition.DictionaryLearning', 'value': '1'},
+    {'id': 'sklearn.decomposition.FactorAnalysis', 'value': '1'},
+    {'id': 'sklearn.decomposition.FastICA', 'value': '1'},
+    {'id': 'sklearn.decomposition.IncrementalPCA', 'value': '1'},
+    {'id': 'sklearn.decomposition.KernelPCA', 'value': '1'},
+    {'id': 'sklearn.decomposition.LatentDirichletAllocation', 'value': '1'},
+    {'id': 'sklearn.decomposition.MiniBatchDictionaryLearning', 'value': '1'},
+    {'id': 'sklearn.decomposition.MiniBatchSparsePCA', 'value': '1'},
+    {'id': 'sklearn.decomposition.NMF', 'value': '1'},
+    {'id': 'sklearn.decomposition.PCA', 'value': '1'},
+    {'id': 'sklearn.decomposition.RandomizedPCA', 'value': '1'},
+    {'id': 'sklearn.decomposition.SparseCoder', 'value': '1'},
+    {'id': 'sklearn.decomposition.SparsePCA', 'value': '1'},
+    {'id': 'sklearn.decomposition.TruncatedSVD', 'value': '1'},
+    {'id': 'sklearn.dummy', 'value': ''},
+    {'id': 'sklearn.dummy.BaseEstimator', 'value': '1'},
+    {'id': 'sklearn.dummy.DummyClassifier', 'value': '1'},
+    {'id': 'sklearn.dummy.DummyRegressor', 'value': '1'},
+    {'id': 'sklearn.ensemble', 'value': ''},
+    {'id': 'sklearn.ensemble.AdaBoostClassifier', 'value': '1'},
+    {'id': 'sklearn.ensemble.AdaBoostRegressor', 'value': '1'},
+    {'id': 'sklearn.ensemble.BaggingClassifier', 'value': '1'},
+    {'id': 'sklearn.ensemble.BaggingRegressor', 'value': '1'},
+    {'id': 'sklearn.ensemble.BaseEnsemble', 'value': '1'},
+    {'id': 'sklearn.ensemble.ExtraTreesClassifier', 'value': '1'},
+    {'id': 'sklearn.ensemble.ExtraTreesRegressor', 'value': '1'},
+    {'id': 'sklearn.ensemble.GradientBoostingClassifier', 'value': '1'},
+    {'id': 'sklearn.ensemble.GradientBoostingRegressor', 'value': '1'},
+    {'id': 'sklearn.ensemble.IsolationForest', 'value': '1'},
+    {'id': 'sklearn.ensemble.RandomForestClassifier', 'value': '1'},
+    {'id': 'sklearn.ensemble.RandomForestRegressor', 'value': '1'},
+    {'id': 'sklearn.ensemble.RandomTreesEmbedding', 'value': '1'},
+    {'id': 'sklearn.ensemble.VotingClassifier', 'value': '1'},
+    {'id': 'sklearn.exceptions', 'value': ''},
+    {'id': 'sklearn.externals', 'value': ''},
+    {'id': 'sklearn.feature_extraction', 'value': ''},
+    {'id': 'sklearn.feature_extraction.DictVectorizer', 'value': '1'},
+    {'id': 'sklearn.feature_extraction.FeatureHasher', 'value': '1'},
+    {'id': 'sklearn.feature_selection', 'value': ''},
+    {'id': 'sklearn.feature_selection.GenericUnivariateSelect', 'value': '1'},
+    {'id': 'sklearn.feature_selection.RFE', 'value': '1'},
+    {'id': 'sklearn.feature_selection.RFECV', 'value': '1'},
+    {'id': 'sklearn.feature_selection.SelectFdr', 'value': '1'},
+    {'id': 'sklearn.feature_selection.SelectFpr', 'value': '1'},
+    {'id': 'sklearn.feature_selection.SelectFromModel', 'value': '1'},
+    {'id': 'sklearn.feature_selection.SelectFwe', 'value': '1'},
+    {'id': 'sklearn.feature_selection.SelectKBest', 'value': '1'},
+    {'id': 'sklearn.feature_selection.SelectPercentile', 'value': '1'},
+    {'id': 'sklearn.feature_selection.VarianceThreshold', 'value': '1'},
+    {'id': 'sklearn.gaussian_process', 'value': ''},
+    {'id': 'sklearn.gaussian_process.GaussianProcess', 'value': '1'},
+    {'id': 'sklearn.gaussian_process.GaussianProcessClassifier', 'value': '1'},
+    {'id': 'sklearn.gaussian_process.GaussianProcessRegressor', 'value': '1'},
+    {'id': 'sklearn.grid_search', 'value': ''},
+    {'id': 'sklearn.grid_search.BaseEstimator', 'value': '1'},
+    {'id': 'sklearn.grid_search.BaseSearchCV', 'value': '1'},
+    {'id': 'sklearn.grid_search.GridSearchCV', 'value': '1'},
+    {'id': 'sklearn.grid_search.RandomizedSearchCV', 'value': '1'},
+    {'id': 'sklearn.isotonic', 'value': ''},
+    {'id': 'sklearn.isotonic.BaseEstimator', 'value': '1'},
+    {'id': 'sklearn.isotonic.IsotonicRegression', 'value': '1'},
+    {'id': 'sklearn.kernel_approximation', 'value': ''},
+    {'id': 'sklearn.kernel_approximation.AdditiveChi2Sampler', 'value': '1'},
+    {'id': 'sklearn.kernel_approximation.BaseEstimator', 'value': '1'},
+    {'id': 'sklearn.kernel_approximation.Nystroem', 'value': '1'},
+    {'id': 'sklearn.kernel_approximation.RBFSampler', 'value': '1'},
+    {'id': 'sklearn.kernel_approximation.SkewedChi2Sampler', 'value': '1'},
+    {'id': 'sklearn.kernel_ridge', 'value': ''},
+    {'id': 'sklearn.kernel_ridge.BaseEstimator', 'value': '1'},
+    {'id': 'sklearn.kernel_ridge.KernelRidge', 'value': '1'},
+    {'id': 'sklearn.learning_curve', 'value': ''},
+    {'id': 'sklearn.linear_model', 'value': ''},
+    {'id': 'sklearn.linear_model.ARDRegression', 'value': '1'},
+    {'id': 'sklearn.linear_model.BayesianRidge', 'value': '1'},
+    {'id': 'sklearn.linear_model.ElasticNet', 'value': '1'},
+    {'id': 'sklearn.linear_model.ElasticNetCV', 'value': '1'},
+    {'id': 'sklearn.linear_model.HuberRegressor', 'value': '1'},
+    {'id': 'sklearn.linear_model.Lars', 'value': '1'},
+    {'id': 'sklearn.linear_model.LarsCV', 'value': '1'},
+    {'id': 'sklearn.linear_model.Lasso', 'value': '1'},
+    {'id': 'sklearn.linear_model.LassoCV', 'value': '1'},
+    {'id': 'sklearn.linear_model.LassoLars', 'value': '1'},
+    {'id': 'sklearn.linear_model.LassoLarsCV', 'value': '1'},
+    {'id': 'sklearn.linear_model.LassoLarsIC', 'value': '1'},
+    {'id': 'sklearn.linear_model.LinearRegression', 'value': '1'},
+    {'id': 'sklearn.linear_model.LogisticRegression', 'value': '1'},
+    {'id': 'sklearn.linear_model.LogisticRegressionCV', 'value': '1'},
+    {'id': 'sklearn.linear_model.MultiTaskElasticNet', 'value': '1'},
+    {'id': 'sklearn.linear_model.MultiTaskElasticNetCV', 'value': '1'},
+    {'id': 'sklearn.linear_model.MultiTaskLasso', 'value': '1'},
+    {'id': 'sklearn.linear_model.MultiTaskLassoCV', 'value': '1'},
+    {'id': 'sklearn.linear_model.OrthogonalMatchingPursuit', 'value': '1'},
+    {'id': 'sklearn.linear_model.OrthogonalMatchingPursuitCV', 'value': '1'},
+    {'id': 'sklearn.linear_model.PassiveAggressiveClassifier', 'value': '1'},
+    {'id': 'sklearn.linear_model.PassiveAggressiveRegressor', 'value': '1'},
+    {'id': 'sklearn.linear_model.Perceptron', 'value': '1'},
+    {'id': 'sklearn.linear_model.RANSACRegressor', 'value': '1'},
+    {'id': 'sklearn.linear_model.RandomizedLasso', 'value': '1'},
+    {'id': 'sklearn.linear_model.RandomizedLogisticRegression', 'value': '1'},
+    {'id': 'sklearn.linear_model.Ridge', 'value': '1'},
+    {'id': 'sklearn.linear_model.RidgeCV', 'value': '1'},
+    {'id': 'sklearn.linear_model.RidgeClassifier', 'value': '1'},
+    {'id': 'sklearn.linear_model.RidgeClassifierCV', 'value': '1'},
+    {'id': 'sklearn.linear_model.SGDClassifier', 'value': '1'},
+    {'id': 'sklearn.linear_model.SGDRegressor', 'value': '1'},
+    {'id': 'sklearn.linear_model.TheilSenRegressor', 'value': '1'},
+    {'id': 'sklearn.manifold', 'value': ''},
+    {'id': 'sklearn.manifold.Isomap', 'value': '1'},
+    {'id': 'sklearn.manifold.LocallyLinearEmbedding', 'value': '1'},
+    {'id': 'sklearn.manifold.MDS', 'value': '1'},
+    {'id': 'sklearn.manifold.SpectralEmbedding', 'value': '1'},
+    {'id': 'sklearn.manifold.TSNE', 'value': '1'},
+    {'id': 'sklearn.metrics', 'value': ''},
+    {'id': 'sklearn.mixture', 'value': ''},
+    {'id': 'sklearn.mixture.BayesianGaussianMixture', 'value': '1'},
+    {'id': 'sklearn.mixture.DPGMM', 'value': '1'},
+    {'id': 'sklearn.mixture.GMM', 'value': '1'},
+    {'id': 'sklearn.mixture.GaussianMixture', 'value': '1'},
+    {'id': 'sklearn.mixture.VBGMM', 'value': '1'},
+    {'id': 'sklearn.model_selection', 'value': ''},
+    {'id': 'sklearn.model_selection.GridSearchCV', 'value': '1'},
+    {'id': 'sklearn.model_selection.RandomizedSearchCV', 'value': '1'},
+    {'id': 'sklearn.multiclass', 'value': ''},
+    {'id': 'sklearn.multiclass.BaseEstimator', 'value': '1'},
+    {'id': 'sklearn.multiclass.LabelBinarizer', 'value': '1'},
+    {'id': 'sklearn.multiclass.OneVsOneClassifier', 'value': '1'},
+    {'id': 'sklearn.multiclass.OneVsRestClassifier', 'value': '1'},
+    {'id': 'sklearn.multiclass.OutputCodeClassifier', 'value': '1'},
+    {'id': 'sklearn.multiclass._ConstantPredictor', 'value': '1'},
+    {'id': 'sklearn.multioutput', 'value': ''},
+    {'id': 'sklearn.multioutput.BaseEstimator', 'value': '1'},
+    {'id': 'sklearn.multioutput.ClassifierChain', 'value': '1'},
+    {'id': 'sklearn.multioutput.MultiOutputClassifier', 'value': '1'},
+    {'id': 'sklearn.multioutput.MultiOutputEstimator', 'value': '1'},
+    {'id': 'sklearn.multioutput.MultiOutputRegressor', 'value': '1'},
+    {'id': 'sklearn.naive_bayes', 'value': ''},
+    {'id': 'sklearn.naive_bayes.BaseDiscreteNB', 'value': '1'},
+    {'id': 'sklearn.naive_bayes.BaseEstimator', 'value': '1'},
+    {'id': 'sklearn.naive_bayes.BaseNB', 'value': '1'},
+    {'id': 'sklearn.naive_bayes.BernoulliNB', 'value': '1'},
+    {'id': 'sklearn.naive_bayes.GaussianNB', 'value': '1'},
+    {'id': 'sklearn.naive_bayes.LabelBinarizer', 'value': '1'},
+    {'id': 'sklearn.naive_bayes.MultinomialNB', 'value': '1'},
+    {'id': 'sklearn.neighbors', 'value': ''},
+    {'id': 'sklearn.neighbors.KNeighborsClassifier', 'value': '1'},
+    {'id': 'sklearn.neighbors.KNeighborsRegressor', 'value': '1'},
+    {'id': 'sklearn.neighbors.KernelDensity', 'value': '1'},
+    {'id': 'sklearn.neighbors.LSHForest', 'value': '1'},
+    {'id': 'sklearn.neighbors.LocalOutlierFactor', 'value': '1'},
+    {'id': 'sklearn.neighbors.NearestCentroid', 'value': '1'},
+    {'id': 'sklearn.neighbors.NearestNeighbors', 'value': '1'},
+    {'id': 'sklearn.neighbors.RadiusNeighborsClassifier', 'value': '1'},
+    {'id': 'sklearn.neighbors.RadiusNeighborsRegressor', 'value': '1'},
+    {'id': 'sklearn.neural_network', 'value': ''},
+    {'id': 'sklearn.neural_network.BernoulliRBM', 'value': '1'},
+    {'id': 'sklearn.neural_network.MLPClassifier', 'value': '1'},
+    {'id': 'sklearn.neural_network.MLPRegressor', 'value': '1'},
+    {'id': 'sklearn.pipeline', 'value': ''},
+    {'id': 'sklearn.pipeline.FeatureUnion', 'value': '1'},
+    {'id': 'sklearn.pipeline.Pipeline', 'value': '1'},
+    {'id': 'sklearn.pipeline._BaseComposition', 'value': '1'},
+    {'id': 'sklearn.preprocessing', 'value': ''},
+    {'id': 'sklearn.preprocessing.Binarizer', 'value': '1'},
+    {'id': 'sklearn.preprocessing.FunctionTransformer', 'value': '1'},
+    {'id': 'sklearn.preprocessing.Imputer', 'value': '1'},
+    {'id': 'sklearn.preprocessing.KernelCenterer', 'value': '1'},
+    {'id': 'sklearn.preprocessing.LabelBinarizer', 'value': '1'},
+    {'id': 'sklearn.preprocessing.LabelEncoder', 'value': '1'},
+    {'id': 'sklearn.preprocessing.MaxAbsScaler', 'value': '1'},
+    {'id': 'sklearn.preprocessing.MinMaxScaler', 'value': '1'},
+    {'id': 'sklearn.preprocessing.MultiLabelBinarizer', 'value': '1'},
+    {'id': 'sklearn.preprocessing.Normalizer', 'value': '1'},
+    {'id': 'sklearn.preprocessing.OneHotEncoder', 'value': '1'},
+    {'id': 'sklearn.preprocessing.PolynomialFeatures', 'value': '1'},
+    {'id': 'sklearn.preprocessing.QuantileTransformer', 'value': '1'},
+    {'id': 'sklearn.preprocessing.RobustScaler', 'value': '1'},
+    {'id': 'sklearn.preprocessing.StandardScaler', 'value': '1'},
+    {'id': 'sklearn.random_projection', 'value': ''},
+    {'id': 'sklearn.random_projection.BaseEstimator', 'value': '1'},
+    {'id': 'sklearn.random_projection.BaseRandomProjection', 'value': '1'},
+    {'id': 'sklearn.random_projection.GaussianRandomProjection', 'value': '1'},
+    {'id': 'sklearn.random_projection.SparseRandomProjection', 'value': '1'},
+    {'id': 'sklearn.semi_supervised', 'value': ''},
+    {'id': 'sklearn.semi_supervised.LabelPropagation', 'value': '1'},
+    {'id': 'sklearn.semi_supervised.LabelSpreading', 'value': '1'},
+    {'id': 'sklearn.svm', 'value': ''},
+    {'id': 'sklearn.svm.LinearSVC', 'value': '1'},
+    {'id': 'sklearn.svm.LinearSVR', 'value': '1'},
+    {'id': 'sklearn.svm.NuSVC', 'value': '1'},
+    {'id': 'sklearn.svm.NuSVR', 'value': '1'},
+    {'id': 'sklearn.svm.OneClassSVM', 'value': '1'},
+    {'id': 'sklearn.svm.SVC', 'value': '1'},
+    {'id': 'sklearn.svm.SVR', 'value': '1'},
+    {'id': 'sklearn.tree', 'value': ''},
+    {'id': 'sklearn.tree.DecisionTreeClassifier', 'value': '1'},
+    {'id': 'sklearn.tree.DecisionTreeRegressor', 'value': '1'},
+    {'id': 'sklearn.tree.ExtraTreeClassifier', 'value': '1'},
+    {'id': 'sklearn.tree.ExtraTreeRegressor', 'value': '1'},
+    {'id': 'sklearn.discriminant_analysis', 'value': ''},
+    {'id': 'sklearn.discriminant_analysis.BaseEstimator', 'value': '1'},
+    {'id': 'sklearn.discriminant_analysis.LinearDiscriminantAnalysis', 'value': '1'},
+    {'id': 'sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis', 'value': '1'},
+    {'id': 'sklearn.discriminant_analysis.StandardScaler', 'value': '1'},
+    {'id': 'sklearn.clone', 'value': ''}
+] 
 
-var link = svg.selectAll(".link"),
-    node = svg.selectAll(".node");
+  var root = tree(stratify(data));
 
-root = {
- "name": "flare",
- "children": [
-  {
-   "name": "analytics",
-   "children": [
-    {
-     "name": "cluster",
-     "children": [
-      {"name": "AgglomerativeCluster", "size": 3938},
-      {"name": "CommunityStructure", "size": 3812},
-      {"name": "HierarchicalCluster", "size": 6714},
-      {"name": "MergeEdge", "size": 743}
-     ]
-    },
-    {
-     "name": "graph",
-     "children": [
-      {"name": "BetweennessCentrality", "size": 3534},
-      {"name": "LinkDistance", "size": 5731},
-      {"name": "MaxFlowMinCut", "size": 7840},
-      {"name": "ShortestPaths", "size": 5914},
-      {"name": "SpanningTree", "size": 3416}
-     ]
-    },
-    {
-     "name": "optimization",
-     "children": [
-      {"name": "AspectRatioBanker", "size": 7074}
-     ]
-    }
-   ]
-  }
- ]
-}
+  var link = g.selectAll(".link")
+    .data(root.links())
+    .enter().append("path")
+      .attr("class", "link")
+      .attr("d", d3.linkRadial()
+          .angle(function(d) { return d.x; })
+          .radius(function(d) { return d.y; }));
 
-update();
+  var node = g.selectAll(".node")
+    .data(root.descendants())
+    .enter().append("g")
+      .attr("class", function(d) { return "node" + (d.children ? " node--internal" : " node--leaf"); })
+      .attr("transform", function(d) { return "translate(" + radialPoint(d.x, d.y) + ")"; });
 
-function update() {
-  var nodes = flatten(root),
-      links = d3.layout.tree().links(nodes);
+  node.append("circle")
+      .attr("r", 2.5);
 
-  // Restart the force layout.
-  force
-      .nodes(nodes)
-      .links(links)
-      .start();
+  node.append("text")
+      .attr("dy", "0.31em")
+      .attr("x", function(d) { return d.x < Math.PI === !d.children ? 6 : -6; })
+      .attr("text-anchor", function(d) { return d.x < Math.PI === !d.children ? "start" : "end"; })
+      .attr("transform", function(d) { return "rotate(" + (d.x < Math.PI ? d.x - Math.PI / 2 : d.x + Math.PI / 2) * 180 / Math.PI + ")"; })
+      .text(function(d) { return d.id.substring(d.id.lastIndexOf(".") + 1); });
 
-  // Update links.
-  link = link.data(links, function(d) { return d.target.id; });
-
-  link.exit().remove();
-
-  link.enter().insert("line", ".node")
-      .attr("class", "link");
-
-  // Update nodes.
-  node = node.data(nodes, function(d) { return d.id; });
-
-  node.exit().remove();
-
-  var nodeEnter = node.enter().append("g")
-      .attr("class", "node")
-      .on("click", click)
-      .call(force.drag);
-
-  nodeEnter.append("circle")
-      .attr("r", function(d) { return Math.sqrt(d.size) / 10 || 4.5; });
-
-  nodeEnter.append("text")
-      .attr("dy", ".35em")
-      .text(function(d) { return d.name; });
-
-  node.select("circle")
-      .style("fill", color);
-}
-
-function tick() {
-  link.attr("x1", function(d) { return d.source.x; })
-      .attr("y1", function(d) { return d.source.y; })
-      .attr("x2", function(d) { return d.target.x; })
-      .attr("y2", function(d) { return d.target.y; });
-
-  node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
-}
-
-function color(d) {
-  return d._children ? "#3182bd" // collapsed package
-      : d.children ? "#c6dbef" // expanded package
-      : "#fd8d3c"; // leaf node
-}
-
-// Toggle children on click.
-function click(d) {
-  if (d3.event.defaultPrevented) return; // ignore drag
-  if (d.children) {
-    d._children = d.children;
-    d.children = null;
-  } else {
-    d.children = d._children;
-    d._children = null;
-  }
-  update();
-}
-
-// Returns a list of all nodes under the root.
-function flatten(root) {
-  var nodes = [], i = 0;
-
-  function recurse(node) {
-    if (node.children) node.children.forEach(recurse);
-    if (!node.id) node.id = ++i;
-    nodes.push(node);
-  }
-
-  recurse(root);
-  return nodes;
+function radialPoint(x, y) {
+  return [(y = +y) * Math.cos(x -= Math.PI / 2), y * Math.sin(x)];
 }
 
 </script>
