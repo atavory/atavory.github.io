@@ -15,34 +15,29 @@
     <link href="css/css-tooltips.css" rel="stylesheet"/>
     <link href="images/logo.ico" rel="shortcut icon" type="x-icon"/>
     <style>
-
-.node circle {
-  fill: #999;
-}
-
-.node text {
-  font: 10px sans-serif;
-}
-
-.node--internal circle {
-  fill: #555;
-}
-
-.node--internal text {
-  text-shadow: 0 1px 0 #fff, 0 -1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff;
-}
-
-.link {
-  fill: none;
-  stroke: #555;
-  stroke-opacity: 0.4;
-  stroke-width: 1.5px;
-}
-
+      .node circle {
+        fill                : #999;
+      }
+      .node text {
+        font                : 10px sans-serif;
+      }
+      .node--internal circle {
+        fill                : #555;
+      }
+      .node--internal text {
+        text-shadow         : 0 1px 0 #fff, 0 -1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff;
+      }
+      .link {
+        fill                : none;
+        stroke              : #555;
+        stroke-opacity      : 0.4;
+        stroke-width        : 1.5px;
+      }
     </style>
     <script src="js/jquery-3.2.1.min.js">
     </script>
-<script src="js/d3.v4.js"></script>
+    <script src="js/d3.v4.js">
+    </script>
     <script type="text/javascript">
       $(document).ready(function() {
         document.addEventListener('impress:stepenter', function(event) {
@@ -151,7 +146,7 @@
             RandomForestRegressor())
 
             prd.fit(X, y)
-                                                                                                </pre>
+            </pre>
           </div>
           <div class="abs-box substep smaller">
             <pre class="brush: python; gutter: true; toolbar: false highlight: [8]">            
@@ -163,7 +158,7 @@
             RandomForestRegressor())
 
             prd.fit(X, y)
-                                                                                                </pre>
+           </pre>
           </div>
         </div>
       </div>
@@ -179,13 +174,13 @@
             <pre class="brush: python; gutter: false; toolbar: false">            
             &gt;&gt;&gt; X1
             array([[9, 8, 78], ..., ..., ..., ])
-            </pre>
+                        </pre>
           </div>
           <div class="abs-box substep smaller">
             <pre class="brush: python; gutter: false; toolbar: false">            
-                &gt;&gt;&gt; X
-                array([[21.8, 0.3, 9.8], ..., ..., ..., ])
-                </pre>
+            &gt;&gt;&gt; X
+            array([[21.8, 0.3, 9.8], ..., ..., ..., ])
+            </pre>
           </div>
           <div class="abs-box substep smaller">
             <pre class="brush: python; gutter: false; toolbar: false">            
@@ -202,8 +197,8 @@
         <div class="smaller">
           <img src="generated/col_aggregating_further_transformations_with_feature_importances_.png"/>
           <pre class="brush: python; gutter: false; toolbar: false">          
-          &gt;&gt;&gt; prd.feature_importances_
-          array([0.1, 0.3, 0.7])
+            &gt;&gt;&gt; prd.feature_importances_
+            array([0.1, 0.3, 0.7])
         </pre>
         </div>
         <ul>
@@ -1264,10 +1259,11 @@
           Wrapping
         </h3>
         <div class="smaller">
-          <pre class="brush: python; gutter: true; toolbar: false; highlight: [3]">          from ibex import frame
-
-                                                                                PdLinearRegression = frame(sklearn.linear_model.LinearRegression)
-                                                                                </pre>
+            <pre class="brush: python; gutter: true; toolbar: false; highlight: [3]">          
+            from ibex import frame
+            
+            PdLinearRegression = frame(sklearn.linear_model.LinearRegression)
+            </pre>
           <img height="300px" src="generated/sklearn_linear_model_linear_regression_after.png" width="400px"/>
         </div>
       </div>
@@ -1276,10 +1272,11 @@
           Indexing
         </h3>
         <div class="smaller">
-          <pre class="brush: python; gutter: false; toolbar: false">import pandas as pd
-X = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]})
-y = pd.Series([10, 20 , 30])
-                                                </pre>
+          <pre class="brush: python; gutter: false; toolbar: false">
+            import pandas as pd
+            X = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]})
+            y = pd.Series([10, 20 , 30])
+           </pre>
           <div style="width:30%; float: left">
             <table class="data">
               <caption>
@@ -1366,8 +1363,9 @@ y = pd.Series([10, 20 , 30])
             </table>
           </div>
           <div style="width: 100%; margin-top: 240px">
-            <pre class="brush: python; gutter: false; toolbar: false">      PdLinearRegression().fit(X, y).predict(X)
-                                                </pre>
+            <pre class="brush: python; gutter: false; toolbar: false">      
+            PdLinearRegression().fit(X, y).predict(X)
+            </pre>
             <div style="width:30%; float: left">
               <table class="data">
               </table>
@@ -1408,9 +1406,10 @@ y = pd.Series([10, 20 , 30])
       </div>
       <div class="step slide" data-scale="0.01" data-x="4200" data-y="55" data-z="10">
         <div class="smaller">
-          <pre class="brush: python; gutter: false; toolbar: false">X = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]})
-y = pd.Series([10, 20 , 30])
-                                                </pre>
+          <pre class="brush: python; gutter: false; toolbar: false">
+            X = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]})
+            y = pd.Series([10, 20 , 30])
+           </pre>
           <div style="width:30%; float: left">
             <table class="data">
               <caption>
@@ -1549,8 +1548,9 @@ y = pd.Series([10, 20 , 30])
             </table>
           </div>
           <div style="width: 100%; margin-top: 240px">
-            <pre class="brush: python; gutter: false; toolbar: false">      PdLinearRegression().fit(X, y).predict(X[['b', 'a']])
-                                                </pre>
+            <pre class="brush: python; gutter: false; toolbar: false">      
+            PdLinearRegression().fit(X, y).predict(X[['b', 'a']])
+           </pre>
             <div style="width:30%; float: left">
               <table class="data">
               </table>
@@ -1591,9 +1591,10 @@ y = pd.Series([10, 20 , 30])
       </div>
       <div class="step slide" data-scale="0.01" data-x="4200" data-y="63" data-z="10">
         <div class="smaller">
-          <pre class="brush: python; gutter: false; toolbar: false">X = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]})
-y = pd.Series([10, 20 , 30])
-X1 = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]}, index=['i', 'j', 'k']) </pre>
+          <pre class="brush: python; gutter: false; toolbar: false">
+            X = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]})
+            y = pd.Series([10, 20 , 30])
+            X1 = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]}, index=['i', 'j', 'k']) </pre>
           <div style="width:30%; float: left">
             <table class="data">
               <caption>
@@ -1732,8 +1733,9 @@ X1 = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]}, index=['i', 'j', 'k']) </pre
             </table>
           </div>
           <div style="width: 100%; margin-top: 240px">
-            <pre class="brush: python; gutter: false; toolbar: false">      PdLinearRegression().fit(X, y).predict(X[['b', 'a']])
-                                                </pre>
+            <pre class="brush: python; gutter: false; toolbar: false">      
+            PdLinearRegression().fit(X, y).predict(X[['b', 'a']])
+           </pre>
             <div style="width:30%; float: left">
               <table class="data">
               </table>
@@ -1775,9 +1777,10 @@ X1 = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]}, index=['i', 'j', 'k']) </pre
       <div class="step slide" data-scale="0.01" data-x="4200" data-y="71" data-z="10">
         <div class="smaller" style="background: url('images/baddy_bg.png'); background-repeat: no-repeat; background-position: 50% 20%;
 ">
-          <pre class="brush: python; gutter: false; toolbar: false">X = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]}, index=['i', 'j', 'k'])
-y = pd.Series([10, 20 , 30], index=[21, 22, 23])
-                                                </pre>
+          <pre class="brush: python; gutter: false; toolbar: false">
+            X = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]}, index=['i', 'j', 'k'])
+            y = pd.Series([10, 20 , 30], index=[21, 22, 23])
+          </pre>
           <div style="width:30%; float: left">
             <table class="data">
               <caption>
@@ -1864,25 +1867,27 @@ y = pd.Series([10, 20 , 30], index=[21, 22, 23])
             </table>
           </div>
           <div style="width: 100%; margin-top: 240px">
-            <pre class="brush: python; gutter: false; toolbar: false">      &gt;&gt;&gt; PdLinearRegression().fit(X, y).predict(X)
-                                ---------------------------------------------------------------------------
-    ValueError                Traceback (most recent call last)
-    ----&gt; 1 LinearRegression().fit(X, y)
-    ...
-    --&gt; 113         **kwargs)
-    ...
-    ValueError: Indexes do not match
-                                                </pre>
+            <pre class="brush: python; gutter: false; toolbar: false">      
+            &gt;&gt;&gt; PdLinearRegression().fit(X, y).predict(X)
+            ---------------------------------------------------------------------------
+            ValueError                Traceback (most recent call last)
+            ----&gt; 1 LinearRegression().fit(X, y)
+            ...
+            --&gt; 113         **kwargs)
+            ...
+            ValueError: Indexes do not match
+            </pre>
           </div>
         </div>
       </div>
       <div class="step slide" data-scale="0.01" data-x="4200" data-y="80" data-z="10">
         <div class="smaller" style="background: url('images/baddy_bg.png'); background-repeat: no-repeat; background-position: 50% 20%;
 ">
-          <pre class="brush: python; gutter: false; toolbar: false">X = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]})
-y = pd.Series([10, 20 , 30])
-X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
-                                                </pre>
+          <pre class="brush: python; gutter: false; toolbar: false">
+            X = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]})
+            y = pd.Series([10, 20 , 30])
+            X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
+           </pre>
           <div style="width:30%; float: left">
             <table class="data">
               <caption>
@@ -2021,15 +2026,16 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
             </table>
           </div>
           <div style="width: 100%; margin-top: 240px">
-            <pre class="brush: python; gutter: false; toolbar: false">      &gt;&gt;&gt; PdLinearRegression().fit(X, y).predict(X1)
-                                                ---------------------------------------------------------------------------
-    KeyError                  Traceback (most recent call last)
-    ----&gt; 1 LinearRegression().fit(X, y).predict(X1)
-    ...
-    -&gt; 1231           raise KeyError('%s not in index' % objarr[mask])
-    ...
-    KeyError: "Index(['a', 'b'], dtype='object') not in index"
-                                                </pre>
+            <pre class="brush: python; gutter: false; toolbar: false">      
+            &gt;&gt;&gt; PdLinearRegression().fit(X, y).predict(X1)
+            ---------------------------------------------------------------------------
+            KeyError                  Traceback (most recent call last)
+            ----&gt; 1 LinearRegression().fit(X, y).predict(X1)
+            ...
+            -&gt; 1231           raise KeyError('%s not in index' % objarr[mask])
+            ...
+            KeyError: "Index(['a', 'b'], dtype='object') not in index"
+            </pre>
           </div>
         </div>
       </div>
@@ -2044,7 +2050,7 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
             best = frame(sklearn.feature_selection.SelectKBest)(k=2)
             pca = frame(sklearn.decomposition.PCA)(n_components=2)
             rf = frame(sklearn.ensemble.RandomForestRegressor)()
-                                                                </pre>
+           </pre>
         </div>
         <ul>
           <li class="substep smaller">
@@ -2059,7 +2065,7 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
             <pre class="brush: python; gutter: true; toolbar: false highlight: [2]">          
             sklearn.pipeline.make_pipeline(pca, rf)
             pca | rf
-                                                                                </pre>
+            </pre>
           </li>
           <li class="substep smaller">
             <em>
@@ -2073,7 +2079,7 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
             <pre class="brush: python; gutter: true; toolbar: false highlight: [2]">          
             sklearn.pipeline.make_union(best, pca)
             best + pca
-                                                                                </pre>
+            </pre>
           </li>
         </ul>
       </div>
@@ -2081,8 +2087,8 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
         <img src="generated/col_aggregating_further_transformations.png"/>
         <div class="substep smaller">
           <pre class="brush: python; gutter: false; toolbar: false ">        
-          SelectKBest(k=1) + PCA(n_components=2) | RandomForestRegressor()
-                                                                </pre>
+            SelectKBest(k=1) + PCA(n_components=2) | RandomForestRegressor()
+           </pre>
         </div>
       </div>
       <div class="step slide" data-scale="0.01" data-x="4214" data-y="70" data-z="10">
@@ -2090,8 +2096,9 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
           Indexing + Combining Estimators
         </h2>
         <div class="smaller">
-          <pre class="brush: python; gutter: false; toolbar: false ">      iris
-                                                </pre>
+          <pre class="brush: python; gutter: false; toolbar: false ">      
+          >>> iris
+          </pre>
           <table class="data">
             <thead>
               <tr style="text-align: right;">
@@ -2222,7 +2229,7 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
           <pre class="brush: python; gutter: false; toolbar: false ">      
             trn = PdPCA(n_components=2) + PdSelectKBest(k=1)
             trn.fit(iris[features], iris['class']).transform(iris[features])
-                                                </pre>
+           </pre>
           <table class="data">
             <thead>
               <tr>
@@ -2443,65 +2450,65 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
               </tr>
             </tbody>
           </table>
-            <table class="data" style="width:30%; float: right">
-              <tbody>
-                <tr>
-                  <td>
-                  </td>
-                  <th class="frozen">
-                    Frozen
-                  </th>
-                  <th class="shrek">
-                    Shrek
-                  </th>
-                  <th class="mulan">
-                    Mulan
-                  </th>
-                </tr>
-                <tr>
-                  <th class="roni">
-                    Roni
-                  </th>
-                  <td>
-                    5
-                  </td>
-                  <td>
-                    5
-                  </td>
-                  <td>
-                    4
-                  </td>
-                </tr>
-                <tr>
-                  <th class="yarden">
-                    Yarden
-                  </th>
-                  <td>
-                    5
-                  </td>
-                  <td>
-                    3
-                  </td>
-                  <td>
-                    1
-                  </td>
-                </tr>
-                <tr>
-                  <th class="anat">
-                    Anat
-                  </th>
-                  <td>
-                    5
-                  </td>
-                  <td>
-                    2
-                  </td>
-                  <td>
-                    1
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <table class="data" style="width:30%; float: right">
+            <tbody>
+              <tr>
+                <td>
+                </td>
+                <th class="frozen">
+                  Frozen
+                </th>
+                <th class="shrek">
+                  Shrek
+                </th>
+                <th class="mulan">
+                  Mulan
+                </th>
+              </tr>
+              <tr>
+                <th class="roni">
+                  Roni
+                </th>
+                <td>
+                  5
+                </td>
+                <td>
+                  5
+                </td>
+                <td>
+                  4
+                </td>
+              </tr>
+              <tr>
+                <th class="yarden">
+                  Yarden
+                </th>
+                <td>
+                  5
+                </td>
+                <td>
+                  3
+                </td>
+                <td>
+                  1
+                </td>
+              </tr>
+              <tr>
+                <th class="anat">
+                  Anat
+                </th>
+                <td>
+                  5
+                </td>
+                <td>
+                  2
+                </td>
+                <td>
+                  1
+                </td>
+              </tr>
+            </tbody>
+          </table>
           <table class="data" style="width:30%; float: bottom">
             <tbody>
               <tr>
@@ -2607,7 +2614,8 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
               <tr>
                 <td class="anat">
                   Anat
-             b   </td>
+                  b
+                </td>
                 <td class="shrek">
                   Shrek
                 </td>
@@ -2706,23 +2714,23 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
               </tr>
             </tbody>
           </table>
-      </div>
+        </div>
       </div>
       <div class="step slide" data-scale="0.01" data-x="4214" data-y="87" data-z="10">
         <div class="smaller">
           <pre class="brush: python; gutter: true; toolbar: false; highlight: [3, 6, 7, 8, 9, 10]">        
-        class UserMovieTransformer(
+                class UserMovieTransformer(
                 base.BaseEstimator, base.EstimatorMixin,
                 ibex.FrameMixin):
 
-            def fit(self, X, y): # X is a DataFrame
+                def fit(self, X, y): # X is a DataFrame
                 pd.pivot(
-                    values=X.target,
-                    index=X.user_id,
-                    columns=X.item_id)
+                values=X.target,
+                index=X.user_id,
+                columns=X.item_id)
 
                 ...
-                                                                </pre>
+                                                                                                                                </pre>
         </div>
       </div>
       <div class="step slide" data-scale="0.01" data-x="4200" data-y="30" data-z="10">
@@ -2754,11 +2762,11 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
           </li>
         </ul>
       </div>
-      <div id="sklearn-classes-slide" class="step slide" data-scale="0.01" data-x="5600" data-y="30" data-z="10">
-        <div  width="2200px" height="600px">            
-            <svg id="sklearn-classes" width="1000" height="800">
-            </svg>
-          </div>
+      <div class="step slide" data-scale="0.01" data-x="5600" data-y="30" data-z="10" id="sklearn-classes-slide">
+        <div height="600px" width="2200px">
+          <svg height="800" id="sklearn-classes" width="1000">
+          </svg>
+        </div>
       </div>
       <div class="step slide" data-scale="0.01" data-x="15300" data-y="37" data-z="10">
         <img src="generated/ibex_class_diagram_np.png"/>
@@ -2788,295 +2796,766 @@ X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
     <script type="text/javascript">
       impress().init();
     </script>
-<script>
-var svg = d3.select("#sklearn-classes"),
-    width = 300,
-    height = width,
-    g = svg.append("g").attr("transform", "translate(" + (width / 2 + 280) + "," + (height / 2 + 230) + ")");
-    console.log(width, height);
-
-var stratify = d3.stratify()
-    .parentId(function(d) { return d.id.substring(0, d.id.lastIndexOf(".")); });
-
-var tree = d3.tree()
-    .size([2 * Math.PI, width])
-    .separation(function(a, b) { return (a.parent == b.parent ? 1 : 2) / a.depth; });
-
-var data = [
-    {'id': 'sklearn', 'value': ''},
-    {'id': 'sklearn.calibration', 'value': ''},
-    {'id': 'sklearn.calibration.BaseEstimator', 'value': '1'},
-    {'id': 'sklearn.calibration.CalibratedClassifierCV', 'value': '1'},
-    {'id': 'sklearn.calibration.IsotonicRegression', 'value': '1'},
-    {'id': 'sklearn.calibration.LabelBinarizer', 'value': '1'},
-    {'id': 'sklearn.calibration.LabelEncoder', 'value': '1'},
-    {'id': 'sklearn.calibration.LinearSVC', 'value': '1'},
-    {'id': 'sklearn.calibration._SigmoidCalibration', 'value': '1'},
-    {'id': 'sklearn.cluster', 'value': ''},
-    {'id': 'sklearn.cluster.AffinityPropagation', 'value': '1'},
-    {'id': 'sklearn.cluster.AgglomerativeClustering', 'value': '1'},
-    {'id': 'sklearn.cluster.Birch', 'value': '1'},
-    {'id': 'sklearn.cluster.DBSCAN', 'value': '1'},
-    {'id': 'sklearn.cluster.FeatureAgglomeration', 'value': '1'},
-    {'id': 'sklearn.cluster.KMeans', 'value': '1'},
-    {'id': 'sklearn.cluster.MeanShift', 'value': '1'},
-    {'id': 'sklearn.cluster.MiniBatchKMeans', 'value': '1'},
-    {'id': 'sklearn.cluster.SpectralBiclustering', 'value': '1'},
-    {'id': 'sklearn.cluster.SpectralClustering', 'value': '1'},
-    {'id': 'sklearn.cluster.SpectralCoclustering', 'value': '1'},
-    {'id': 'sklearn.covariance', 'value': ''},
-    {'id': 'sklearn.covariance.EllipticEnvelope', 'value': '1'},
-    {'id': 'sklearn.covariance.EmpiricalCovariance', 'value': '1'},
-    {'id': 'sklearn.covariance.GraphLasso', 'value': '1'},
-    {'id': 'sklearn.covariance.GraphLassoCV', 'value': '1'},
-    {'id': 'sklearn.covariance.LedoitWolf', 'value': '1'},
-    {'id': 'sklearn.covariance.MinCovDet', 'value': '1'},
-    {'id': 'sklearn.covariance.OAS', 'value': '1'},
-    {'id': 'sklearn.covariance.ShrunkCovariance', 'value': '1'},
-    {'id': 'sklearn.cross_decomposition', 'value': ''},
-    {'id': 'sklearn.cross_decomposition.CCA', 'value': '1'},
-    {'id': 'sklearn.cross_decomposition.PLSCanonical', 'value': '1'},
-    {'id': 'sklearn.cross_decomposition.PLSRegression', 'value': '1'},
-    {'id': 'sklearn.cross_decomposition.PLSSVD', 'value': '1'},
-    {'id': 'sklearn.cross_validation', 'value': ''},
-    {'id': 'sklearn.datasets', 'value': ''},
-    {'id': 'sklearn.decomposition', 'value': ''},
-    {'id': 'sklearn.decomposition.DictionaryLearning', 'value': '1'},
-    {'id': 'sklearn.decomposition.FactorAnalysis', 'value': '1'},
-    {'id': 'sklearn.decomposition.FastICA', 'value': '1'},
-    {'id': 'sklearn.decomposition.IncrementalPCA', 'value': '1'},
-    {'id': 'sklearn.decomposition.KernelPCA', 'value': '1'},
-    {'id': 'sklearn.decomposition.LatentDirichletAllocation', 'value': '1'},
-    {'id': 'sklearn.decomposition.MiniBatchDictionaryLearning', 'value': '1'},
-    {'id': 'sklearn.decomposition.MiniBatchSparsePCA', 'value': '1'},
-    {'id': 'sklearn.decomposition.NMF', 'value': '1'},
-    {'id': 'sklearn.decomposition.PCA', 'value': '1'},
-    {'id': 'sklearn.decomposition.RandomizedPCA', 'value': '1'},
-    {'id': 'sklearn.decomposition.SparseCoder', 'value': '1'},
-    {'id': 'sklearn.decomposition.SparsePCA', 'value': '1'},
-    {'id': 'sklearn.decomposition.TruncatedSVD', 'value': '1'},
-    {'id': 'sklearn.dummy', 'value': ''},
-    {'id': 'sklearn.dummy.BaseEstimator', 'value': '1'},
-    {'id': 'sklearn.dummy.DummyClassifier', 'value': '1'},
-    {'id': 'sklearn.dummy.DummyRegressor', 'value': '1'},
-    {'id': 'sklearn.ensemble', 'value': ''},
-    {'id': 'sklearn.ensemble.AdaBoostClassifier', 'value': '1'},
-    {'id': 'sklearn.ensemble.AdaBoostRegressor', 'value': '1'},
-    {'id': 'sklearn.ensemble.BaggingClassifier', 'value': '1'},
-    {'id': 'sklearn.ensemble.BaggingRegressor', 'value': '1'},
-    {'id': 'sklearn.ensemble.BaseEnsemble', 'value': '1'},
-    {'id': 'sklearn.ensemble.ExtraTreesClassifier', 'value': '1'},
-    {'id': 'sklearn.ensemble.ExtraTreesRegressor', 'value': '1'},
-    {'id': 'sklearn.ensemble.GradientBoostingClassifier', 'value': '1'},
-    {'id': 'sklearn.ensemble.GradientBoostingRegressor', 'value': '1'},
-    {'id': 'sklearn.ensemble.IsolationForest', 'value': '1'},
-    {'id': 'sklearn.ensemble.RandomForestClassifier', 'value': '1'},
-    {'id': 'sklearn.ensemble.RandomForestRegressor', 'value': '1'},
-    {'id': 'sklearn.ensemble.RandomTreesEmbedding', 'value': '1'},
-    {'id': 'sklearn.ensemble.VotingClassifier', 'value': '1'},
-    {'id': 'sklearn.exceptions', 'value': ''},
-    {'id': 'sklearn.externals', 'value': ''},
-    {'id': 'sklearn.feature_extraction', 'value': ''},
-    {'id': 'sklearn.feature_extraction.DictVectorizer', 'value': '1'},
-    {'id': 'sklearn.feature_extraction.FeatureHasher', 'value': '1'},
-    {'id': 'sklearn.feature_selection', 'value': ''},
-    {'id': 'sklearn.feature_selection.GenericUnivariateSelect', 'value': '1'},
-    {'id': 'sklearn.feature_selection.RFE', 'value': '1'},
-    {'id': 'sklearn.feature_selection.RFECV', 'value': '1'},
-    {'id': 'sklearn.feature_selection.SelectFdr', 'value': '1'},
-    {'id': 'sklearn.feature_selection.SelectFpr', 'value': '1'},
-    {'id': 'sklearn.feature_selection.SelectFromModel', 'value': '1'},
-    {'id': 'sklearn.feature_selection.SelectFwe', 'value': '1'},
-    {'id': 'sklearn.feature_selection.SelectKBest', 'value': '1'},
-    {'id': 'sklearn.feature_selection.SelectPercentile', 'value': '1'},
-    {'id': 'sklearn.feature_selection.VarianceThreshold', 'value': '1'},
-    {'id': 'sklearn.gaussian_process', 'value': ''},
-    {'id': 'sklearn.gaussian_process.GaussianProcess', 'value': '1'},
-    {'id': 'sklearn.gaussian_process.GaussianProcessClassifier', 'value': '1'},
-    {'id': 'sklearn.gaussian_process.GaussianProcessRegressor', 'value': '1'},
-    {'id': 'sklearn.grid_search', 'value': ''},
-    {'id': 'sklearn.grid_search.BaseEstimator', 'value': '1'},
-    {'id': 'sklearn.grid_search.BaseSearchCV', 'value': '1'},
-    {'id': 'sklearn.grid_search.GridSearchCV', 'value': '1'},
-    {'id': 'sklearn.grid_search.RandomizedSearchCV', 'value': '1'},
-    {'id': 'sklearn.isotonic', 'value': ''},
-    {'id': 'sklearn.isotonic.BaseEstimator', 'value': '1'},
-    {'id': 'sklearn.isotonic.IsotonicRegression', 'value': '1'},
-    {'id': 'sklearn.kernel_approximation', 'value': ''},
-    {'id': 'sklearn.kernel_approximation.AdditiveChi2Sampler', 'value': '1'},
-    {'id': 'sklearn.kernel_approximation.BaseEstimator', 'value': '1'},
-    {'id': 'sklearn.kernel_approximation.Nystroem', 'value': '1'},
-    {'id': 'sklearn.kernel_approximation.RBFSampler', 'value': '1'},
-    {'id': 'sklearn.kernel_approximation.SkewedChi2Sampler', 'value': '1'},
-    {'id': 'sklearn.kernel_ridge', 'value': ''},
-    {'id': 'sklearn.kernel_ridge.BaseEstimator', 'value': '1'},
-    {'id': 'sklearn.kernel_ridge.KernelRidge', 'value': '1'},
-    {'id': 'sklearn.learning_curve', 'value': ''},
-    {'id': 'sklearn.linear_model', 'value': ''},
-    {'id': 'sklearn.linear_model.ARDRegression', 'value': '1'},
-    {'id': 'sklearn.linear_model.BayesianRidge', 'value': '1'},
-    {'id': 'sklearn.linear_model.ElasticNet', 'value': '1'},
-    {'id': 'sklearn.linear_model.ElasticNetCV', 'value': '1'},
-    {'id': 'sklearn.linear_model.HuberRegressor', 'value': '1'},
-    {'id': 'sklearn.linear_model.Lars', 'value': '1'},
-    {'id': 'sklearn.linear_model.LarsCV', 'value': '1'},
-    {'id': 'sklearn.linear_model.Lasso', 'value': '1'},
-    {'id': 'sklearn.linear_model.LassoCV', 'value': '1'},
-    {'id': 'sklearn.linear_model.LassoLars', 'value': '1'},
-    {'id': 'sklearn.linear_model.LassoLarsCV', 'value': '1'},
-    {'id': 'sklearn.linear_model.LassoLarsIC', 'value': '1'},
-    {'id': 'sklearn.linear_model.LinearRegression', 'value': '1'},
-    {'id': 'sklearn.linear_model.LogisticRegression', 'value': '1'},
-    {'id': 'sklearn.linear_model.LogisticRegressionCV', 'value': '1'},
-    {'id': 'sklearn.linear_model.MultiTaskElasticNet', 'value': '1'},
-    {'id': 'sklearn.linear_model.MultiTaskElasticNetCV', 'value': '1'},
-    {'id': 'sklearn.linear_model.MultiTaskLasso', 'value': '1'},
-    {'id': 'sklearn.linear_model.MultiTaskLassoCV', 'value': '1'},
-    {'id': 'sklearn.linear_model.OrthogonalMatchingPursuit', 'value': '1'},
-    {'id': 'sklearn.linear_model.OrthogonalMatchingPursuitCV', 'value': '1'},
-    {'id': 'sklearn.linear_model.PassiveAggressiveClassifier', 'value': '1'},
-    {'id': 'sklearn.linear_model.PassiveAggressiveRegressor', 'value': '1'},
-    {'id': 'sklearn.linear_model.Perceptron', 'value': '1'},
-    {'id': 'sklearn.linear_model.RANSACRegressor', 'value': '1'},
-    {'id': 'sklearn.linear_model.RandomizedLasso', 'value': '1'},
-    {'id': 'sklearn.linear_model.RandomizedLogisticRegression', 'value': '1'},
-    {'id': 'sklearn.linear_model.Ridge', 'value': '1'},
-    {'id': 'sklearn.linear_model.RidgeCV', 'value': '1'},
-    {'id': 'sklearn.linear_model.RidgeClassifier', 'value': '1'},
-    {'id': 'sklearn.linear_model.RidgeClassifierCV', 'value': '1'},
-    {'id': 'sklearn.linear_model.SGDClassifier', 'value': '1'},
-    {'id': 'sklearn.linear_model.SGDRegressor', 'value': '1'},
-    {'id': 'sklearn.linear_model.TheilSenRegressor', 'value': '1'},
-    {'id': 'sklearn.manifold', 'value': ''},
-    {'id': 'sklearn.manifold.Isomap', 'value': '1'},
-    {'id': 'sklearn.manifold.LocallyLinearEmbedding', 'value': '1'},
-    {'id': 'sklearn.manifold.MDS', 'value': '1'},
-    {'id': 'sklearn.manifold.SpectralEmbedding', 'value': '1'},
-    {'id': 'sklearn.manifold.TSNE', 'value': '1'},
-    {'id': 'sklearn.metrics', 'value': ''},
-    {'id': 'sklearn.mixture', 'value': ''},
-    {'id': 'sklearn.mixture.BayesianGaussianMixture', 'value': '1'},
-    {'id': 'sklearn.mixture.DPGMM', 'value': '1'},
-    {'id': 'sklearn.mixture.GMM', 'value': '1'},
-    {'id': 'sklearn.mixture.GaussianMixture', 'value': '1'},
-    {'id': 'sklearn.mixture.VBGMM', 'value': '1'},
-    {'id': 'sklearn.model_selection', 'value': ''},
-    {'id': 'sklearn.model_selection.GridSearchCV', 'value': '1'},
-    {'id': 'sklearn.model_selection.RandomizedSearchCV', 'value': '1'},
-    {'id': 'sklearn.multiclass', 'value': ''},
-    {'id': 'sklearn.multiclass.BaseEstimator', 'value': '1'},
-    {'id': 'sklearn.multiclass.LabelBinarizer', 'value': '1'},
-    {'id': 'sklearn.multiclass.OneVsOneClassifier', 'value': '1'},
-    {'id': 'sklearn.multiclass.OneVsRestClassifier', 'value': '1'},
-    {'id': 'sklearn.multiclass.OutputCodeClassifier', 'value': '1'},
-    {'id': 'sklearn.multiclass._ConstantPredictor', 'value': '1'},
-    {'id': 'sklearn.multioutput', 'value': ''},
-    {'id': 'sklearn.multioutput.BaseEstimator', 'value': '1'},
-    {'id': 'sklearn.multioutput.ClassifierChain', 'value': '1'},
-    {'id': 'sklearn.multioutput.MultiOutputClassifier', 'value': '1'},
-    {'id': 'sklearn.multioutput.MultiOutputEstimator', 'value': '1'},
-    {'id': 'sklearn.multioutput.MultiOutputRegressor', 'value': '1'},
-    {'id': 'sklearn.naive_bayes', 'value': ''},
-    {'id': 'sklearn.naive_bayes.BaseDiscreteNB', 'value': '1'},
-    {'id': 'sklearn.naive_bayes.BaseEstimator', 'value': '1'},
-    {'id': 'sklearn.naive_bayes.BaseNB', 'value': '1'},
-    {'id': 'sklearn.naive_bayes.BernoulliNB', 'value': '1'},
-    {'id': 'sklearn.naive_bayes.GaussianNB', 'value': '1'},
-    {'id': 'sklearn.naive_bayes.LabelBinarizer', 'value': '1'},
-    {'id': 'sklearn.naive_bayes.MultinomialNB', 'value': '1'},
-    {'id': 'sklearn.neighbors', 'value': ''},
-    {'id': 'sklearn.neighbors.KNeighborsClassifier', 'value': '1'},
-    {'id': 'sklearn.neighbors.KNeighborsRegressor', 'value': '1'},
-    {'id': 'sklearn.neighbors.KernelDensity', 'value': '1'},
-    {'id': 'sklearn.neighbors.LSHForest', 'value': '1'},
-    {'id': 'sklearn.neighbors.LocalOutlierFactor', 'value': '1'},
-    {'id': 'sklearn.neighbors.NearestCentroid', 'value': '1'},
-    {'id': 'sklearn.neighbors.NearestNeighbors', 'value': '1'},
-    {'id': 'sklearn.neighbors.RadiusNeighborsClassifier', 'value': '1'},
-    {'id': 'sklearn.neighbors.RadiusNeighborsRegressor', 'value': '1'},
-    {'id': 'sklearn.neural_network', 'value': ''},
-    {'id': 'sklearn.neural_network.BernoulliRBM', 'value': '1'},
-    {'id': 'sklearn.neural_network.MLPClassifier', 'value': '1'},
-    {'id': 'sklearn.neural_network.MLPRegressor', 'value': '1'},
-    {'id': 'sklearn.pipeline', 'value': ''},
-    {'id': 'sklearn.pipeline.FeatureUnion', 'value': '1'},
-    {'id': 'sklearn.pipeline.Pipeline', 'value': '1'},
-    {'id': 'sklearn.pipeline._BaseComposition', 'value': '1'},
-    {'id': 'sklearn.preprocessing', 'value': ''},
-    {'id': 'sklearn.preprocessing.Binarizer', 'value': '1'},
-    {'id': 'sklearn.preprocessing.FunctionTransformer', 'value': '1'},
-    {'id': 'sklearn.preprocessing.Imputer', 'value': '1'},
-    {'id': 'sklearn.preprocessing.KernelCenterer', 'value': '1'},
-    {'id': 'sklearn.preprocessing.LabelBinarizer', 'value': '1'},
-    {'id': 'sklearn.preprocessing.LabelEncoder', 'value': '1'},
-    {'id': 'sklearn.preprocessing.MaxAbsScaler', 'value': '1'},
-    {'id': 'sklearn.preprocessing.MinMaxScaler', 'value': '1'},
-    {'id': 'sklearn.preprocessing.MultiLabelBinarizer', 'value': '1'},
-    {'id': 'sklearn.preprocessing.Normalizer', 'value': '1'},
-    {'id': 'sklearn.preprocessing.OneHotEncoder', 'value': '1'},
-    {'id': 'sklearn.preprocessing.PolynomialFeatures', 'value': '1'},
-    {'id': 'sklearn.preprocessing.QuantileTransformer', 'value': '1'},
-    {'id': 'sklearn.preprocessing.RobustScaler', 'value': '1'},
-    {'id': 'sklearn.preprocessing.StandardScaler', 'value': '1'},
-    {'id': 'sklearn.random_projection', 'value': ''},
-    {'id': 'sklearn.random_projection.BaseEstimator', 'value': '1'},
-    {'id': 'sklearn.random_projection.BaseRandomProjection', 'value': '1'},
-    {'id': 'sklearn.random_projection.GaussianRandomProjection', 'value': '1'},
-    {'id': 'sklearn.random_projection.SparseRandomProjection', 'value': '1'},
-    {'id': 'sklearn.semi_supervised', 'value': ''},
-    {'id': 'sklearn.semi_supervised.LabelPropagation', 'value': '1'},
-    {'id': 'sklearn.semi_supervised.LabelSpreading', 'value': '1'},
-    {'id': 'sklearn.svm', 'value': ''},
-    {'id': 'sklearn.svm.LinearSVC', 'value': '1'},
-    {'id': 'sklearn.svm.LinearSVR', 'value': '1'},
-    {'id': 'sklearn.svm.NuSVC', 'value': '1'},
-    {'id': 'sklearn.svm.NuSVR', 'value': '1'},
-    {'id': 'sklearn.svm.OneClassSVM', 'value': '1'},
-    {'id': 'sklearn.svm.SVC', 'value': '1'},
-    {'id': 'sklearn.svm.SVR', 'value': '1'},
-    {'id': 'sklearn.tree', 'value': ''},
-    {'id': 'sklearn.tree.DecisionTreeClassifier', 'value': '1'},
-    {'id': 'sklearn.tree.DecisionTreeRegressor', 'value': '1'},
-    {'id': 'sklearn.tree.ExtraTreeClassifier', 'value': '1'},
-    {'id': 'sklearn.tree.ExtraTreeRegressor', 'value': '1'},
-    {'id': 'sklearn.discriminant_analysis', 'value': ''},
-    {'id': 'sklearn.discriminant_analysis.BaseEstimator', 'value': '1'},
-    {'id': 'sklearn.discriminant_analysis.LinearDiscriminantAnalysis', 'value': '1'},
-    {'id': 'sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis', 'value': '1'},
-    {'id': 'sklearn.discriminant_analysis.StandardScaler', 'value': '1'},
-    {'id': 'sklearn.clone', 'value': ''}
-] 
-
-  var root = tree(stratify(data));
-
-  var link = g.selectAll(".link")
-    .data(root.links())
-    .enter().append("path")
-      .attr("class", "link")
-      .attr("d", d3.linkRadial()
-          .angle(function(d) { return d.x; })
-          .radius(function(d) { return d.y; }));
-
-  var node = g.selectAll(".node")
-    .data(root.descendants())
-    .enter().append("g")
-      .attr("class", function(d) { return "node" + (d.children ? " node--internal" : " node--leaf"); })
-      .attr("transform", function(d) { return "translate(" + radialPoint(d.x, d.y) + ")"; });
-
-  node.append("circle")
-      .attr("r", 2.5);
-
-  node.append("text")
-      .attr("dy", "0.31em")
-      .attr("x", function(d) { return d.x < Math.PI === !d.children ? 6 : -6; })
-      .attr("text-anchor", function(d) { return d.x < Math.PI === !d.children ? "start" : "end"; })
-      .attr("transform", function(d) { return "rotate(" + (d.x < Math.PI ? d.x - Math.PI / 2 : d.x + Math.PI / 2) * 180 / Math.PI + ")"; })
-      .text(function(d) { return d.id.substring(d.id.lastIndexOf(".") + 1); });
-
-function radialPoint(x, y) {
-  return [(y = +y) * Math.cos(x -= Math.PI / 2), y * Math.sin(x)];
-}
-
-</script>
+    <script>
+      var svg = d3.select("#sklearn-classes"), width = 300, height = width, g = svg.append("g").attr("transform", "translate(" + (width / 2 + 280) + "," + (height / 2 + 230) + ")");
+      console.log(width, height);
+      var stratify = d3.stratify().parentId(function(d) {
+        return d.id.substring(0, d.id.lastIndexOf("."));
+      });
+      var tree = d3.tree().size([2 * Math.PI,width]).separation(function(a, b) {
+        return (a.parent == b.parent ? 1 : 2) / a.depth;
+      });
+      var data = [{
+        'id': 'sklearn',
+        'value': ''
+      },{
+        'id': 'sklearn.calibration',
+        'value': ''
+      },{
+        'id': 'sklearn.calibration.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.calibration.CalibratedClassifierCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.calibration.IsotonicRegression',
+        'value': '1'
+      },{
+        'id': 'sklearn.calibration.LabelBinarizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.calibration.LabelEncoder',
+        'value': '1'
+      },{
+        'id': 'sklearn.calibration.LinearSVC',
+        'value': '1'
+      },{
+        'id': 'sklearn.calibration._SigmoidCalibration',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster',
+        'value': ''
+      },{
+        'id': 'sklearn.cluster.AffinityPropagation',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.AgglomerativeClustering',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.Birch',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.DBSCAN',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.FeatureAgglomeration',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.KMeans',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.MeanShift',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.MiniBatchKMeans',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.SpectralBiclustering',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.SpectralClustering',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.SpectralCoclustering',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance',
+        'value': ''
+      },{
+        'id': 'sklearn.covariance.EllipticEnvelope',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance.EmpiricalCovariance',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance.GraphLasso',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance.GraphLassoCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance.LedoitWolf',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance.MinCovDet',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance.OAS',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance.ShrunkCovariance',
+        'value': '1'
+      },{
+        'id': 'sklearn.cross_decomposition',
+        'value': ''
+      },{
+        'id': 'sklearn.cross_decomposition.CCA',
+        'value': '1'
+      },{
+        'id': 'sklearn.cross_decomposition.PLSCanonical',
+        'value': '1'
+      },{
+        'id': 'sklearn.cross_decomposition.PLSRegression',
+        'value': '1'
+      },{
+        'id': 'sklearn.cross_decomposition.PLSSVD',
+        'value': '1'
+      },{
+        'id': 'sklearn.cross_validation',
+        'value': ''
+      },{
+        'id': 'sklearn.datasets',
+        'value': ''
+      },{
+        'id': 'sklearn.decomposition',
+        'value': ''
+      },{
+        'id': 'sklearn.decomposition.DictionaryLearning',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.FactorAnalysis',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.FastICA',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.IncrementalPCA',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.KernelPCA',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.LatentDirichletAllocation',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.MiniBatchDictionaryLearning',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.MiniBatchSparsePCA',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.NMF',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.PCA',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.RandomizedPCA',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.SparseCoder',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.SparsePCA',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.TruncatedSVD',
+        'value': '1'
+      },{
+        'id': 'sklearn.dummy',
+        'value': ''
+      },{
+        'id': 'sklearn.dummy.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.dummy.DummyClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.dummy.DummyRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble',
+        'value': ''
+      },{
+        'id': 'sklearn.ensemble.AdaBoostClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.AdaBoostRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.BaggingClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.BaggingRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.BaseEnsemble',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.ExtraTreesClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.ExtraTreesRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.GradientBoostingClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.GradientBoostingRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.IsolationForest',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.RandomForestClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.RandomForestRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.RandomTreesEmbedding',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.VotingClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.exceptions',
+        'value': ''
+      },{
+        'id': 'sklearn.externals',
+        'value': ''
+      },{
+        'id': 'sklearn.feature_extraction',
+        'value': ''
+      },{
+        'id': 'sklearn.feature_extraction.DictVectorizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_extraction.FeatureHasher',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection',
+        'value': ''
+      },{
+        'id': 'sklearn.feature_selection.GenericUnivariateSelect',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.RFE',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.RFECV',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.SelectFdr',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.SelectFpr',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.SelectFromModel',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.SelectFwe',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.SelectKBest',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.SelectPercentile',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.VarianceThreshold',
+        'value': '1'
+      },{
+        'id': 'sklearn.gaussian_process',
+        'value': ''
+      },{
+        'id': 'sklearn.gaussian_process.GaussianProcess',
+        'value': '1'
+      },{
+        'id': 'sklearn.gaussian_process.GaussianProcessClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.gaussian_process.GaussianProcessRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.grid_search',
+        'value': ''
+      },{
+        'id': 'sklearn.grid_search.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.grid_search.BaseSearchCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.grid_search.GridSearchCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.grid_search.RandomizedSearchCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.isotonic',
+        'value': ''
+      },{
+        'id': 'sklearn.isotonic.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.isotonic.IsotonicRegression',
+        'value': '1'
+      },{
+        'id': 'sklearn.kernel_approximation',
+        'value': ''
+      },{
+        'id': 'sklearn.kernel_approximation.AdditiveChi2Sampler',
+        'value': '1'
+      },{
+        'id': 'sklearn.kernel_approximation.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.kernel_approximation.Nystroem',
+        'value': '1'
+      },{
+        'id': 'sklearn.kernel_approximation.RBFSampler',
+        'value': '1'
+      },{
+        'id': 'sklearn.kernel_approximation.SkewedChi2Sampler',
+        'value': '1'
+      },{
+        'id': 'sklearn.kernel_ridge',
+        'value': ''
+      },{
+        'id': 'sklearn.kernel_ridge.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.kernel_ridge.KernelRidge',
+        'value': '1'
+      },{
+        'id': 'sklearn.learning_curve',
+        'value': ''
+      },{
+        'id': 'sklearn.linear_model',
+        'value': ''
+      },{
+        'id': 'sklearn.linear_model.ARDRegression',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.BayesianRidge',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.ElasticNet',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.ElasticNetCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.HuberRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.Lars',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LarsCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.Lasso',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LassoCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LassoLars',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LassoLarsCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LassoLarsIC',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LinearRegression',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LogisticRegression',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LogisticRegressionCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.MultiTaskElasticNet',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.MultiTaskElasticNetCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.MultiTaskLasso',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.MultiTaskLassoCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.OrthogonalMatchingPursuit',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.OrthogonalMatchingPursuitCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.PassiveAggressiveClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.PassiveAggressiveRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.Perceptron',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.RANSACRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.RandomizedLasso',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.RandomizedLogisticRegression',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.Ridge',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.RidgeCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.RidgeClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.RidgeClassifierCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.SGDClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.SGDRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.TheilSenRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.manifold',
+        'value': ''
+      },{
+        'id': 'sklearn.manifold.Isomap',
+        'value': '1'
+      },{
+        'id': 'sklearn.manifold.LocallyLinearEmbedding',
+        'value': '1'
+      },{
+        'id': 'sklearn.manifold.MDS',
+        'value': '1'
+      },{
+        'id': 'sklearn.manifold.SpectralEmbedding',
+        'value': '1'
+      },{
+        'id': 'sklearn.manifold.TSNE',
+        'value': '1'
+      },{
+        'id': 'sklearn.metrics',
+        'value': ''
+      },{
+        'id': 'sklearn.mixture',
+        'value': ''
+      },{
+        'id': 'sklearn.mixture.BayesianGaussianMixture',
+        'value': '1'
+      },{
+        'id': 'sklearn.mixture.DPGMM',
+        'value': '1'
+      },{
+        'id': 'sklearn.mixture.GMM',
+        'value': '1'
+      },{
+        'id': 'sklearn.mixture.GaussianMixture',
+        'value': '1'
+      },{
+        'id': 'sklearn.mixture.VBGMM',
+        'value': '1'
+      },{
+        'id': 'sklearn.model_selection',
+        'value': ''
+      },{
+        'id': 'sklearn.model_selection.GridSearchCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.model_selection.RandomizedSearchCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.multiclass',
+        'value': ''
+      },{
+        'id': 'sklearn.multiclass.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.multiclass.LabelBinarizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.multiclass.OneVsOneClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.multiclass.OneVsRestClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.multiclass.OutputCodeClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.multiclass._ConstantPredictor',
+        'value': '1'
+      },{
+        'id': 'sklearn.multioutput',
+        'value': ''
+      },{
+        'id': 'sklearn.multioutput.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.multioutput.ClassifierChain',
+        'value': '1'
+      },{
+        'id': 'sklearn.multioutput.MultiOutputClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.multioutput.MultiOutputEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.multioutput.MultiOutputRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.naive_bayes',
+        'value': ''
+      },{
+        'id': 'sklearn.naive_bayes.BaseDiscreteNB',
+        'value': '1'
+      },{
+        'id': 'sklearn.naive_bayes.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.naive_bayes.BaseNB',
+        'value': '1'
+      },{
+        'id': 'sklearn.naive_bayes.BernoulliNB',
+        'value': '1'
+      },{
+        'id': 'sklearn.naive_bayes.GaussianNB',
+        'value': '1'
+      },{
+        'id': 'sklearn.naive_bayes.LabelBinarizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.naive_bayes.MultinomialNB',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors',
+        'value': ''
+      },{
+        'id': 'sklearn.neighbors.KNeighborsClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.KNeighborsRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.KernelDensity',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.LSHForest',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.LocalOutlierFactor',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.NearestCentroid',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.NearestNeighbors',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.RadiusNeighborsClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.RadiusNeighborsRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.neural_network',
+        'value': ''
+      },{
+        'id': 'sklearn.neural_network.BernoulliRBM',
+        'value': '1'
+      },{
+        'id': 'sklearn.neural_network.MLPClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.neural_network.MLPRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.pipeline',
+        'value': ''
+      },{
+        'id': 'sklearn.pipeline.FeatureUnion',
+        'value': '1'
+      },{
+        'id': 'sklearn.pipeline.Pipeline',
+        'value': '1'
+      },{
+        'id': 'sklearn.pipeline._BaseComposition',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing',
+        'value': ''
+      },{
+        'id': 'sklearn.preprocessing.Binarizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.FunctionTransformer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.Imputer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.KernelCenterer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.LabelBinarizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.LabelEncoder',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.MaxAbsScaler',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.MinMaxScaler',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.MultiLabelBinarizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.Normalizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.OneHotEncoder',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.PolynomialFeatures',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.QuantileTransformer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.RobustScaler',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.StandardScaler',
+        'value': '1'
+      },{
+        'id': 'sklearn.random_projection',
+        'value': ''
+      },{
+        'id': 'sklearn.random_projection.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.random_projection.BaseRandomProjection',
+        'value': '1'
+      },{
+        'id': 'sklearn.random_projection.GaussianRandomProjection',
+        'value': '1'
+      },{
+        'id': 'sklearn.random_projection.SparseRandomProjection',
+        'value': '1'
+      },{
+        'id': 'sklearn.semi_supervised',
+        'value': ''
+      },{
+        'id': 'sklearn.semi_supervised.LabelPropagation',
+        'value': '1'
+      },{
+        'id': 'sklearn.semi_supervised.LabelSpreading',
+        'value': '1'
+      },{
+        'id': 'sklearn.svm',
+        'value': ''
+      },{
+        'id': 'sklearn.svm.LinearSVC',
+        'value': '1'
+      },{
+        'id': 'sklearn.svm.LinearSVR',
+        'value': '1'
+      },{
+        'id': 'sklearn.svm.NuSVC',
+        'value': '1'
+      },{
+        'id': 'sklearn.svm.NuSVR',
+        'value': '1'
+      },{
+        'id': 'sklearn.svm.OneClassSVM',
+        'value': '1'
+      },{
+        'id': 'sklearn.svm.SVC',
+        'value': '1'
+      },{
+        'id': 'sklearn.svm.SVR',
+        'value': '1'
+      },{
+        'id': 'sklearn.tree',
+        'value': ''
+      },{
+        'id': 'sklearn.tree.DecisionTreeClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.tree.DecisionTreeRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.tree.ExtraTreeClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.tree.ExtraTreeRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.discriminant_analysis',
+        'value': ''
+      },{
+        'id': 'sklearn.discriminant_analysis.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.discriminant_analysis.LinearDiscriminantAnalysis',
+        'value': '1'
+      },{
+        'id': 'sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis',
+        'value': '1'
+      },{
+        'id': 'sklearn.discriminant_analysis.StandardScaler',
+        'value': '1'
+      },{
+        'id': 'sklearn.clone',
+        'value': ''
+      }];
+      var root = tree(stratify(data));
+      var link = g.selectAll(".link").data(root.links()).enter().append("path").attr("class", "link").attr("d", d3.linkRadial().angle(function(d) {
+        return d.x;
+      }).radius(function(d) {
+        return d.y;
+      }));
+      var node = g.selectAll(".node").data(root.descendants()).enter().append("g").attr("class", function(d) {
+        return "node" + (d.children ? " node--internal" : " node--leaf");
+      }).attr("transform", function(d) {
+        return "translate(" + radialPoint(d.x, d.y) + ")";
+      });
+      node.append("circle").attr("r", 2.5);
+      node.append("text").attr("dy", "0.31em").attr("x", function(d) {
+        return d.x < Math.PI === !d.children ? 6 : -6;
+      }).attr("text-anchor", function(d) {
+        return d.x < Math.PI === !d.children ? "start" : "end";
+      }).attr("transform", function(d) {
+        return "rotate(" + (d.x < Math.PI ? d.x - Math.PI / 2 : d.x + Math.PI / 2) * 180 / Math.PI + ")";
+      }).text(function(d) {
+        return d.id.substring(d.id.lastIndexOf(".") + 1);
+      });
+      function radialPoint(x, y) {
+        return [(y = +y) * Math.cos(x -= Math.PI / 2),y * Math.sin(x)];
+      }
+    </script>
   </body>
 </html>
