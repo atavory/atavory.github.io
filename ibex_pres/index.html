@@ -130,8 +130,8 @@
 
             features = make_union(SelectKBest(k=1), PCA(n_components=2))
             prd = make_pipeline(
-            features,
-            RandomForestRegressor())
+                features,
+                RandomForestRegressor())
 
             prd.fit(X, y)
             </pre>
@@ -142,8 +142,8 @@
 
             features = make_union(SelectKBest(k=1), PCA(n_components=2))
             prd = make_pipeline(
-            features,
-            RandomForestRegressor())
+                features,
+                RandomForestRegressor())
 
             prd.fit(X, y)
             </pre>
@@ -154,8 +154,8 @@
 
             features = make_union(SelectKBest(k=1), PCA(n_components=2))
             prd = make_pipeline(
-            features,
-            RandomForestRegressor())
+                features,
+                RandomForestRegressor())
 
             prd.fit(X, y)
            </pre>
@@ -2806,6 +2806,24 @@
         </div>
       </div>
       <div class="step slide" data-scale="0.01" data-x="5600" data-y="30" data-z="10">
+          <h2>Straightforward Approach: Compose</h2>
+          <div class="smaller">
+            <pre class="brush: python; gutter: true; toolbar: false highlight: []">            
+            class Wrapper(BaseEstimator, RegressorMixin, FrameMixing):
+                def __init__(self, *args, **kwargs):
+                    self.wrapped = LinearRegression(*args, **kwargs)
+
+            ...
+            </pre>
+          </div>
+            <div class="substep smaller">
+                <img src="generated/wrapper_wrapped_delegation.png"/>
+            </div>
+      </div>
+      <div class="step slide" data-scale="0.01" data-x="5600" data-y="40" data-z="10">
+          <h3 class="baddy">
+              1. <code>sklearn</code> Too Large/Dynamic For Manual Wrapping
+          </h3>
         <div height="600px" width="2200px">
           <svg height="800" id="sklearn-classes" width="1000">
           </svg>
