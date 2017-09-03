@@ -703,7 +703,7 @@
             setSubSteps(next);
         }
         if (next.subSteps.length &&
-            (next.subSteps.active !== (next.subSteps.length - 1))) {
+                (next.subSteps.active !== (next.subSteps.length - 1))) {
             slice.call(next.subSteps, 0, -1).forEach(setPrevious);
             setActive(next.subSteps[next.subSteps.length - 1]);
             next.subSteps.active = next.subSteps.length - 1;
@@ -712,26 +712,41 @@
     };
  
 	 var setSubSteps = function (el) {
+        // console.log("s", el);
         var steps = el.querySelectorAll(".substep"),
-        order = [], unordered = [];
-        forEach.call(steps, function (el) {
-        	if (el.dataset) {
-            var index = Number(el.dataset.order);
-            if (!isNaN(index)) {
-                if (!order[index]) {
-                    order[index] = el;
-                } else if (Array.isArray(order[index])) {
-                    order[index].push(el);
-                } else {
-                    order[index] = [order[index], el];
+        order = [], 
+        unordered = [];
+        if (steps.length > 0) {
+            console.log("-------------");
+        }
+        forEach.call(
+            steps, 
+            function (el) {
+                // console.log("ss", el, el.dataset);
+                if (el.dataset) {
+                    var index = Number(el.dataset.order);
+                    console.log("sso", el, el.dataset);
+                    if (!isNaN(index)) {
+                        if (!order[index]) {
+                            order[index] = el;
+                        } 
+                        else if (Array.isArray(order[index])) {
+                            order[index].push(el);
+                        } 
+                        else {
+                            order[index] = [order[index], el];
+                        }
+                    } 
+                    else {
+                        console.log("ssu", el, el.dataset);
+                        unordered.push(el);
+                    } 
+                } 
+                else {
+                    unordered.push(el);
                 }
-            } else {
-                unordered.push(el);
-            } } else {
-            	unordered.push(el);
-            }
-        });
-        el.subSteps = order.filter(Boolean).concat(unordered);
+            });
+        el.subSteps = unordered;
     };
  
  //END PATCH       

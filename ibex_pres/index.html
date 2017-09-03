@@ -470,7 +470,7 @@
           </table>
         </div>
       </div>
-      <div class="step slide" data-scale="0.01" data-x="1506" data-y="39.3" data-z="10">
+      <div class="step slide" data-scale="0.01" data-x="1505.6" data-y="39.3" data-z="10">
         <div style="align: center">
           <h3>
             Pivot
@@ -2861,7 +2861,6 @@
     </script>
     <script>
       var svg = d3.select("#sklearn-classes"), width = 300, height = width, g = svg.append("g").attr("transform", "translate(" + (width / 2 + 280) + "," + (height / 2 + 230) + ")");
-      console.log(width, height);
       var stratify = d3.stratify().parentId(function(d) {
         return d.id.substring(0, d.id.lastIndexOf("."));
       });
