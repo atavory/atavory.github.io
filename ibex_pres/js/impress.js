@@ -579,22 +579,6 @@
             return el;
         };
         
-        // `prev` API function goes to previous step (in document order)
-        var _prev = function () {
-            var prev = steps.indexOf( activeStep ) - 1;
-            prev = prev >= 0 ? steps[ prev ] : steps[ steps.length-1 ];
-            
-            return goto(prev);
-        };
-        
-        // `next` API function goes to next step (in document order)
-        var _next = function () {
-            var next = steps.indexOf( activeStep ) + 1;
-            next = next < steps.length ? steps[ next ] : steps[ 0 ];
-            
-            return goto(next);
-        };
-        
         
  //PATCH for SUBSTEPS
  	var forEach = Array.prototype.forEach,
@@ -668,7 +652,7 @@
             return;
         }
         next = steps.indexOf( active ) + 1;
-        next = next < steps.length ? steps[ next ] : steps[ 0 ];
+        next = next < steps.length ? steps[ next ] : steps[ steps.length - 1 ];
         if (!next.subSteps) {
             setSubSteps(next);
         }
@@ -698,7 +682,7 @@
             return;
         }
         next = steps.indexOf( active ) - 1;
-        next = next >= 0 ? steps[ next ] : steps[ steps.length-1 ];
+        next = next >= 0 ? steps[ next ] : steps[ 0 ];
         if (!next.subSteps) {
             setSubSteps(next);
         }
