@@ -466,13 +466,12 @@ body {
   opacity: 1;
 }
 
-
 svg .substep.previous {
   opacity: 1; 
 }
 
 .substep.previous {
-  opacity: 0.75;
+  opacity: 1;
 }
 
 div.abs-box {

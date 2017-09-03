@@ -709,19 +709,7 @@
                 // console.log("ss", el, el.dataset);
                 if (el.dataset) {
                     var index = Number(el.dataset.order);
-                    console.log("sso", el, el.dataset);
-                    if (!isNaN(index)) {
-                        if (!order[index]) {
-                            order[index] = el;
-                        } 
-                        else if (Array.isArray(order[index])) {
-                            order[index].push(el);
-                        } 
-                        else {
-                            order[index] = [order[index], el];
-                        }
-                    } 
-                    else {
+                    if (isNaN(index)) {
                         console.log("ssu", el, el.dataset);
                         unordered.push(el);
                     } 
