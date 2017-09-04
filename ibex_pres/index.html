@@ -106,10 +106,10 @@
             </ul>
           </li>
           <li class="other">
-            User Perspective
+            Interface
           </li>
           <li class="other">
-            Internals
+            Implementation
           </li>
           <li class="other">
             Conclusions
@@ -226,6 +226,58 @@
           </h4>
           <img src="generated/deployment_col_aggregating_further_transformations.png"/>
         </div>
+      </div>
+    <div class="step slide" data-scale="0.01" data-x="1414" data-y="60" data-z="10">
+        <h3 class="baddy">
+          Combination Verbosity
+        </h3>
+		<div class="smaller">
+			<div class="smaller">
+				<pre class="brush: bash; gutter: true; toolbar: false">          
+				pipeline = Pipeline([
+					# Extract the subject & body
+					('subjectbody', SubjectBodyExtractor()),
+
+					# Use FeatureUnion to combine the features from subject and body
+					('union', FeatureUnion(
+						transformer_list=[
+
+							# Pipeline for pulling features from the post's subject line
+							('subject', Pipeline([
+								('selector', ItemSelector(key='subject')),
+								('tfidf', TfidfVectorizer(min_df=50)),
+							])),
+
+							# Pipeline for standard bag-of-words model for body
+							('body_bow', Pipeline([
+								('selector', ItemSelector(key='body')),
+								('tfidf', TfidfVectorizer()),
+								('best', TruncatedSVD(n_components=50)),
+							])),
+
+							# Pipeline for pulling ad hoc features from post's body
+							('body_stats', Pipeline([
+								('selector', ItemSelector(key='body')),
+								('stats', TextStats()),  # returns a list of dicts
+								('vect', DictVectorizer()),  # list of dicts -> feature matrix
+							])),
+
+						],
+
+						# weight components in FeatureUnion
+						transformer_weights={
+							'subject': 0.8,
+							'body_bow': 0.5,
+							'body_stats': 1.0,
+						},
+					)),
+
+					# Use a SVC classifier on the combined features
+					('svc', SVC(kernel='linear')),
+				])
+				</pre>
+			</div>
+		</div>
       </div>
       <div class="step slide" data-scale="0.01" data-x="1500" data-y="30" data-z="10">
         <h2>
@@ -1008,10 +1060,10 @@
             </ul>
           </li>
           <li class="other">
-            User Perspective
+            Interface
           </li>
           <li class="other">
-            Internals
+            Implementation
           </li>
           <li class="other">
             Conclusions
@@ -1239,10 +1291,10 @@
             Motivation
           </li>
           <li class="current">
-              <div style="width: 350px; border-left: 1px solid grey; border-right: 1px solid grey">User Perspective</div>
+              <div style="width: 350px; border-left: 1px solid grey; border-right: 1px solid grey">Interface</div>
           </li>
           <li class="other">
-              <div style="width: 350px; border-left: 1px solid grey; border-right: 1px solid grey">Internals</div>
+              <div style="width: 350px; border-left: 1px solid grey; border-right: 1px solid grey">Implementation</div>
           </li>
           <li class="other">
             Conclusions
@@ -2792,10 +2844,10 @@
             Motivation
           </li>
           <li class="other">
-              <div style="width: 350px; border-left: 1px solid grey; border-right: 1px solid grey">User Perspective</div>
+              <div style="width: 350px; border-left: 1px solid grey; border-right: 1px solid grey">Interface</div>
           </li>
           <li class="current">
-              <div style="width: 350px; border-left: 1px solid grey; border-right: 1px solid grey">Internals</div>
+              <div style="width: 350px; border-left: 1px solid grey; border-right: 1px solid grey">Implementation</div>
           </li>
           <li class="other">
             Conclusions
@@ -2829,21 +2881,135 @@
           </svg>
         </div>
       </div>
-      <div class="step slide" data-scale="0.01" data-x="15300" data-y="37" data-z="10">
-        <img src="generated/ibex_class_diagram_np.png"/>
-      </div>
-      <div class="step slide" data-scale="0.01" data-x="15300" data-y="44" data-z="10">
-        <img src="generated/ibex_class_diagram_pandas.png"/>
-      </div>
-      <div class="step slide" data-scale="0.01" data-x="15313" data-y="30" data-z="10">
-        <h2>
-          2) Alternative
-          <u>
-            Optional
-          </u>
-          Combination Notation
-        </h2>
-      </div>
+        <div class="step slide" data-x="17007" data-y="0", data-z="0", data-scale="0.01">
+            <h3>1. Dynamic Loading</h3>
+            <img src="generated/import_seq.png">
+        </div>
+        <div class="step slide" data-x="17000" data-y="-10", data-z="0", data-scale="0.005">
+            <h3><code>sys.meta_path</code></h3>
+            Register loader class for <code>import</code>s.
+        </div>
+        <div class="step slide" data-x="17007" data-y="0", data-z="0", data-scale="0.01">
+            <h3>1. Dynamic Loading</h3>
+            <img src="generated/import_seq.png">
+        </div>
+        <div class="step slide" data-x="17000" data-y="0", data-z="0", data-scale="0.005">
+            <h3><code>dir</code></h3>
+            <div class="smaller">
+                <pre class='brush: python; gutter: false; toolbar: false'>
+                >>> dir(linear_model)
+                ['__all__',
+                    'ARDRegression', 
+                    'BayesianRidge', 
+                    'ElasticNet', 
+                    'ElasticNetCV',
+                    'Hinge',
+                    ...]
+                </pre>
+            </div>
+        </div>
+        <div class="step slide" data-x="17007" data-y="0", data-z="0", data-scale="0.01">
+            <h3>1. Dynamic Loading</h3>
+            <img src="generated/import_seq.png">
+        </div>
+        <div class="step slide" data-x="17000" data-y="10", data-z="0", data-scale="0.005">
+            <h3><code>inspect</code></h3>
+            <div class="smaller">
+                <pre class='brush: python; gutter: false; toolbar: false'>
+                import inspect
+
+                if inspect.isclass(est) and issubclass(est, base.BaseEstimator):
+                    ...
+                </pre>
+            </div>
+        </div>
+        <div class="step slide" data-x="17007" data-y="0", data-z="0", data-scale="0.01">
+            <h3>1. Dynamic Loading</h3>
+            <img src="generated/import_seq.png">
+        </div>
+        <div class="step slide" data-x="17007" data-y="10", data-z="0", data-scale="0.01">
+            <h3 class="baddy">2. Scikit-Learn Estimator Idiosyncrisities</h3>
+            <div class="smaller substep" style="background: url('images/baddy_bg.png'); background-repeat: no-repeat; background-position: 50% 80%;
+">
+                Stringent <code>__init__</code> Requirements:
+                <pre class='brush: python; gutter: false; toolbar: false'>
+                class FooTransformer(BaseEstimator, TransformerMixin):
+                    def __init__(self, *args, **kwargs):
+                        ...
+                </pre>
+            </div>
+            <div class="smaller substep" style="background: url('images/baddy_bg.png'); background-repeat: no-repeat; background-position: 50% 80%;">
+                State-Dependent Properties
+                <pre class='brush: python; gutter: true; toolbar: false'>
+                linear_model.LinearRegression().fit(X, y).coef_
+                linear_model.LinearRegression().coef_
+                </pre>
+            </div>
+        </div>
+        <div class="step slide" data-x="17021" data-y="10", data-z="0", data-scale="0.01">
+            <h3>2. Local Classes</h3>
+            <div class="smaller">
+                <pre class='brush: python; gutter: false; toolbar: false'>
+                def frame(est):
+                    class _Adaptor(est, FrameMixin):
+                        ...
+                </pre>
+            </div>
+        </div>
+        <div class="step slide" data-x="17007" data-y="20", data-z="0", data-scale="0.01">
+            <h3 class="baddy">3. Local Classes Idiosync</h3>
+            <div class="smaller substep">
+                Serialization
+                <pre class='brush: python; gutter: false; toolbar: false'>
+                model_selection.cross_val_score(prd, ..., n_jobs=-1)
+                </pre>
+            </div>
+            <div class="smaller substep">
+                Attributes (<code>__name__</code>, <code>__doc__</code>, etc.)
+            </div>
+        </div>
+        <div class="step slide" data-x="17021" data-y="20", data-z="0", data-scale="0.01">
+            <h3>3. Various Hacks</h3>
+        </div>
+        <div id="outline-conclusions" class="step slide" data-x="27007" data-y="0" data-scale="1">
+            <h3>Outline</h3>
+
+            <ul class="outline">
+                <li class="other">Motivation </li>
+                <li class="other">Interface</li>
+
+                <li class="other">Implementation</li>
+
+                <li class="current">Conclusions</li>
+            </ul>
+        </div>
+        <div class="step slide" data-x="27007" data-y="0", data-z="0", data-scale="0.01">
+            <h3>Utilize Pandas Metadata</h3>
+            <p>Metadata &rarr; complex pipelines</p>
+            <div class="smaller">
+                <ul>
+                    <li>Interpretability</li>
+                    <li>Safety</li>
+                    <li>Data-Munging</li>
+                    <li>Index-Aware Operations (Stacking, Nested Stratified &amp; Labeled CV)</li>
+                    <li>...</li>
+                    <li>Combinations Of The Above</li>
+                </ul>
+            </div>
+        </div>
+        <div class="step slide" data-x="27007" data-y="7", data-z="0", data-scale="0.01">
+            <h3>But Leverage Numpy-Interfacing Libraries</h3>
+            <img src="generated/ibex_class_diagram_pandas.png">
+        </div>
+        <div class="step slide" data-x="27007" data-y="14", data-z="0", data-scale="0.01">
+            <h3>(Semi-)Automatic Wrapping</h3>
+            <ul>
+                <li class="substep"><code>sys.meta_path</code></li>
+                <li class="substep"><code>dir</code></li>
+                <li class="substep"><code>inspect</code></li>
+                <li class="substep">Local Classes</li>
+            </ul>
+        </div>
     </div>
     <script src="js/shCore.js" type="text/javascript">
     </script>
@@ -2864,7 +3030,7 @@
       var stratify = d3.stratify().parentId(function(d) {
         return d.id.substring(0, d.id.lastIndexOf("."));
       });
-      var tree = d3.tree().size([2 * Math.PI,width]).separation(function(a, b) {
+      var tree = d3.tree().size([2 * Math.PI, width]).separation(function(a, b) {
         return (a.parent == b.parent ? 1 : 2) / a.depth;
       });
       var data = [{

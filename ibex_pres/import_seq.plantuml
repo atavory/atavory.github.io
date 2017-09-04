@@ -1,0 +1,18 @@
+@startuml
+
+skinparam monochrome true
+skinparam shadowing false
+
+actor user
+
+user -> runtime: 1. import ibex.sklearn.linear_model
+runtime -> ibex: 2. import ibex
+runtime -> ibex.sklearn: 3. import ibex.sklearn
+ibex.sklearn -> ibex.sklearn: 4. register sys.metapath
+runtime -> loader: 5. import ibex.sklearn.linear_model
+loader -> sklearn.linear_model: 6. dir
+sklearn.linear_model -> loader: 7. members
+loader -> loader: 8. inspect
+loader -> loader: 9. wrap
+
+@enduml

@@ -603,8 +603,7 @@
             data.forEach(setPrevious);
             return;
         }
-        //removeClass(data,'active');
-        //data.className = data.className + ' previous';
+        console.log('sp', data);
         data.classList.remove('active');
         data.classList.add('previous');
     };
@@ -614,8 +613,7 @@
             data.forEach(setActive);
             return;
         }
-        //removeClass(data,'previous');
-        //data.className = data.className + ' active';
+        console.log('sa', data);
         data.classList.remove('previous');
         data.classList.add('active');
         onSubStepActive(data);
@@ -626,8 +624,7 @@
             data.forEach(clearSub);
             return;
         }
-        //removeClass(data,'previous');
-        //removeClass(data,'active');
+        console.log('cs', data);
         data.classList.remove('active');
         data.classList.remove('previous');
     };

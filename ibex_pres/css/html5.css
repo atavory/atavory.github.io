@@ -115,7 +115,7 @@ body {
   min-height: 740px;
 
   color: #000;
-  background: white;
+  background: rgba(255, 255, 255, 1);
 
   -webkit-font-smoothing: antialiased;
 }
@@ -147,16 +147,6 @@ li ul { font-size: 0.8em; margin: 0; margin-left: 1em; list-style-type: circle;}
 sup {
   font-size:smaller;
   vertical-align:super;
-}
-
-
-ul.check li {
-    background:url("../images/ok-icon.png") no-repeat 0 5%;
-    padding-left: 60px;
-}
-
-ul.check {
-    list-style-type: none;
 }
 
 ul.outline li.current {
@@ -502,31 +492,6 @@ rect:hover {stroke:#fff;}
 p.paper {font-size:0.5em; text-align:center}
 p.paper:after {content:"]";}
 p.paper:before {content:"[";}
-
-
-@media print {
-  body { text-shadow: none }
-  body pre code { color: #000; border: #000 dotted 1px; }
-  body pre code b { color: #000; }
-  .wrap { height: auto; }
-  div.step { page-break-before: always; }
-  div.step.nobreak { page-break-before: avoid !important; }
-  li {margin:0}
-  ol { list-style-position: inside; }
-  h1 { font-size: 1.75em; margin-top: 0}
-  h2 { font-size: 1.5em; margin-top: 0}
-  h3 { font-size: 1.5em; margin-bottom: 0}
-  .step div.counter {
-  position: absolute;
-  float:right;
-  top: -2em;
-  right: 0;
-  font-size: 16px;
-  opacity: 0.5;
-}
-	#refs { font-size: 1em }
-	a { color: rgb(0, 67, 148) }
-}
 
 /*.wrap { 
  padding-top:10px;	
