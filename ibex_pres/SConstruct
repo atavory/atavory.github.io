@@ -6,12 +6,15 @@ PlantUMLBuilder = Builder(
     action='java -jar -Djava.awt.headless=true plantuml.jar -tpng $SOURCE -o generated/')
 PrettyBuilder = Builder(
     action='html5-print $SOURCE > tmp_print.html && cp tmp_print.html $SOURCE && touch $TARGET')
+TidyBuilder = Builder(
+    action='tidy -config .tidy-config -m $SOURCE')
 env = Environment(BUILDERS={
-    'PlantUMLBuilder' : PlantUMLBuilder,
-    'PrettyBuilder' : PrettyBuilder
+    'PlantUMLBuilder': PlantUMLBuilder,
+    'TidyBuilder': TidyBuilder,
+    'PrettyBuilder': PrettyBuilder
 })
 
 for f_name in glob.glob('*.plantuml'):
     src, target = f_name, os.path.join('generated', os.path.splitext(f_name)[0] + '.png')
     env.PlantUMLBuilder(target, src)
-env.PrettyBuilder('index.html.tidy', 'index.html')
+env.TidyBuilder('index.html.tidy', 'index.html')

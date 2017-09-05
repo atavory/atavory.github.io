@@ -16,6 +16,8 @@
  *  source:  http://github.com/bartaz/impress.js/
  */
 
+var prevStep = null;
+
 /*jshint bitwise:true, curly:true, eqeqeq:true, forin:true, latedef:true, newcap:true,
          noarg:true, noempty:true, undef:true, strict:true, browser:true */
 
@@ -470,7 +472,7 @@
             
             body.classList.add("impress-on-" + el.id);
 
-            console.log(step.translate);
+            console.log(prevStep, step.translate);
             
             // compute target state of the canvas based on given step
             var target = {
@@ -486,8 +488,10 @@
                 },
                 scale: 1 / step.scale
             };
+
+            prevStep = target;
             
-            if(transformationCallback) { 
+            if (transformationCallback) { 
                 transformationCallback({
                   scale:step.scale,
                   rotate:step.rotate,
