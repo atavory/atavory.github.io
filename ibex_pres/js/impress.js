@@ -469,6 +469,8 @@
             el.classList.add("active");
             
             body.classList.add("impress-on-" + el.id);
+
+            console.log(step.translate);
             
             // compute target state of the canvas based on given step
             var target = {
@@ -603,7 +605,7 @@
             data.forEach(setPrevious);
             return;
         }
-        console.log('sp', data);
+        // console.log('sp', data);
         data.classList.remove('active');
         data.classList.add('previous');
     };
@@ -613,7 +615,7 @@
             data.forEach(setActive);
             return;
         }
-        console.log('sa', data);
+        // console.log('sa', data);
         data.classList.remove('previous');
         data.classList.add('active');
         onSubStepActive(data);
@@ -624,7 +626,7 @@
             data.forEach(clearSub);
             return;
         }
-        console.log('cs', data);
+        // console.log('cs', data);
         data.classList.remove('active');
         data.classList.remove('previous');
     };
@@ -698,7 +700,7 @@
         order = [], 
         unordered = [];
         if (steps.length > 0) {
-            console.log("-------------");
+            // console.log("-------------");
         }
         forEach.call(
             steps, 
@@ -707,7 +709,7 @@
                 if (el.dataset) {
                     var index = Number(el.dataset.order);
                     if (isNaN(index)) {
-                        console.log("ssu", el, el.dataset);
+                        // console.log("ssu", el, el.dataset);
                         unordered.push(el);
                     } 
                 } 
