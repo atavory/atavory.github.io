@@ -32,9 +32,9 @@
         stroke-width        : 1.5px;
       }
     </style>
-    <script src="js/jquery-3.2.1.min.js"></script>
-    <script src="js/d3.v4.js"></script>
-    <script src="js/cola.js"></script>
+    <script src="../js/jquery-3.2.1.min.js"></script>
+    <script src="../js/d3.v4.js"></script>
+    <script src="../js/cola.js"></script>
     <script type="text/javascript">
       $(document).ready(function() {
         document.addEventListener('impress:stepenter', function(event) {
@@ -99,7 +99,7 @@
         <div class="step slide" data-scale="0.01" data-x="1400" data-y="30" data-z="10">
         <h2>Example 1: Concatenate &amp; Manipulate Columns</h2><img src=
         "generated/col_aggregating_further_transformations.png"></div>
-        <div class="step slide abs-box base" data-scale="0.01" data-x="1400" data-y="32" data-z="10">
+        <div class="step slide abs-box base smaller" data-scale="0.01" data-x="1400" data-y="33" data-z="10">
             <div class="abs-box substep smaller">
                 <pre class="brush: python; gutter: true; toolbar: false highlight: [1]">            
             X = np.c_[X0, X1]
@@ -110,7 +110,7 @@
                 RandomForestRegressor())
 
             prd.fit(X, y)
-            </pre>
+                </pre>
             </div>
             <div class="abs-box substep smaller">
                 <pre class="brush: python; gutter: true; toolbar: false highlight: [3, 4, 5, 6]">            
@@ -122,7 +122,7 @@
                 RandomForestRegressor())
 
             prd.fit(X, y)
-            </pre>
+                </pre>
             </div>
             <div class="abs-box substep smaller">
                 <pre class="brush: python; gutter: true; toolbar: false highlight: [8]">            
@@ -134,7 +134,7 @@
                 RandomForestRegressor())
 
             prd.fit(X, y)
-           </pre>
+                </pre>
             </div>
         </div>
         <div class="step slide abs-box base" data-scale="0.01" data-x="1400" data-y="36" data-z="10">
@@ -185,54 +185,9 @@
             <h4>Possible Deployment Scenario</h4><img src=
             "generated/deployment_col_aggregating_further_transformations.png"></div>
         </div>
-        <div class="step slide" data-scale="0.01" data-x="1414" data-y="60" data-z="10">
-            <h3 class="baddy">Combination Verbosity</h3>
-            <div class="smaller smaller">
-                <pre class="brush: bash; gutter: true; toolbar: false">          
-                                pipeline = Pipeline([
-                                        # Extract the subject & body
-                                        (&#39;subjectbody&#39;, SubjectBodyExtractor()),
 
-                                        # Use FeatureUnion to combine the features from subject and body
-                                        (&#39;union&#39;, FeatureUnion(
-                                                transformer_list=[
-
-                                                        # Pipeline for pulling features from the post&#39;s subject line
-                                                        (&#39;subject&#39;, Pipeline([
-                                                                (&#39;selector&#39;, ItemSelector(key=&#39;subject&#39;)),
-                                                                (&#39;tfidf&#39;, TfidfVectorizer(min_df=50)),
-                                                        ])),
-
-                                                        # Pipeline for standard bag-of-words model for body
-                                                        (&#39;body_bow&#39;, Pipeline([
-                                                                (&#39;selector&#39;, ItemSelector(key=&#39;body&#39;)),
-                                                                (&#39;tfidf&#39;, TfidfVectorizer()),
-                                                                (&#39;best&#39;, TruncatedSVD(n_components=50)),
-                                                        ])),
-
-                                                        # Pipeline for pulling ad hoc features from post&#39;s body
-                                                        (&#39;body_stats&#39;, Pipeline([
-                                                                (&#39;selector&#39;, ItemSelector(key=&#39;body&#39;)),
-                                                                (&#39;stats&#39;, TextStats()),  # returns a list of dicts
-                                                                (&#39;vect&#39;, DictVectorizer()),  # list of dicts -&gt; feature matrix
-                                                        ])),
-
-                                                ],
-
-                                                # weight components in FeatureUnion
-                                                transformer_weights={
-                                                        &#39;subject&#39;: 0.8,
-                                                        &#39;body_bow&#39;: 0.5,
-                                                        &#39;body_stats&#39;: 1.0,
-                                                },
-                                        )),
-
-                                        # Use a SVC classifier on the combined features
-                                        (&#39;svc&#39;, SVC(kernel=&#39;linear&#39;)),
-                                ])
-                                </pre>
-            </div>
-        </div>
+        
+        
         <div class="step slide" data-scale="0.01" data-x="1500" data-y="30" data-z="10">
             <h2>Example 2: Latent Factor Features</h2>
             <div class="smaller">
@@ -386,7 +341,7 @@
         <div class="step slide" data-scale="0.01" data-x="1512" data-y="39.4" data-z="10">
             <h3>NMF Decomposition</h3>
             <div>
-                <div class="smaller c5">
+                <div class="smaller">
                     <table class="data">
                         <tbody>
                             <tr>
@@ -412,7 +367,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="smaller c5">
+                <div class="smaller">
                     <table class="data">
                         <tbody>
                             <tr>
@@ -593,6 +548,56 @@
                     </div>
                 </li>
             </ul>
+        </div>
+<div class="step slide" data-scale="0.01" data-x="1600" data-y="30" data-z="10">
+            <h3 class="baddy">Example 3: Combination Verbosity</h3>
+            <div class="smaller">
+                <div class="smaller">
+                <pre class="brush: bash; gutter: true; toolbar: false">          
+                                pipeline = Pipeline([
+                                        # Extract the subject & body
+                                        (&#39;subjectbody&#39;, SubjectBodyExtractor()),
+
+                                        # Use FeatureUnion to combine the features from subject and body
+                                        (&#39;union&#39;, FeatureUnion(
+                                                transformer_list=[
+
+                                                        # Pipeline for pulling features from the post&#39;s subject line
+                                                        (&#39;subject&#39;, Pipeline([
+                                                                (&#39;selector&#39;, ItemSelector(key=&#39;subject&#39;)),
+                                                                (&#39;tfidf&#39;, TfidfVectorizer(min_df=50)),
+                                                        ])),
+
+                                                        # Pipeline for standard bag-of-words model for body
+                                                        (&#39;body_bow&#39;, Pipeline([
+                                                                (&#39;selector&#39;, ItemSelector(key=&#39;body&#39;)),
+                                                                (&#39;tfidf&#39;, TfidfVectorizer()),
+                                                                (&#39;best&#39;, TruncatedSVD(n_components=50)),
+                                                        ])),
+
+                                                        # Pipeline for pulling ad hoc features from post&#39;s body
+                                                        (&#39;body_stats&#39;, Pipeline([
+                                                                (&#39;selector&#39;, ItemSelector(key=&#39;body&#39;)),
+                                                                (&#39;stats&#39;, TextStats()),  # returns a list of dicts
+                                                                (&#39;vect&#39;, DictVectorizer()),  # list of dicts -&gt; feature matrix
+                                                        ])),
+
+                                                ],
+
+                                                # weight components in FeatureUnion
+                                                transformer_weights={
+                                                        &#39;subject&#39;: 0.8,
+                                                        &#39;body_bow&#39;: 0.5,
+                                                        &#39;body_stats&#39;: 1.0,
+                                                },
+                                        )),
+
+                                        # Use a SVC classifier on the combined features
+                                        (&#39;svc&#39;, SVC(kernel=&#39;linear&#39;)),
+                                ])
+                                </pre>
+                </div>
+            </div>
         </div>
         <div class="step slide" data-scale="1" data-x="2800" data-y="0" id="outline-intro-3">
             <h2>Outline</h2>
@@ -804,39 +809,35 @@
                 </div>
                 <div class="c12">
                     <pre class="brush: python; gutter: false; toolbar: false">      
-            PdLinearRegression().fit(X, y).predict(X)
+            >>> PdLinearRegression().fit(X, y).predict(X)
             </pre>
-                    <div class="c11">
-                        <table class="data"></table>
-                        <table class="data">
-                            <caption>
-                                y
-                            </caption>
-                            <tbody>
-                                <tr>
-                                    <th>0</th>
-                                    <td>10</td>
-                                </tr>
-                                <tr>
-                                    <th>1</th>
-                                    <td>20</td>
-                                </tr>
-                                <tr>
-                                    <th>2</th>
-                                    <td>30</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <table class="data">
+                        <tbody>
+                            <tr>
+                                <th>0</th>
+                                <td>10</td>
+                            </tr>
+                            <tr>
+                                <th>1</th>
+                                <td>20</td>
+                            </tr>
+                            <tr>
+                                <th>2</th>
+                                <td>30</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
         <div class="step slide smaller" data-scale="0.01" data-x="4200" data-y="55" data-z="10">
-            <pre class="brush: python; gutter: false; toolbar: false">
-            X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]})
-            y = pd.Series([10, 20 , 30])
-           </pre>
-            <div class="c11">
+            <div class="smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">
+                X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]})
+                y = pd.Series([10, 20 , 30])
+            </pre>
+            </div>
+            <div class="smaller">
                 <table class="data">
                     <caption>
                         X
@@ -865,7 +866,7 @@
                     </tbody>
                 </table>
             </div>
-            <div class="c11">
+            <div class="smaller">
                 <table class="data">
                     <caption>
                         y
@@ -886,7 +887,7 @@
                     </tbody>
                 </table>
             </div>
-            <div class="c13">
+            <div class="smaller">
                 <table class="data" width="40%">
                     <caption>
                         X[[&#39;b&#39;, &#39;a&#39;]]
@@ -915,16 +916,13 @@
                     </tbody>
                 </table>
             </div>
-            <div class="c12">
+            <div class="smaller">
                 <pre class="brush: python; gutter: false; toolbar: false">      
-            PdLinearRegression().fit(X, y).predict(X[[&#39;b&#39;, &#39;a&#39;]])
+            >>> PdLinearRegression().fit(X, y).predict(X[[&#39;b&#39;, &#39;a&#39;]])
            </pre>
-                <div class="c11">
+                <div class="smaller">
                     <table class="data"></table>
                     <table class="data">
-                        <caption>
-                            y
-                        </caption>
                         <tbody>
                             <tr>
                                 <th>0</th>
@@ -944,11 +942,12 @@
             </div>
         </div>
         <div class="step slide smaller" data-scale="0.01" data-x="4200" data-y="63" data-z="10">
+            <div class="smaller">
             <pre class="brush: python; gutter: false; toolbar: false">
             X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]})
             y = pd.Series([10, 20 , 30])
             X1 = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]}, index=[&#39;i&#39;, &#39;j&#39;, &#39;k&#39;]) </pre>
-            <div class="c11">
+            <div class="smaller">
                 <table class="data">
                     <caption>
                         X
@@ -976,8 +975,6 @@
                         </tr>
                     </tbody>
                 </table>
-            </div>
-            <div class="c11">
                 <table class="data">
                     <caption>
                         y
@@ -997,8 +994,6 @@
                         </tr>
                     </tbody>
                 </table>
-            </div>
-            <div class="c13">
                 <table class="data" width="40%">
                     <caption>
                         X1
@@ -1026,6 +1021,7 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
             </div>
             <div class="c12">
                 <pre class="brush: python; gutter: false; toolbar: false">      
@@ -1055,7 +1051,7 @@
                 </div>
             </div>
         </div>
-        <div class="step slide smaller c14" data-scale="0.01" data-x="4200" data-y="71" data-z="10">
+        <div class="step slide smaller" data-scale="0.01" data-x="4200" data-y="71" data-z="10">
             <pre class="brush: python; gutter: false; toolbar: false">
             X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]}, index=[&#39;i&#39;, &#39;j&#39;, &#39;k&#39;])
             y = pd.Series([10, 20 , 30], index=[21, 22, 23])
@@ -1123,7 +1119,7 @@
             </pre>
             </div>
         </div>
-        <div class="step slide smaller c14" data-scale="0.01" data-x="4200" data-y="80" data-z="10">
+        <div class="step slide smaller" data-scale="0.01" data-x="4200" data-y="80" data-z="10">
             <pre class="brush: python; gutter: false; toolbar: false">
             X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]})
             y = pd.Series([10, 20 , 30])
@@ -1261,7 +1257,7 @@
           </pre>
                 <table class="data">
                     <thead>
-                        <tr class="c16">
+                        <tr>
                             <th></th>
                             <th>sepal length (cm)</th>
                             <th>sepal width (cm)</th>
@@ -1540,19 +1536,21 @@
             </div>
         </div>
         <div class="step slide smaller" data-scale="0.01" data-x="4214" data-y="87" data-z="10">
-            <pre class="brush: python; gutter: true; toolbar: false; highlight: [3, 6, 7, 8, 9, 10]">        
-                class UserMovieTransformer(
-                        base.BaseEstimator, base.EstimatorMixin,
-                        ibex.FrameMixin):
+            <div class="smaller">
+                <pre class="brush: python; gutter: true; toolbar: false; highlight: [3, 6, 7, 8, 9, 10]">        
+                    class UserMovieTransformer(
+                            base.BaseEstimator, base.EstimatorMixin,
+                            ibex.FrameMixin):
 
-                    def fit(self, X, y): # X is a DataFrame
-                        pd.pivot(
-                            values=X.target,
-                            index=X.user_id,
-                            columns=X.item_id)
+                        def fit(self, X, y): # X is a DataFrame
+                            pd.pivot(
+                                values=X.target,
+                                index=X.user_id,
+                                columns=X.item_id)
 
-                    ...
-                                                                                                                                </pre>
+                        ...
+                                                                                                                                    </pre>
+            </div>
         </div>
         <div class="step slide" data-scale="0.01" data-x="4200" data-y="30" data-z="10"></div>
         <div class="step slide sol-layer" data-rotate-x="30" data-scale="0.01" data-x="4207" data-y="27" data-z="0">
@@ -1588,7 +1586,7 @@
         <div class="step slide" data-scale="1" data-x="5600" data-y="0" id="outline-intro-5">
             <h2>Outline</h2>
             <div>
-            <div class="c9">
+            <div class=""">
                 <ul class="outline">
                     <li class="other">Motivation</li>
                     <li class="other">
@@ -1738,9 +1736,9 @@
             </ul>
         </div>
     </div>
-    <script src="js/shCore.js" type="text/javascript"></script> 
-    <script src="js/shBrushPython.js" type="text/javascript"></script> 
-    <script src="js/shBrushBash.js" type="text/javascript"></script> 
+    <script src="../js/shCore.js" type="text/javascript"></script> 
+    <script src="../js/shBrushPython.js" type="text/javascript"></script> 
+    <script src="../js/shBrushBash.js" type="text/javascript"></script> 
     <script type="text/javascript">
 
 
