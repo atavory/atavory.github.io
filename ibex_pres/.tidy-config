@@ -20,4 +20,5 @@ new-inline-tags: cfif, cfelse, math, mroot,
   mprescripts, mtable, mtr, mtd, mth
 new-blocklevel-tags: cfoutput, cfquery
 new-empty-tags: cfelse
+merge-divs: no
 join-styles: no
