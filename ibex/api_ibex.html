@@ -1,0 +1,272 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>ibex &#8212; ibex 0.1.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-ibex">
+<span id="ibex"></span><h1><code class="docutils literal"><span class="pre">ibex</span></code><a class="headerlink" href="#module-ibex" title="Permalink to this headline">¶</a></h1>
+<p>Pandas adapters for sklearn-type estimators</p>
+<p><a class="reference internal" href="api_ibex_frame_mixin.html#ibex.FrameMixin" title="ibex.FrameMixin"><code class="xref py py-class docutils literal"><span class="pre">ibex.FrameMixin</span></code></a></p>
+<p><a class="reference internal" href="api_ibex_frame.html#ibex.frame" title="ibex.frame"><code class="xref py py-func docutils literal"><span class="pre">ibex.frame()</span></code></a></p>
+<p><a class="reference internal" href="api_ibex_trans.html#ibex.trans" title="ibex.trans"><code class="xref py py-func docutils literal"><span class="pre">ibex.trans()</span></code></a></p>
+<div class="section" id="sklearn">
+<h2><code class="docutils literal"><span class="pre">sklearn</span></code><a class="headerlink" href="#sklearn" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+</div>
+<span class="target" id="module-ibex.sklearn"></span><p>Wrappers for <code class="xref py py-mod docutils literal"><span class="pre">sklearn</span></code>.</p>
+<p>This module loads corresponding modules in <code class="docutils literal"><span class="pre">sklearn</span></code> on demand, just
+as <code class="docutils literal"><span class="pre">sklearn</span></code> does. Its contents depend on those of the <code class="docutils literal"><span class="pre">sklearn</span></code>
+in your system when it is loaded.</p>
+<p class="rubric">Example</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">sklearn</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ibex</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.linear_model" title="(in scikit-learn v0.19.0)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.linear_model</span></code></a> is part of <code class="docutils literal"><span class="pre">sklearn</span></code>,
+therefore <a class="reference internal" href="#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> will have a counterpart.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;linear_model&#39;</span> <span class="ow">in</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">__all__</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;linear_model&#39;</span> <span class="ow">in</span> <span class="n">ibex</span><span class="o">.</span><span class="n">sklearn</span><span class="o">.</span><span class="n">__all__</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">linear_model</span> 
+</pre></div>
+</div>
+<p><code class="docutils literal"><span class="pre">foo</span></code> is not part of <code class="docutils literal"><span class="pre">sklearn</span></code>,
+therefore <a class="reference internal" href="#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> will not have a counterpart.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;foo&#39;</span> <span class="ow">in</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">__all__</span>
+<span class="go">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;foo&#39;</span> <span class="ow">in</span> <span class="n">ibex</span><span class="o">.</span><span class="n">sklearn</span><span class="o">.</span><span class="n">__all__</span>
+<span class="go">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">try</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">foo</span>
+<span class="gp">... </span><span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;caught&#39;</span><span class="p">)</span>
+<span class="go">caught</span>
+</pre></div>
+</div>
+<div class="section" id="module-ibex.sklearn.preprocessing">
+<span id="preprocessing"></span><h3><code class="docutils literal"><span class="pre">preprocessing</span></code><a class="headerlink" href="#module-ibex.sklearn.preprocessing" title="Permalink to this headline">¶</a></h3>
+<p>Auto-generated <a class="reference internal" href="#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.preprocessing" title="(in scikit-learn v0.19.0)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.preprocessing</span></code></a>.</p>
+<div class="admonition tip">
+<p class="first admonition-title">Tip</p>
+<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
+<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
+<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
+<p>Example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
+<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
+<span class="go">array([ 0.,  1.,  2.])</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
+<span class="go">         0...      1...          2...</span>
+<span class="go">0    0.879682  0.120308  1.081314e-05</span>
+<span class="go">1    0.799706  0.200263  3.038254e-05</span>
+<span class="go">2    0.853797  0.146177  2.590313e-05</span>
+<span class="go">3    0.825383  0.174559  5.793567e-05</span>
+<span class="go">4    0.897324  0.102665  1.120500e-05</span>
+<span class="go">5    0.926987  0.073000  1.296939e-05</span>
+<span class="go"> ...</span>
+</pre></div>
+</div>
+<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
+<span class="go">          0...      1...       2...</span>
+<span class="go">0    -0.128195 -2.117704 -11.434749</span>
+<span class="go">1    -0.223511 -1.608122 -10.401643</span>
+<span class="go">2    -0.158062 -1.922935 -10.561147</span>
+<span class="go">3    -0.191908 -1.745493  -9.756177</span>
+<span class="go">4    -0.108339 -2.276282 -11.399150</span>
+<span class="go">5    -0.075816 -2.617290 -11.252919</span>
+<span class="gp">...</span>
+</pre></div>
+</div>
+</div>
+<p><a class="reference internal" href="api_ibex_sklearn_preprocessing_functiontransformer.html#ibex.sklearn.preprocessing.FunctionTransformer" title="ibex.sklearn.preprocessing.FunctionTransformer"><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.preprocessing.FunctionTransformer</span></code></a></p>
+</div>
+<div class="section" id="module-ibex.sklearn.pipeline">
+<span id="pipeline"></span><h3><code class="docutils literal"><span class="pre">pipeline</span></code><a class="headerlink" href="#module-ibex.sklearn.pipeline" title="Permalink to this headline">¶</a></h3>
+<p>Auto-generated <a class="reference internal" href="#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.pipeline" title="(in scikit-learn v0.19.0)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.pipeline</span></code></a>.</p>
+<div class="admonition tip">
+<p class="first admonition-title">Tip</p>
+<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
+<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
+<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
+<p>Example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
+<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
+<span class="go">array([ 0.,  1.,  2.])</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
+<span class="go">         0...      1...          2...</span>
+<span class="go">0    0.879682  0.120308  1.081314e-05</span>
+<span class="go">1    0.799706  0.200263  3.038254e-05</span>
+<span class="go">2    0.853797  0.146177  2.590313e-05</span>
+<span class="go">3    0.825383  0.174559  5.793567e-05</span>
+<span class="go">4    0.897324  0.102665  1.120500e-05</span>
+<span class="go">5    0.926987  0.073000  1.296939e-05</span>
+<span class="go"> ...</span>
+</pre></div>
+</div>
+<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
+<span class="go">          0...      1...       2...</span>
+<span class="go">0    -0.128195 -2.117704 -11.434749</span>
+<span class="go">1    -0.223511 -1.608122 -10.401643</span>
+<span class="go">2    -0.158062 -1.922935 -10.561147</span>
+<span class="go">3    -0.191908 -1.745493  -9.756177</span>
+<span class="go">4    -0.108339 -2.276282 -11.399150</span>
+<span class="go">5    -0.075816 -2.617290 -11.252919</span>
+<span class="gp">...</span>
+</pre></div>
+</div>
+</div>
+<p><code class="xref py py-func docutils literal"><span class="pre">ibex.sklearn.pipeline.make_union()</span></code></p>
+<p><a class="reference internal" href="api_ibex_sklearn_pipeline_make_pipeline.html#ibex.sklearn.pipeline.make_pipeline" title="ibex.sklearn.pipeline.make_pipeline"><code class="xref py py-func docutils literal"><span class="pre">ibex.sklearn.pipeline.make_pipeline()</span></code></a></p>
+<p><a class="reference internal" href="api_ibex_sklearn_pipeline_feature_union.html#ibex.sklearn.pipeline.FeatureUnion" title="ibex.sklearn.pipeline.FeatureUnion"><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.pipeline.FeatureUnion</span></code></a></p>
+<p><a class="reference internal" href="api_ibex_sklearn_pipeline_pipeline.html#ibex.sklearn.pipeline.Pipeline" title="ibex.sklearn.pipeline.Pipeline"><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.pipeline.Pipeline</span></code></a></p>
+</div>
+<div class="section" id="module-ibex.sklearn.model_selection">
+<span id="model-selection"></span><h3><code class="docutils literal"><span class="pre">model_selection</span></code><a class="headerlink" href="#module-ibex.sklearn.model_selection" title="Permalink to this headline">¶</a></h3>
+<p>Auto-generated <a class="reference internal" href="#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.model_selection" title="(in scikit-learn v0.19.0)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.model_selection</span></code></a>.</p>
+<p><a class="reference internal" href="api_ibex_sklearn_model_selection_cross_val_predict.html#ibex.sklearn.model_selection.cross_val_predict" title="ibex.sklearn.model_selection.cross_val_predict"><code class="xref py py-func docutils literal"><span class="pre">ibex.sklearn.model_selection.cross_val_predict()</span></code></a></p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

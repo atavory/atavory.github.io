@@ -1,0 +1,268 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Ibex &#8212; ibex 0.1.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Overview" href="overview.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="ibex">
+<h1>Ibex<a class="headerlink" href="#ibex" title="Permalink to this headline">¶</a></h1>
+<p>Ami Tavory, Shahar Azulay, Tali Raveh-Sadka</p>
+<a class="reference external image-reference" href="https://travis-ci.org/atavory/ibex"><img alt="https://travis-ci.org/atavory/ibex.svg?branch=master" src="https://travis-ci.org/atavory/ibex.svg?branch=master" /></a>
+<a class="reference external image-reference" href="https://landscape.io/github/atavory/ibex/master"><img alt="https://landscape.io/github/atavory/ibex/master/landscape.svg?style=flat" src="https://landscape.io/github/atavory/ibex/master/landscape.svg?style=flat" /></a>
+<a class="reference external image-reference" href="https://codecov.io/gh/atavory/ibex/"><img alt="https://img.shields.io/codecov/c/github/atavory/ibex/master.svg" src="https://img.shields.io/codecov/c/github/atavory/ibex/master.svg" /></a>
+<a class="reference external image-reference" href="http://ibex.readthedocs.io/en/latest/?badge=latest"><img alt="http://readthedocs.org/projects/ibex/badge/?version=latest" src="http://readthedocs.org/projects/ibex/badge/?version=latest" /></a>
+<a class="reference external image-reference" href="https://raw.githubusercontent.com/atavory/ibex/master/LICENSE.txt"><img alt="https://img.shields.io/badge/license-BSD--3--Clause-brightgreen.svg" src="https://img.shields.io/badge/license-BSD--3--Clause-brightgreen.svg" /></a>
+<a class="reference external image-reference" href="https://badge.fury.io/py/ibex"><img alt="https://badge.fury.io/py/ibex.svg" src="https://badge.fury.io/py/ibex.svg" /></a>
+<p>This library aims for two (somewhat independent) goals:</p>
+<ul class="simple">
+<li>providing <a class="reference external" href="http://pandas.pydata.org/">pandas</a> adapters for <a class="reference external" href="http://scikit-learn.org/stable/developers/contributing.html#apis-of-scikit-learn-objects">estimators conforming to the sickit-learn protocol</a>, in particular those of <a class="reference external" href="http://scikit-learn.org/stable/">scikit-learn</a> itself</li>
+<li>providing easier, and more succinct ways of combining estimators, features, and pipelines</li>
+</ul>
+<p>(You might also want to check out the excellent <a class="reference external" href="https://pypi.python.org/pypi/sklearn-pandas">pandas-sklearn</a> which has the same aims, but takes a very different
+approach.)</p>
+<p>The full documentation at <a class="reference external" href="http://ibex.readthedocs.io/en/latest/?badge=latest"><img alt="read_the_docs_ibex" src="http://ibex.readthedocs.io/en/latest/_static/read_the_docs.png" /></a> defines these matters in detail, but the library has an extremely-small <a class="reference external" href="http://ibex.readthedocs.io/en/latest/overview.html">interface</a>.</p>
+<div class="section" id="tl-dr">
+<h2>TL;DR<a class="headerlink" href="#tl-dr" title="Permalink to this headline">¶</a></h2>
+<p>The following short example shows the main points of the library. It is an adaptation of the scikit-learn example <a class="reference external" href="http://scikit-learn.org/stable/auto_examples/plot_feature_stacker.html#sphx-glr-auto-examples-plot-feature-stacker-py">Concatenating multiple feature extraction methods</a>. In this example, we build a classifier for the <a class="reference external" href="http://scikit-learn.org/stable/auto_examples/datasets/plot_iris_dataset.html">iris dataset</a> using a combination of <a class="reference external" href="https://en.wikipedia.org/wiki/Principal_component_analysis">PCA</a>, <a class="reference external" href="https://en.wikipedia.org/wiki/Feature_selection#Subset_selection">univariate feature selection</a>, and a <a class="reference external" href="https://en.wikipedia.org/wiki/Support_vector_machine">support vecor machine classifier</a>.</p>
+<p>We first load the Iris dataset into a pandas <code class="docutils literal"><span class="pre">DataFrame</span></code>.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span><span class="p">,</span> <span class="n">iris</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">],</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
+<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span><span class="o">.</span><span class="n">columns</span>
+<span class="go">Index([...&#39;sepal length (cm)&#39;, ...&#39;sepal width (cm)&#39;, ...&#39;petal length (cm)&#39;,</span>
+<span class="go">       ...&#39;petal width (cm)&#39;, ...&#39;class&#39;],</span>
+<span class="go">      dtype=&#39;object&#39;)</span>
+</pre></div>
+</div>
+<p>Now, we import the relevant steps. Note that, in this example, we import them from <cite>ibex.sklearn</cite> rather than <cite>sklearn</cite>.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.svm</span> <span class="k">import</span> <span class="n">SVC</span> <span class="k">as</span> <span class="n">PdSVC</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.feature_selection</span> <span class="k">import</span> <span class="n">SelectKBest</span> <span class="k">as</span> <span class="n">PdSelectKBest</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.decomposition</span> <span class="k">import</span> <span class="n">PCA</span> <span class="k">as</span> <span class="n">PdPCA</span>
+</pre></div>
+</div>
+<p>(Of course, it’s possible to import steps from <cite>sklearn</cite> as well, and use them alongside and together with the steps of <cite>ibex.sklearn</cite>.)</p>
+<p>Finally, we construct a pipeline that, given a <code class="docutils literal"><span class="pre">DataFrame</span></code> of features:</p>
+<ul>
+<li><p class="first">horizontally concatenates a 2-component PCA <code class="docutils literal"><span class="pre">DataFrame</span></code>, and the best-feature <code class="docutils literal"><span class="pre">DataFrame</span></code>, to a resulting <code class="docutils literal"><span class="pre">DataFrame</span></code></p>
+</li>
+<li><p class="first">then, passes the result to a support-vector machine classifier outputting a pandas series:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdPCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">PdSelectKBest</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">|</span> <span class="n">PdSVC</span><span class="p">(</span><span class="n">kernel</span><span class="o">=</span><span class="s2">&quot;linear&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<p><code class="docutils literal"><span class="pre">clf</span></code> is now a <code class="docutils literal"><span class="pre">pandas</span></code>-ware classifier, but otherwise can be used pretty much like all <code class="docutils literal"><span class="pre">sklearn</span></code> estimator. For example,</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">param_grid</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">featureunion__pca__n_components</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="n">featureunion__selectkbest__k</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="n">svc__C</span><span class="o">=</span><span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.model_selection</span> <span class="k">import</span> <span class="n">GridSearchCV</span> <span class="k">as</span> <span class="n">PdGridSearchCV</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">PdGridSearchCV</span><span class="p">(</span><span class="n">clf</span><span class="p">,</span> <span class="n">param_grid</span><span class="o">=</span><span class="n">param_grid</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span> 
+<span class="gp">...</span>
+</pre></div>
+</div>
+<p>So what does this add to the original version?</p>
+<ol class="arabic simple">
+<li>The estimators perform <a class="reference external" href="http://ibex.readthedocs.io/en/latest/input_verification_and_output_processing.html">verification and processing</a> on the inputs and outputs. They verify column names following calls to <code class="docutils literal"><span class="pre">fit</span></code>, and index results according to those of the inputs. This helps catch bugs.</li>
+<li>It allows <a class="reference external" href="http://ibex.readthedocs.io/en/latest/extending.html">writing Pandas-munging estimators</a> (see also <a class="reference external" href="movielens_simple_row_aggregating_features.ipynb">Multiple-Row Features In The Movielens Dataset</a>).</li>
+<li>Using <code class="docutils literal"><span class="pre">DataFrame</span></code> metadata, it allows writing more complex meta-learning algorithms, such as stacking and nested labeled and stratified cross validation.</li>
+<li>The pipeline syntax is succinct and clear (see <a class="reference external" href="http://ibex.readthedocs.io/en/latest/pipeline_motivation.html">Motivation For Shorter Combinations</a>).</li>
+</ol>
+</div>
+</div>
+<div class="section" id="contents">
+<h1>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#goals">Goals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#motivation">Motivation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#interface">Interface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#documentation-structure">Documentation Structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="input_verification_and_output_processing.html#input-verification">Input Verification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input_verification_and_output_processing.html#output-processing">Output Processing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="input_verification_and_output_processing.html#indexes">Indexes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="input_verification_and_output_processing.html#dataframe-columns"><code class="docutils literal"><span class="pre">DataFrame</span></code> Columns</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="function_transformer.html#specifying-functions">Specifying Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="function_transformer.html#specifying-input-columns">Specifying Input Columns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="function_transformer.html#specifying-output-columns">Specifying Output Columns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="function_transformer.html#specifying-combinations">Specifying Combinations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="function_transformer.html#multiple-transformations">Multiple Transformations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pipelines.html#sklearn-alternative"><code class="docutils literal"><span class="pre">sklearn</span></code> Alternative</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pipelines.html#pipeline-syntax-alternative">Pipeline-Syntax Alternative</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="feature_union.html#sklearn-alternative"><code class="docutils literal"><span class="pre">sklearn</span></code> Alternative</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature_union.html#pipeline-syntax-alternative">Pipeline-Syntax Alternative</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="sklearn.html#general-idea">General Idea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sklearn.html#differences-from-sklearn">Differences From <code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="extending.html#example-transformation">Example Transformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extending.html#writing-a-new-transformer-step">Writing A New Transformer Step</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#ibex"><code class="docutils literal"><span class="pre">ibex</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-ibex">Module Doc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#notable-members">Notable Members</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#sklearn"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#xgboost"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="indexes-and-tables">
+<h1>Indexes and tables<a class="headerlink" href="#indexes-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="#">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="overview.html" title="next chapter">Overview</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

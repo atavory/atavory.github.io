@@ -1,0 +1,457 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Ibex: Making Scikit-Learn Run On Top Of Pandas &#8212; ibex 0.1.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <p>This is a demo for Hovercraft! You can view it as a finished presentation
+at <a class="reference external" href="http://regebro.github.com/hovercraft/">http://regebro.github.com/hovercraft/</a></p>
+<p>It’s also useful as an example, in which case it’s supposed to be read as
+<a class="reference external" href="../_sources/examples/hovercraft.txt">source code</a>.</p>
+<p>You can render this presentation to HTML with the command:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">hovercraft</span> <span class="n">hovercraft</span><span class="o">.</span><span class="n">rst</span> <span class="n">outdir</span>
+</pre></div>
+</div>
+<p>And then view the outdir/index.html file to see how it turned out.</p>
+<p>If you are seeing this text, and not reading this as source code, you are
+doing it wrong! It’s going to be confusing and not very useful.</p>
+<p>Use The Source, Luke! But first you probably want to read through the
+official documentation at <a class="reference external" href="https://hovercraft.readthedocs.io/">https://hovercraft.readthedocs.io/</a></p>
+<hr class="docutils" />
+<div class="section" id="ibex-making-scikit-learn-run-on-top-of-pandas">
+<h1>Ibex: Making Scikit-Learn Run On Top Of Pandas<a class="headerlink" href="#ibex-making-scikit-learn-run-on-top-of-pandas" title="Permalink to this headline">¶</a></h1>
+<p>Ami Tavory, Shahar Azulay, Tali Raveh-Sadka</p>
+<div class="section" id="making-presentations-is-no-fun">
+<h2>Making presentations is no <em>fun!</em><a class="headerlink" href="#making-presentations-is-no-fun" title="Permalink to this headline">¶</a></h2>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Welcome to the presenter console!</p>
+</div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="gui-tools-are-inflexible">
+<h1>GUI tools are inflexible<a class="headerlink" href="#gui-tools-are-inflexible" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li>It’s hard to reorganize or import text</li>
+<li>Slow and memory hungry</li>
+<li>You get caught up in design early in the process.</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Here you have a view of the current slide, a preview of the next slide
+and your notes.</p>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="use-restructuredtext">
+<h1>Use reStructuredText!<a class="headerlink" href="#use-restructuredtext" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li>You can use your favorite text-editor!</li>
+<li>Many tools available: Landslide, S5</li>
+<li>Convenient (and powerful!)</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">You also have a clock and a timer, so you know how much time you have
+left.</p>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="but-then-there-was-prezi">
+<h1>But then there was Prezi<a class="headerlink" href="#but-then-there-was-prezi" title="Permalink to this headline">¶</a></h1>
+<p>Sliding from left to right is no longer enough.
+You need to be able to…</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If you click on the timer it restarts from zero. This is handy when you
+are rehearsing the presentation and need to make sure it fits in the time
+allocated.</p>
+</div>
+<hr class="docutils" />
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">data-y:</th><td class="field-body">r1000</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="pan">
+<h1>…pan…<a class="headerlink" href="#pan" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If you have more notes than fit in the console, you can scroll down, but
+more handily, you can scroll the text up by pressing space bar.</p>
+</div>
+<hr class="docutils" />
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">data-rotate:</th><td class="field-body">90</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="rotate">
+<h1>…rotate…<a class="headerlink" href="#rotate" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If there isn’t more text to scroll up, space bar will go to the next
+slide. Therefore you, as a presenter, just press space every time you run
+out of things to say!</p>
+</div>
+<hr class="docutils" />
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">data-x:</th><td class="field-body">r0</td>
+</tr>
+<tr class="field-even field"><th class="field-name">data-y:</th><td class="field-body">r500</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">data-scale:</th><td class="field-body">0.1</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="and-zoom">
+<h1>…and zoom!<a class="headerlink" href="#and-zoom" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Zooming is cool. But one day it will grow old as well. What will we do
+then to make presentations interesting?</p>
+</div>
+<hr class="docutils" />
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">data-x:</th><td class="field-body">r-800</td>
+</tr>
+<tr class="field-even field"><th class="field-name">data-scale:</th><td class="field-body">1</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="but-prezi-is-a-gui">
+<h1>But Prezi is a GUI<a class="headerlink" href="#but-prezi-is-a-gui" title="Permalink to this headline">¶</a></h1>
+<p>So we are back to square one.</p>
+<p>(And it is closed source to boot)</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">It’s probably back to making bad jokes again.</p>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="what-about-impress-js">
+<h1>What about impress.js?<a class="headerlink" href="#what-about-impress-js" title="Permalink to this headline">¶</a></h1>
+<p>It’s open source!</p>
+<p>Supports pan, tilt and zoom!</p>
+<hr class="docutils" />
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">id:</th><td class="field-body">ThreeD</td>
+</tr>
+<tr class="field-even field"><th class="field-name">data-y:</th><td class="field-body">r1200</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">data-rotate-x:</th><td class="field-body">180</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="in-three-dimensions">
+<h1>In three dimensions!<a class="headerlink" href="#in-three-dimensions" title="Permalink to this headline">¶</a></h1>
+<p><em>But…</em></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Wow! 3D! You didn’t see that one coming, did you?</p>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="it-s-html">
+<h1>It’s HTML…<a class="headerlink" href="#it-s-html" title="Permalink to this headline">¶</a></h1>
+<p>Not a friendly format to edit</p>
+<hr class="docutils" />
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">data-x:</th><td class="field-body">r800</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="and-manual-positioning">
+<h1>…and manual positioning<a class="headerlink" href="#and-manual-positioning" title="Permalink to this headline">¶</a></h1>
+<p>So inserting a slide means</p>
+<p>repositioning all the following slides!</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The endless repositioning of slides is what prompted me to write
+Hovercraft! in the first place.</p>
+</div>
+<hr class="docutils" />
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">id:</th><td class="field-body">thequestion</td>
+</tr>
+<tr class="field-even field"><th class="field-name">data-x:</th><td class="field-body">r0</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">data-y:</th><td class="field-body">r-1200</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="is-there-no-solution">
+<h1><em>Is there no solution?</em><a class="headerlink" href="#is-there-no-solution" title="Permalink to this headline">¶</a></h1>
+<p>Of course there is!</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">What would be the point of this slide show if I didn’t have a solution?
+Duh!</p>
+</div>
+<hr class="docutils" />
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">data-rotate-y:</th><td class="field-body">180</td>
+</tr>
+<tr class="field-even field"><th class="field-name">data-scale:</th><td class="field-body">3</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">data-x:</th><td class="field-body">r-2500</td>
+</tr>
+<tr class="field-even field"><th class="field-name">data-y:</th><td class="field-body">r0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="introducing-hovercraft">
+<h1>Introducing <strong>Hovercraft!</strong><a class="headerlink" href="#introducing-hovercraft" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">TADA!</p>
+</div>
+<hr class="docutils" />
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">data-x:</th><td class="field-body">r-3000</td>
+</tr>
+<tr class="field-even field"><th class="field-name">data-scale:</th><td class="field-body">1</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="restructuredtext">
+<h2>reStructuredText<a class="headerlink" href="#restructuredtext" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="plus">
+<h3>plus<a class="headerlink" href="#plus" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="impress-js">
+<h2>impress.js<a class="headerlink" href="#impress-js" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id1">
+<h3>plus<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="impressconsole-js">
+<h2>impressConsole.js<a class="headerlink" href="#impressconsole-js" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id2">
+<h3>plus<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="positioning">
+<h2>positioning!<a class="headerlink" href="#positioning" title="Permalink to this headline">¶</a></h2>
+<hr class="docutils" />
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">data-y:</th><td class="field-body">r-1200</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="position-slides">
+<h1>Position slides<a class="headerlink" href="#position-slides" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li>Automatically!</li>
+<li>Absolutely!</li>
+<li>Relative to the previous slide!</li>
+<li>Along an SVG path!</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">That SVG path support was a lot of work. And all I used it for was to
+position the slides in circles.</p>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="presenter-console">
+<h1>Presenter console!<a class="headerlink" href="#presenter-console" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li>A view of the current slide</li>
+<li>A view of the next slide</li>
+<li>Your notes</li>
+<li>A clock</li>
+<li>A timer</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">You found the presenter console already!</p>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="hovercraft">
+<h1><strong>Hovercraft!</strong><a class="headerlink" href="#hovercraft" title="Permalink to this headline">¶</a></h1>
+<p># .. image:: images/hovercraft_logo.png</p>
+<p>The merge of convenience and cool!</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">A slogan: The ad-mans best friend!</p>
+</div>
+<hr class="docutils" />
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">data-x:</th><td class="field-body">0</td>
+</tr>
+<tr class="field-even field"><th class="field-name">data-y:</th><td class="field-body">2500</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">data-z:</th><td class="field-body">4000</td>
+</tr>
+<tr class="field-even field"><th class="field-name">data-rotate-x:</th><td class="field-body">90</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="id3">
+<h1><strong>Hovercraft!</strong><a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h1>
+<p>On Github:</p>
+<p><a class="reference external" href="https://github.com/regebro/hovercraft">https://github.com/regebro/hovercraft</a></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Fork and contribute!</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/pres.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/pres.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

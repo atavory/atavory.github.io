@@ -1,0 +1,310 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Transforming &#8212; ibex 0.1.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Pipelining" href="pipelines.html" />
+    <link rel="prev" title="Verification and Processing" href="input_verification_and_output_processing.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="transforming">
+<span id="function-transformer"></span><h1>Transforming<a class="headerlink" href="#transforming" title="Permalink to this headline">¶</a></h1>
+<p>This chapter describes the <a class="reference internal" href="api_ibex_trans.html#ibex.trans" title="ibex.trans"><code class="xref py py-func docutils literal"><span class="pre">ibex.trans()</span></code></a> function, which allows</p>
+<ol class="arabic simple">
+<li>applying functions or estimators to <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> objects</li>
+<li>selecting a subset of columns for applications</li>
+<li>naming the output columns of the results</li>
+</ol>
+<p>or any combination of these.</p>
+<p>We’ll use a <code class="docutils literal"><span class="pre">DataFrame</span></code> <code class="docutils literal"><span class="pre">X</span></code>, with columns <code class="docutils literal"><span class="pre">'a'</span></code> and <code class="docutils literal"><span class="pre">'b'</span></code>, and (implied) index <code class="docutils literal"><span class="pre">1,</span> <span class="pre">2,</span> <span class="pre">3</span></code>,</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]})</span>
+</pre></div>
+</div>
+<p>and also import <code class="docutils literal"><span class="pre">trans</span></code>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex</span> <span class="k">import</span> <span class="n">trans</span>
+</pre></div>
+</div>
+<div class="section" id="specifying-functions">
+<h2>Specifying Functions<a class="headerlink" href="#specifying-functions" title="Permalink to this headline">¶</a></h2>
+<p>The (positionally first) <code class="docutils literal"><span class="pre">func</span></code> argument allows specifying the transformation to apply.</p>
+<p>This can be <code class="docutils literal"><span class="pre">None</span></code>, meaning that the output should be the input:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">()</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">   a  b</span>
+<span class="go">0  1  3</span>
+<span class="go">1  2  4</span>
+</pre></div>
+</div>
+<div class="admonition tip">
+<p class="first admonition-title">Tip</p>
+<p class="last"><a class="reference internal" href="#function-transformer-specifying-output-columns"><span class="std std-ref">Specifying Output Columns</span></a> and <a class="reference internal" href="#function-transformer-multiple-transformations"><span class="std std-ref">Multiple Transformations</span></a> show uses for this.</p>
+</div>
+<p>The <code class="docutils literal"><span class="pre">func</span></code> argument can alternatively be a function, which will be applied to the
+<a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.values.html#pandas.DataFrame.values" title="(in pandas v0.20.3)"><code class="xref py py-attr docutils literal"><span class="pre">pandas.DataFrame.values</span></code></a> of the input:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">)</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">          a         b</span>
+<span class="go">0  1.000000  1.732051</span>
+<span class="go">1  1.414214  2.000000</span>
+</pre></div>
+</div>
+<p>Finally, it can be a different estimator:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.decomposition</span> <span class="k">import</span> <span class="n">PCA</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="n">PCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">          a  b</span>
+<span class="go">0 -0.707107  ...</span>
+<span class="go">1  0.707107  ...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="specifying-input-columns">
+<h2>Specifying Input Columns<a class="headerlink" href="#specifying-input-columns" title="Permalink to this headline">¶</a></h2>
+<p>The (positionally second) <code class="docutils literal"><span class="pre">in_cols</span></code> argument allows specifying the columns to which to apply the function.</p>
+<p>If it is <code class="docutils literal"><span class="pre">None</span></code>, then the function will be applied to all columns.</p>
+<p>If it is a string, the function will be applied to the <code class="docutils literal"><span class="pre">DataFrame</span></code> consisting of the single column corresponding to this string:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">   a</span>
+<span class="go">0  1</span>
+<span class="go">1  2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">          a</span>
+<span class="go">0  1.000000</span>
+<span class="go">1  1.414214</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="n">PCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">     a</span>
+<span class="go">0 -0.5</span>
+<span class="go">1  0.5</span>
+</pre></div>
+</div>
+<p>If it is a <code class="docutils literal"><span class="pre">list</span></code> of strings, the function will be applied to the <code class="docutils literal"><span class="pre">DataFrame</span></code> consisting of the columns corresponding to these strings:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">   a</span>
+<span class="go">0  1</span>
+<span class="go">1  2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">          a</span>
+<span class="go">0  1.000000</span>
+<span class="go">1  1.414214</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="n">PCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">     a</span>
+<span class="go">0 -0.5</span>
+<span class="go">1  0.5</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="specifying-output-columns">
+<span id="function-transformer-specifying-output-columns"></span><h2>Specifying Output Columns<a class="headerlink" href="#specifying-output-columns" title="Permalink to this headline">¶</a></h2>
+<p>The (positionally third) <code class="docutils literal"><span class="pre">out_cols</span></code> argument allows specifying the names of the columns of the result.</p>
+<p>If it is <code class="docutils literal"><span class="pre">None</span></code>, then the output columns will be as explained in
+<span class="xref std std-ref">_verification_and_processing_output_dataframe_columns</span>
+in
+<span class="xref std std-ref">_verification_and_processing</span>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">,</span> <span class="n">out_cols</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">          a         b</span>
+<span class="go">0  1.000000  1.732051</span>
+<span class="go">1  1.414214  2.000000</span>
+</pre></div>
+</div>
+<p>If it is a string, it will become the (single) column of the resulting <code class="docutils literal"><span class="pre">DataFrame</span></code>.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="n">PCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">out_cols</span><span class="o">=</span><span class="s1">&#39;pc&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">        pc</span>
+<span class="go">0 -0.707107</span>
+<span class="go">1  0.707107</span>
+</pre></div>
+</div>
+<p>If it is a <code class="docutils literal"><span class="pre">list</span></code> of strings, these will become the columns of the resulting <code class="docutils literal"><span class="pre">DataFrame</span></code>.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="n">out_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">   c  d</span>
+<span class="go">0  1  3</span>
+<span class="go">1  2  4</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">,</span> <span class="n">out_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">          c         d</span>
+<span class="go">0  1.000000  1.732051</span>
+<span class="go">1  1.414214  2.000000</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="n">PCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span> <span class="n">out_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;pc1&#39;</span><span class="p">,</span> <span class="s1">&#39;pc2&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">          pc1  pc2</span>
+<span class="go">0 -0.707107  ...</span>
+<span class="go">1  0.707107  ...</span>
+</pre></div>
+</div>
+<div class="admonition tip">
+<p class="first admonition-title">Tip</p>
+<p class="last">As can be seen from the first of the examples just above, this can be used to build a step that simply changes the column names of a <code class="docutils literal"><span class="pre">DataFrame</span></code>.</p>
+</div>
+</div>
+<div class="section" id="specifying-combinations">
+<h2>Specifying Combinations<a class="headerlink" href="#specifying-combinations" title="Permalink to this headline">¶</a></h2>
+<p>Of course, you can combine the arguments specified above:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">   c</span>
+<span class="go">0  1</span>
+<span class="go">1  2</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;c&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">   c</span>
+<span class="go">0  1</span>
+<span class="go">1  2</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">          c         d</span>
+<span class="go">0  1.000000  1.732051</span>
+<span class="go">1  1.414214  2.000000</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="n">PCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;pc&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">     pc</span>
+<span class="go">0 -0.5</span>
+<span class="go">1  0.5</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="multiple-transformations">
+<span id="function-transformer-multiple-transformations"></span><h2>Multiple Transformations<a class="headerlink" href="#multiple-transformations" title="Permalink to this headline">¶</a></h2>
+<p>Applying multiple transformations on a single <code class="docutils literal"><span class="pre">DataFrame</span></code> is no different than any other case of uniting features (see <a class="reference internal" href="feature_union.html#feature-union"><span class="std std-ref">Uniting Features</span></a>). In particular, it’s possible to succinctly use the <code class="docutils literal"><span class="pre">+</span></code> operator:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span> <span class="o">=</span> <span class="n">trans</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;sin_a&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">trans</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="s1">&#39;cos_b&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">  functiontransformer_0 functiontransformer_1</span>
+<span class="go">                  sin_a                 cos_b</span>
+<span class="go">0              0.841471             -0.989992</span>
+<span class="go">1              0.909297             -0.653644</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span> <span class="o">=</span> <span class="n">trans</span><span class="p">()</span> <span class="o">+</span> <span class="n">trans</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;sin_a&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">trans</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="s1">&#39;cos_b&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">  functiontransformer_0    functiontransformer_1 functiontransformer_2</span>
+<span class="go">                      a  b                 sin_a                 cos_b</span>
+<span class="go">0                     1  3              0.841471             -0.989992</span>
+<span class="go">1                     2  4              0.909297             -0.653644</span>
+</pre></div>
+</div>
+<div class="admonition tip">
+<p class="first admonition-title">Tip</p>
+<p class="last">As can be seen from the last of the examples just above, this can be used to build a step that simply adds to the
+existing columns of some <code class="docutils literal"><span class="pre">DataFrame</span></code>.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Transforming</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#specifying-functions">Specifying Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#specifying-input-columns">Specifying Input Columns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#specifying-output-columns">Specifying Output Columns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#specifying-combinations">Specifying Combinations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#multiple-transformations">Multiple Transformations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="input_verification_and_output_processing.html" title="previous chapter">Verification and Processing</a></li>
+      <li>Next: <a href="pipelines.html" title="next chapter">Pipelining</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/function_transformer.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/function_transformer.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

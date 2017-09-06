@@ -1,0 +1,904 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.decomposition.pca &#8212; ibex 0.1.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.decomposition.pca</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; Principal Component Analysis</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Author: Alexandre Gramfort &lt;alexandre.gramfort@inria.fr&gt;</span>
+<span class="c1">#         Olivier Grisel &lt;olivier.grisel@ensta.org&gt;</span>
+<span class="c1">#         Mathieu Blondel &lt;mathieu@mblondel.org&gt;</span>
+<span class="c1">#         Denis A. Engemann &lt;denis-alexander.engemann@inria.fr&gt;</span>
+<span class="c1">#         Michael Eickenberg &lt;michael.eickenberg@inria.fr&gt;</span>
+<span class="c1">#         Giorgio Patrini &lt;giorgio.patrini@anu.edu.au&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+<span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">log</span><span class="p">,</span> <span class="n">sqrt</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">linalg</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="k">import</span> <span class="n">gammaln</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">issparse</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse.linalg</span> <span class="k">import</span> <span class="n">svds</span>
+
+<span class="kn">from</span> <span class="nn">..externals</span> <span class="k">import</span> <span class="n">six</span>
+
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">_BasePCA</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">deprecated</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_random_state</span><span class="p">,</span> <span class="n">as_float_array</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_array</span>
+<span class="kn">from</span> <span class="nn">..utils.extmath</span> <span class="k">import</span> <span class="n">fast_logdet</span><span class="p">,</span> <span class="n">randomized_svd</span><span class="p">,</span> <span class="n">svd_flip</span>
+<span class="kn">from</span> <span class="nn">..utils.extmath</span> <span class="k">import</span> <span class="n">stable_cumsum</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_is_fitted</span>
+
+
+<span class="k">def</span> <span class="nf">_assess_dimension_</span><span class="p">(</span><span class="n">spectrum</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the likelihood of a rank ``rank`` dataset</span>
+
+<span class="sd">    The dataset is assumed to be embedded in gaussian noise of shape(n,</span>
+<span class="sd">    dimf) having spectrum ``spectrum``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    spectrum : array of shape (n)</span>
+<span class="sd">        Data spectrum.</span>
+<span class="sd">    rank : int</span>
+<span class="sd">        Tested rank value.</span>
+<span class="sd">    n_samples : int</span>
+<span class="sd">        Number of samples.</span>
+<span class="sd">    n_features : int</span>
+<span class="sd">        Number of features.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ll : float,</span>
+<span class="sd">        The log-likelihood</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This implements the method of `Thomas P. Minka:</span>
+<span class="sd">    Automatic Choice of Dimensionality for PCA. NIPS 2000: 598-604`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">rank</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">spectrum</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The tested rank cannot exceed the rank of the&quot;</span>
+                         <span class="s2">&quot; dataset&quot;</span><span class="p">)</span>
+
+    <span class="n">pu</span> <span class="o">=</span> <span class="o">-</span><span class="n">rank</span> <span class="o">*</span> <span class="n">log</span><span class="p">(</span><span class="mf">2.</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">rank</span><span class="p">):</span>
+        <span class="n">pu</span> <span class="o">+=</span> <span class="p">(</span><span class="n">gammaln</span><span class="p">((</span><span class="n">n_features</span> <span class="o">-</span> <span class="n">i</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">)</span> <span class="o">-</span>
+               <span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">-</span> <span class="n">i</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">)</span>
+
+    <span class="n">pl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">spectrum</span><span class="p">[:</span><span class="n">rank</span><span class="p">]))</span>
+    <span class="n">pl</span> <span class="o">=</span> <span class="o">-</span><span class="n">pl</span> <span class="o">*</span> <span class="n">n_samples</span> <span class="o">/</span> <span class="mf">2.</span>
+
+    <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="n">n_features</span><span class="p">:</span>
+        <span class="n">pv</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">spectrum</span><span class="p">[</span><span class="n">rank</span><span class="p">:])</span> <span class="o">/</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">-</span> <span class="n">rank</span><span class="p">)</span>
+        <span class="n">pv</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">*</span> <span class="n">n_samples</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">-</span> <span class="n">rank</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span>
+
+    <span class="n">m</span> <span class="o">=</span> <span class="n">n_features</span> <span class="o">*</span> <span class="n">rank</span> <span class="o">-</span> <span class="n">rank</span> <span class="o">*</span> <span class="p">(</span><span class="n">rank</span> <span class="o">+</span> <span class="mf">1.</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span>
+    <span class="n">pp</span> <span class="o">=</span> <span class="n">log</span><span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">m</span> <span class="o">+</span> <span class="n">rank</span> <span class="o">+</span> <span class="mf">1.</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span>
+
+    <span class="n">pa</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="n">spectrum_</span> <span class="o">=</span> <span class="n">spectrum</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">spectrum_</span><span class="p">[</span><span class="n">rank</span><span class="p">:</span><span class="n">n_features</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">rank</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">spectrum</span><span class="p">)):</span>
+            <span class="n">pa</span> <span class="o">+=</span> <span class="n">log</span><span class="p">((</span><span class="n">spectrum</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">spectrum</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="o">*</span>
+                      <span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="n">spectrum_</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">spectrum_</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="o">+</span> <span class="n">log</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span>
+
+    <span class="n">ll</span> <span class="o">=</span> <span class="n">pu</span> <span class="o">+</span> <span class="n">pl</span> <span class="o">+</span> <span class="n">pv</span> <span class="o">+</span> <span class="n">pp</span> <span class="o">-</span> <span class="n">pa</span> <span class="o">/</span> <span class="mf">2.</span> <span class="o">-</span> <span class="n">rank</span> <span class="o">*</span> <span class="n">log</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span>
+
+    <span class="k">return</span> <span class="n">ll</span>
+
+
+<span class="k">def</span> <span class="nf">_infer_dimension_</span><span class="p">(</span><span class="n">spectrum</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Infers the dimension of a dataset of shape (n_samples, n_features)</span>
+
+<span class="sd">    The dataset is described by its spectrum `spectrum`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n_spectrum</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">spectrum</span><span class="p">)</span>
+    <span class="n">ll</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">n_spectrum</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">rank</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_spectrum</span><span class="p">):</span>
+        <span class="n">ll</span><span class="p">[</span><span class="n">rank</span><span class="p">]</span> <span class="o">=</span> <span class="n">_assess_dimension_</span><span class="p">(</span><span class="n">spectrum</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ll</span><span class="o">.</span><span class="n">argmax</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">PCA</span><span class="p">(</span><span class="n">_BasePCA</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Principal component analysis (PCA)</span>
+
+<span class="sd">    Linear dimensionality reduction using Singular Value Decomposition of the</span>
+<span class="sd">    data to project it to a lower dimensional space.</span>
+
+<span class="sd">    It uses the LAPACK implementation of the full SVD or a randomized truncated</span>
+<span class="sd">    SVD by the method of Halko et al. 2009, depending on the shape of the input</span>
+<span class="sd">    data and the number of components to extract.</span>
+
+<span class="sd">    It can also use the scipy.sparse.linalg ARPACK implementation of the</span>
+<span class="sd">    truncated SVD.</span>
+
+<span class="sd">    Notice that this class does not support sparse input. See</span>
+<span class="sd">    :class:`TruncatedSVD` for an alternative with sparse data.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;PCA&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_components : int, float, None or string</span>
+<span class="sd">        Number of components to keep.</span>
+<span class="sd">        if n_components is not set all components are kept::</span>
+
+<span class="sd">            n_components == min(n_samples, n_features)</span>
+
+<span class="sd">        if n_components == &#39;mle&#39; and svd_solver == &#39;full&#39;, Minka\&#39;s MLE is used</span>
+<span class="sd">        to guess the dimension</span>
+<span class="sd">        if ``0 &lt; n_components &lt; 1`` and svd_solver == &#39;full&#39;, select the number</span>
+<span class="sd">        of components such that the amount of variance that needs to be</span>
+<span class="sd">        explained is greater than the percentage specified by n_components</span>
+<span class="sd">        n_components cannot be equal to n_features for svd_solver == &#39;arpack&#39;.</span>
+
+<span class="sd">    copy : bool (default True)</span>
+<span class="sd">        If False, data passed to fit are overwritten and running</span>
+<span class="sd">        fit(X).transform(X) will not yield the expected results,</span>
+<span class="sd">        use fit_transform(X) instead.</span>
+
+<span class="sd">    whiten : bool, optional (default False)</span>
+<span class="sd">        When True (False by default) the `components_` vectors are multiplied</span>
+<span class="sd">        by the square root of n_samples and then divided by the singular values</span>
+<span class="sd">        to ensure uncorrelated outputs with unit component-wise variances.</span>
+
+<span class="sd">        Whitening will remove some information from the transformed signal</span>
+<span class="sd">        (the relative variance scales of the components) but can sometime</span>
+<span class="sd">        improve the predictive accuracy of the downstream estimators by</span>
+<span class="sd">        making their data respect some hard-wired assumptions.</span>
+
+<span class="sd">    svd_solver : string {&#39;auto&#39;, &#39;full&#39;, &#39;arpack&#39;, &#39;randomized&#39;}</span>
+<span class="sd">        auto :</span>
+<span class="sd">            the solver is selected by a default policy based on `X.shape` and</span>
+<span class="sd">            `n_components`: if the input data is larger than 500x500 and the</span>
+<span class="sd">            number of components to extract is lower than 80% of the smallest</span>
+<span class="sd">            dimension of the data, then the more efficient &#39;randomized&#39;</span>
+<span class="sd">            method is enabled. Otherwise the exact full SVD is computed and</span>
+<span class="sd">            optionally truncated afterwards.</span>
+<span class="sd">        full :</span>
+<span class="sd">            run exact full SVD calling the standard LAPACK solver via</span>
+<span class="sd">            `scipy.linalg.svd` and select the components by postprocessing</span>
+<span class="sd">        arpack :</span>
+<span class="sd">            run SVD truncated to n_components calling ARPACK solver via</span>
+<span class="sd">            `scipy.sparse.linalg.svds`. It requires strictly</span>
+<span class="sd">            0 &lt; n_components &lt; X.shape[1]</span>
+<span class="sd">        randomized :</span>
+<span class="sd">            run randomized SVD by the method of Halko et al.</span>
+
+<span class="sd">        .. versionadded:: 0.18.0</span>
+
+<span class="sd">    tol : float &gt;= 0, optional (default .0)</span>
+<span class="sd">        Tolerance for singular values computed by svd_solver == &#39;arpack&#39;.</span>
+
+<span class="sd">        .. versionadded:: 0.18.0</span>
+
+<span class="sd">    iterated_power : int &gt;= 0, or &#39;auto&#39;, (default &#39;auto&#39;)</span>
+<span class="sd">        Number of iterations for the power method computed by</span>
+<span class="sd">        svd_solver == &#39;randomized&#39;.</span>
+
+<span class="sd">        .. versionadded:: 0.18.0</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional (default None)</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`. Used when ``svd_solver`` == &#39;arpack&#39; or &#39;randomized&#39;.</span>
+
+<span class="sd">        .. versionadded:: 0.18.0</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    components_ : array, shape (n_components, n_features)</span>
+<span class="sd">        Principal axes in feature space, representing the directions of</span>
+<span class="sd">        maximum variance in the data. The components are sorted by</span>
+<span class="sd">        ``explained_variance_``.</span>
+
+<span class="sd">    explained_variance_ : array, shape (n_components,)</span>
+<span class="sd">        The amount of variance explained by each of the selected components.</span>
+
+<span class="sd">        .. versionadded:: 0.18</span>
+
+<span class="sd">    explained_variance_ratio_ : array, shape (n_components,)</span>
+<span class="sd">        Percentage of variance explained by each of the selected components.</span>
+
+<span class="sd">        If ``n_components`` is not set then all components are stored and the</span>
+<span class="sd">        sum of explained variances is equal to 1.0.</span>
+
+<span class="sd">    singular_values_ : array, shape (n_components,)</span>
+<span class="sd">        The singular values corresponding to each of the selected components.</span>
+<span class="sd">        The singular values are equal to the 2-norms of the ``n_components``</span>
+<span class="sd">        variables in the lower-dimensional space.</span>
+
+<span class="sd">    mean_ : array, shape (n_features,)</span>
+<span class="sd">        Per-feature empirical mean, estimated from the training set.</span>
+
+<span class="sd">        Equal to `X.mean(axis=1)`.</span>
+
+<span class="sd">    n_components_ : int</span>
+<span class="sd">        The estimated number of components. When n_components is set</span>
+<span class="sd">        to &#39;mle&#39; or a number between 0 and 1 (with svd_solver == &#39;full&#39;) this</span>
+<span class="sd">        number is estimated from input data. Otherwise it equals the parameter</span>
+<span class="sd">        n_components, or n_features if n_components is None.</span>
+
+<span class="sd">    noise_variance_ : float</span>
+<span class="sd">        The estimated noise covariance following the Probabilistic PCA model</span>
+<span class="sd">        from Tipping and Bishop 1999. See &quot;Pattern Recognition and</span>
+<span class="sd">        Machine Learning&quot; by C. Bishop, 12.2.1 p. 574 or</span>
+<span class="sd">        http://www.miketipping.com/papers/met-mppca.pdf. It is required to</span>
+<span class="sd">        computed the estimated data covariance and score samples.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    For n_components == &#39;mle&#39;, this class uses the method of `Thomas P. Minka:</span>
+<span class="sd">    Automatic Choice of Dimensionality for PCA. NIPS 2000: 598-604`</span>
+
+<span class="sd">    Implements the probabilistic PCA model from:</span>
+<span class="sd">    M. Tipping and C. Bishop, Probabilistic Principal Component Analysis,</span>
+<span class="sd">    Journal of the Royal Statistical Society, Series B, 61, Part 3, pp. 611-622</span>
+<span class="sd">    via the score and score_samples methods.</span>
+<span class="sd">    See http://www.miketipping.com/papers/met-mppca.pdf</span>
+
+<span class="sd">    For svd_solver == &#39;arpack&#39;, refer to `scipy.sparse.linalg.svds`.</span>
+
+<span class="sd">    For svd_solver == &#39;randomized&#39;, see:</span>
+<span class="sd">    `Finding structure with randomness: Stochastic algorithms</span>
+<span class="sd">    for constructing approximate matrix decompositions Halko, et al., 2009</span>
+<span class="sd">    (arXiv:909)`</span>
+<span class="sd">    `A randomized algorithm for the decomposition of matrices</span>
+<span class="sd">    Per-Gunnar Martinsson, Vladimir Rokhlin and Mark Tygert`</span>
+
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.decomposition import PCA</span>
+<span class="sd">    &gt;&gt;&gt; X = np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])</span>
+<span class="sd">    &gt;&gt;&gt; pca = PCA(n_components=2)</span>
+<span class="sd">    &gt;&gt;&gt; pca.fit(X)</span>
+<span class="sd">    PCA(copy=True, iterated_power=&#39;auto&#39;, n_components=2, random_state=None,</span>
+<span class="sd">      svd_solver=&#39;auto&#39;, tol=0.0, whiten=False)</span>
+<span class="sd">    &gt;&gt;&gt; print(pca.explained_variance_ratio_)  # doctest: +ELLIPSIS</span>
+<span class="sd">    [ 0.99244...  0.00755...]</span>
+<span class="sd">    &gt;&gt;&gt; print(pca.singular_values_)  # doctest: +ELLIPSIS</span>
+<span class="sd">    [ 6.30061...  0.54980...]</span>
+
+<span class="sd">    &gt;&gt;&gt; pca = PCA(n_components=2, svd_solver=&#39;full&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; pca.fit(X)                 # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE</span>
+<span class="sd">    PCA(copy=True, iterated_power=&#39;auto&#39;, n_components=2, random_state=None,</span>
+<span class="sd">      svd_solver=&#39;full&#39;, tol=0.0, whiten=False)</span>
+<span class="sd">    &gt;&gt;&gt; print(pca.explained_variance_ratio_)  # doctest: +ELLIPSIS</span>
+<span class="sd">    [ 0.99244...  0.00755...]</span>
+<span class="sd">    &gt;&gt;&gt; print(pca.singular_values_)  # doctest: +ELLIPSIS</span>
+<span class="sd">    [ 6.30061...  0.54980...]</span>
+
+<span class="sd">    &gt;&gt;&gt; pca = PCA(n_components=1, svd_solver=&#39;arpack&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; pca.fit(X)</span>
+<span class="sd">    PCA(copy=True, iterated_power=&#39;auto&#39;, n_components=1, random_state=None,</span>
+<span class="sd">      svd_solver=&#39;arpack&#39;, tol=0.0, whiten=False)</span>
+<span class="sd">    &gt;&gt;&gt; print(pca.explained_variance_ratio_)  # doctest: +ELLIPSIS</span>
+<span class="sd">    [ 0.99244...]</span>
+<span class="sd">    &gt;&gt;&gt; print(pca.singular_values_)  # doctest: +ELLIPSIS</span>
+<span class="sd">    [ 6.30061...]</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    KernelPCA</span>
+<span class="sd">    SparsePCA</span>
+<span class="sd">    TruncatedSVD</span>
+<span class="sd">    IncrementalPCA</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">whiten</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">svd_solver</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">iterated_power</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span>
+                 <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">=</span> <span class="n">n_components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">copy</span> <span class="o">=</span> <span class="n">copy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">whiten</span> <span class="o">=</span> <span class="n">whiten</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">svd_solver</span> <span class="o">=</span> <span class="n">svd_solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iterated_power</span> <span class="o">=</span> <span class="n">iterated_power</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+
+<div class="viewcode-block" id="PCA.fit"><a class="viewcode-back" href="../../../api_ibex_transformer_example.html#ibex.sklearn.decomposition.PCA.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model with X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training data, where n_samples in the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : object</span>
+<span class="sd">            Returns the instance itself.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="PCA.fit_transform"><a class="viewcode-back" href="../../../api_ibex_transformer_example.html#ibex.sklearn.decomposition.PCA.fit_transform">[docs]</a>    <span class="k">def</span> <span class="nf">fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model with X and apply the dimensionality reduction on X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training data, where n_samples is the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X_new : array-like, shape (n_samples, n_components)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">U</span> <span class="o">=</span> <span class="n">U</span><span class="p">[:,</span> <span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">whiten</span><span class="p">:</span>
+            <span class="c1"># X_new = X * V / S * sqrt(n_samples) = U * sqrt(n_samples)</span>
+            <span class="n">U</span> <span class="o">*=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># X_new = X * V = U * S * V^T * V = U * S</span>
+            <span class="n">U</span> <span class="o">*=</span> <span class="n">S</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">U</span></div>
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Dispatch to the right submethod depending on the chosen solver.&quot;&quot;&quot;</span>
+
+        <span class="c1"># Raise an error for sparse input.</span>
+        <span class="c1"># This is more informative than the generic one raised by check_array.</span>
+        <span class="k">if</span> <span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;PCA does not support sparse input. See &#39;</span>
+                            <span class="s1">&#39;TruncatedSVD for a possible alternative.&#39;</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">],</span> <span class="n">ensure_2d</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">copy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">)</span>
+
+        <span class="c1"># Handle n_components==None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">n_components</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">n_components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span>
+
+        <span class="c1"># Handle svd_solver</span>
+        <span class="n">svd_solver</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">svd_solver</span>
+        <span class="k">if</span> <span class="n">svd_solver</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+            <span class="c1"># Small problem, just call full PCA</span>
+            <span class="k">if</span> <span class="nb">max</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">500</span><span class="p">:</span>
+                <span class="n">svd_solver</span> <span class="o">=</span> <span class="s1">&#39;full&#39;</span>
+            <span class="k">elif</span> <span class="n">n_components</span> <span class="o">&gt;=</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">n_components</span> <span class="o">&lt;</span> <span class="o">.</span><span class="mi">8</span> <span class="o">*</span> <span class="nb">min</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">):</span>
+                <span class="n">svd_solver</span> <span class="o">=</span> <span class="s1">&#39;randomized&#39;</span>
+            <span class="c1"># This is also the case of n_components in (0,1)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">svd_solver</span> <span class="o">=</span> <span class="s1">&#39;full&#39;</span>
+
+        <span class="c1"># Call different fits for either full or truncated SVD</span>
+        <span class="k">if</span> <span class="n">svd_solver</span> <span class="o">==</span> <span class="s1">&#39;full&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_full</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n_components</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">svd_solver</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;arpack&#39;</span><span class="p">,</span> <span class="s1">&#39;randomized&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_truncated</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span> <span class="n">svd_solver</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unrecognized svd_solver=&#39;</span><span class="si">{0}</span><span class="s2">&#39;&quot;</span>
+                             <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">svd_solver</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_fit_full</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">n_components</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model by computing full SVD on X&quot;&quot;&quot;</span>
+        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="k">if</span> <span class="n">n_components</span> <span class="o">==</span> <span class="s1">&#39;mle&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">n_samples</span> <span class="o">&lt;</span> <span class="n">n_features</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;n_components=&#39;mle&#39; is only supported &quot;</span>
+                                 <span class="s2">&quot;if n_samples &gt;= n_features&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">n_components</span> <span class="o">&lt;=</span> <span class="n">n_features</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;n_components=</span><span class="si">%r</span><span class="s2"> must be between 0 and &quot;</span>
+                             <span class="s2">&quot;n_features=</span><span class="si">%r</span><span class="s2"> with svd_solver=&#39;full&#39;&quot;</span>
+                             <span class="o">%</span> <span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="n">n_features</span><span class="p">))</span>
+
+        <span class="c1"># Center data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span>
+
+        <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="c1"># flip eigenvectors&#39; sign to enforce deterministic output</span>
+        <span class="n">U</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">svd_flip</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">V</span><span class="p">)</span>
+
+        <span class="n">components_</span> <span class="o">=</span> <span class="n">V</span>
+
+        <span class="c1"># Get variance explained by singular values</span>
+        <span class="n">explained_variance_</span> <span class="o">=</span> <span class="p">(</span><span class="n">S</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">n_samples</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">total_var</span> <span class="o">=</span> <span class="n">explained_variance_</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">explained_variance_ratio_</span> <span class="o">=</span> <span class="n">explained_variance_</span> <span class="o">/</span> <span class="n">total_var</span>
+        <span class="n">singular_values_</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># Store the singular values.</span>
+
+        <span class="c1"># Postprocess the number of components required</span>
+        <span class="k">if</span> <span class="n">n_components</span> <span class="o">==</span> <span class="s1">&#39;mle&#39;</span><span class="p">:</span>
+            <span class="n">n_components</span> <span class="o">=</span> \
+                <span class="n">_infer_dimension_</span><span class="p">(</span><span class="n">explained_variance_</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">n_components</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">:</span>
+            <span class="c1"># number of components for which the cumulated explained</span>
+            <span class="c1"># variance percentage is superior to the desired threshold</span>
+            <span class="n">ratio_cumsum</span> <span class="o">=</span> <span class="n">stable_cumsum</span><span class="p">(</span><span class="n">explained_variance_ratio_</span><span class="p">)</span>
+            <span class="n">n_components</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">ratio_cumsum</span><span class="p">,</span> <span class="n">n_components</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># Compute noise covariance using Probabilistic PCA model</span>
+        <span class="c1"># The sigma2 maximum likelihood (cf. eq. 12.46)</span>
+        <span class="k">if</span> <span class="n">n_components</span> <span class="o">&lt;</span> <span class="nb">min</span><span class="p">(</span><span class="n">n_features</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">noise_variance_</span> <span class="o">=</span> <span class="n">explained_variance_</span><span class="p">[</span><span class="n">n_components</span><span class="p">:]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">noise_variance_</span> <span class="o">=</span> <span class="mf">0.</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_samples_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_features_</span> <span class="o">=</span> <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">=</span> <span class="n">components_</span><span class="p">[:</span><span class="n">n_components</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span> <span class="o">=</span> <span class="n">n_components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">explained_variance_</span> <span class="o">=</span> <span class="n">explained_variance_</span><span class="p">[:</span><span class="n">n_components</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">explained_variance_ratio_</span> <span class="o">=</span> \
+            <span class="n">explained_variance_ratio_</span><span class="p">[:</span><span class="n">n_components</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">singular_values_</span> <span class="o">=</span> <span class="n">singular_values_</span><span class="p">[:</span><span class="n">n_components</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span>
+
+    <span class="k">def</span> <span class="nf">_fit_truncated</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span> <span class="n">svd_solver</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model by computing truncated SVD (by ARPACK or randomized)</span>
+<span class="sd">        on X</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="n">six</span><span class="o">.</span><span class="n">string_types</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;n_components=</span><span class="si">%r</span><span class="s2"> cannot be a string &quot;</span>
+                             <span class="s2">&quot;with svd_solver=&#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span>
+                             <span class="o">%</span> <span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="n">svd_solver</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="mi">1</span> <span class="o">&lt;=</span> <span class="n">n_components</span> <span class="o">&lt;=</span> <span class="n">n_features</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;n_components=</span><span class="si">%r</span><span class="s2"> must be between 1 and &quot;</span>
+                             <span class="s2">&quot;n_features=</span><span class="si">%r</span><span class="s2"> with svd_solver=&#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span>
+                             <span class="o">%</span> <span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="n">n_features</span><span class="p">,</span> <span class="n">svd_solver</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">svd_solver</span> <span class="o">==</span> <span class="s1">&#39;arpack&#39;</span> <span class="ow">and</span> <span class="n">n_components</span> <span class="o">==</span> <span class="n">n_features</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;n_components=</span><span class="si">%r</span><span class="s2"> must be stricly less than &quot;</span>
+                             <span class="s2">&quot;n_features=</span><span class="si">%r</span><span class="s2"> with svd_solver=&#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span>
+                             <span class="o">%</span> <span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="n">n_features</span><span class="p">,</span> <span class="n">svd_solver</span><span class="p">))</span>
+
+        <span class="n">random_state</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+
+        <span class="c1"># Center data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span>
+
+        <span class="k">if</span> <span class="n">svd_solver</span> <span class="o">==</span> <span class="s1">&#39;arpack&#39;</span><span class="p">:</span>
+            <span class="c1"># random init solution, as ARPACK does it internally</span>
+            <span class="n">v0</span> <span class="o">=</span> <span class="n">random_state</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+            <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">svds</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span> <span class="n">v0</span><span class="o">=</span><span class="n">v0</span><span class="p">)</span>
+            <span class="c1"># svds doesn&#39;t abide by scipy.linalg.svd/randomized_svd</span>
+            <span class="c1"># conventions, so reverse its outputs.</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">S</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="c1"># flip eigenvectors&#39; sign to enforce deterministic output</span>
+            <span class="n">U</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">svd_flip</span><span class="p">(</span><span class="n">U</span><span class="p">[:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">V</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="k">elif</span> <span class="n">svd_solver</span> <span class="o">==</span> <span class="s1">&#39;randomized&#39;</span><span class="p">:</span>
+            <span class="c1"># sign flipping is done inside</span>
+            <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">randomized_svd</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span>
+                                     <span class="n">n_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">iterated_power</span><span class="p">,</span>
+                                     <span class="n">flip_sign</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                     <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_samples_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_features_</span> <span class="o">=</span> <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">=</span> <span class="n">V</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span> <span class="o">=</span> <span class="n">n_components</span>
+
+        <span class="c1"># Get variance explained by singular values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">explained_variance_</span> <span class="o">=</span> <span class="p">(</span><span class="n">S</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">n_samples</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">total_var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">explained_variance_ratio_</span> <span class="o">=</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">explained_variance_</span> <span class="o">/</span> <span class="n">total_var</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">singular_values_</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># Store the singular values.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span> <span class="o">&lt;</span> <span class="n">n_features</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">noise_variance_</span> <span class="o">=</span> <span class="p">(</span><span class="n">total_var</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">-</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">explained_variance_</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">noise_variance_</span> <span class="o">=</span> <span class="mf">0.</span>
+
+        <span class="k">return</span> <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span>
+
+<div class="viewcode-block" id="PCA.score_samples"><a class="viewcode-back" href="../../../api_ibex_transformer_example.html#ibex.sklearn.decomposition.PCA.score_samples">[docs]</a>    <span class="k">def</span> <span class="nf">score_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the log-likelihood of each sample.</span>
+
+<span class="sd">        See. &quot;Pattern Recognition and Machine Learning&quot;</span>
+<span class="sd">        by C. Bishop, 12.2.1 p. 574</span>
+<span class="sd">        or http://www.miketipping.com/papers/met-mppca.pdf</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array, shape(n_samples, n_features)</span>
+<span class="sd">            The data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ll : array, shape (n_samples,)</span>
+<span class="sd">            Log-likelihood of each sample under the current model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;mean_&#39;</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">Xr</span> <span class="o">=</span> <span class="n">X</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span>
+        <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">log_like</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">precision</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_precision</span><span class="p">()</span>
+        <span class="n">log_like</span> <span class="o">=</span> <span class="o">-.</span><span class="mi">5</span> <span class="o">*</span> <span class="p">(</span><span class="n">Xr</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Xr</span><span class="p">,</span> <span class="n">precision</span><span class="p">)))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">log_like</span> <span class="o">-=</span> <span class="o">.</span><span class="mi">5</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">*</span> <span class="n">log</span><span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">-</span>
+                          <span class="n">fast_logdet</span><span class="p">(</span><span class="n">precision</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">log_like</span></div>
+
+<div class="viewcode-block" id="PCA.score"><a class="viewcode-back" href="../../../api_ibex_transformer_example.html#ibex.sklearn.decomposition.PCA.score">[docs]</a>    <span class="k">def</span> <span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the average log-likelihood of all samples.</span>
+
+<span class="sd">        See. &quot;Pattern Recognition and Machine Learning&quot;</span>
+<span class="sd">        by C. Bishop, 12.2.1 p. 574</span>
+<span class="sd">        or http://www.miketipping.com/papers/met-mppca.pdf</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array, shape(n_samples, n_features)</span>
+<span class="sd">            The data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ll : float</span>
+<span class="sd">            Average log-likelihood of the samples under the current model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">score_samples</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;RandomizedPCA was deprecated in 0.18 and will be removed in &quot;</span>
+            <span class="s2">&quot;0.20. &quot;</span>
+            <span class="s2">&quot;Use PCA(svd_solver=&#39;randomized&#39;) instead. The new implementation &quot;</span>
+            <span class="s2">&quot;DOES NOT store whiten ``components_``. Apply transform to get &quot;</span>
+            <span class="s2">&quot;them.&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">RandomizedPCA</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Principal component analysis (PCA) using randomized SVD</span>
+
+<span class="sd">    .. deprecated:: 0.18</span>
+<span class="sd">        This class will be removed in 0.20.</span>
+<span class="sd">        Use :class:`PCA` with parameter svd_solver &#39;randomized&#39; instead.</span>
+<span class="sd">        The new implementation DOES NOT store whiten ``components_``.</span>
+<span class="sd">        Apply transform to get them.</span>
+
+<span class="sd">    Linear dimensionality reduction using approximated Singular Value</span>
+<span class="sd">    Decomposition of the data and keeping only the most significant</span>
+<span class="sd">    singular vectors to project the data to a lower dimensional space.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;RandomizedPCA&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_components : int, optional</span>
+<span class="sd">        Maximum number of components to keep. When not given or None, this</span>
+<span class="sd">        is set to n_features (the second dimension of the training data).</span>
+
+<span class="sd">    copy : bool</span>
+<span class="sd">        If False, data passed to fit are overwritten and running</span>
+<span class="sd">        fit(X).transform(X) will not yield the expected results,</span>
+<span class="sd">        use fit_transform(X) instead.</span>
+
+<span class="sd">    iterated_power : int, default=2</span>
+<span class="sd">        Number of iterations for the power method.</span>
+
+<span class="sd">        .. versionchanged:: 0.18</span>
+
+<span class="sd">    whiten : bool, optional</span>
+<span class="sd">        When True (False by default) the `components_` vectors are multiplied</span>
+<span class="sd">        by the square root of (n_samples) and divided by the singular values to</span>
+<span class="sd">        ensure uncorrelated outputs with unit component-wise variances.</span>
+
+<span class="sd">        Whitening will remove some information from the transformed signal</span>
+<span class="sd">        (the relative variance scales of the components) but can sometime</span>
+<span class="sd">        improve the predictive accuracy of the downstream estimators by</span>
+<span class="sd">        making their data respect some hard-wired assumptions.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional, default=None</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    components_ : array, shape (n_components, n_features)</span>
+<span class="sd">        Components with maximum variance.</span>
+
+<span class="sd">    explained_variance_ratio_ : array, shape (n_components,)</span>
+<span class="sd">        Percentage of variance explained by each of the selected components.</span>
+<span class="sd">        If k is not set then all components are stored and the sum of explained</span>
+<span class="sd">        variances is equal to 1.0.</span>
+
+<span class="sd">    singular_values_ : array, shape (n_components,)</span>
+<span class="sd">        The singular values corresponding to each of the selected components.</span>
+<span class="sd">        The singular values are equal to the 2-norms of the ``n_components``</span>
+<span class="sd">        variables in the lower-dimensional space.</span>
+
+<span class="sd">    mean_ : array, shape (n_features,)</span>
+<span class="sd">        Per-feature empirical mean, estimated from the training set.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.decomposition import RandomizedPCA</span>
+<span class="sd">    &gt;&gt;&gt; X = np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])</span>
+<span class="sd">    &gt;&gt;&gt; pca = RandomizedPCA(n_components=2)</span>
+<span class="sd">    &gt;&gt;&gt; pca.fit(X)                 # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE</span>
+<span class="sd">    RandomizedPCA(copy=True, iterated_power=2, n_components=2,</span>
+<span class="sd">           random_state=None, whiten=False)</span>
+<span class="sd">    &gt;&gt;&gt; print(pca.explained_variance_ratio_)  # doctest: +ELLIPSIS</span>
+<span class="sd">    [ 0.99244...  0.00755...]</span>
+<span class="sd">    &gt;&gt;&gt; print(pca.singular_values_)  # doctest: +ELLIPSIS</span>
+<span class="sd">    [ 6.30061...  0.54980...]</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    PCA</span>
+<span class="sd">    TruncatedSVD</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    .. [Halko2009] `Finding structure with randomness: Stochastic algorithms</span>
+<span class="sd">      for constructing approximate matrix decompositions Halko, et al., 2009</span>
+<span class="sd">      (arXiv:909)`</span>
+
+<span class="sd">    .. [MRT] `A randomized algorithm for the decomposition of matrices</span>
+<span class="sd">      Per-Gunnar Martinsson, Vladimir Rokhlin and Mark Tygert`</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">iterated_power</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                 <span class="n">whiten</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">=</span> <span class="n">n_components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">copy</span> <span class="o">=</span> <span class="n">copy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iterated_power</span> <span class="o">=</span> <span class="n">iterated_power</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">whiten</span> <span class="o">=</span> <span class="n">whiten</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model with X by extracting the first principal components.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training data, where n_samples in the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : object</span>
+<span class="sd">            Returns the instance itself.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model to the data X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training vector, where n_samples in the number of samples and</span>
+<span class="sd">            n_features is the number of features.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X : ndarray, shape (n_samples, n_features)</span>
+<span class="sd">            The input data, copied, centered and whitened when requested.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">random_state</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">as_float_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">))</span>
+
+        <span class="n">n_samples</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Center data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">n_components</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">n_components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span>
+
+        <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">randomized_svd</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span>
+                                 <span class="n">n_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">iterated_power</span><span class="p">,</span>
+                                 <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">explained_variance_</span> <span class="o">=</span> <span class="n">exp_var</span> <span class="o">=</span> <span class="p">(</span><span class="n">S</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">n_samples</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">full_var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">explained_variance_ratio_</span> <span class="o">=</span> <span class="n">exp_var</span> <span class="o">/</span> <span class="n">full_var</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">singular_values_</span> <span class="o">=</span> <span class="n">S</span>  <span class="c1"># Store the singular values.</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">whiten</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">=</span> <span class="n">V</span> <span class="o">/</span> <span class="n">S</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">=</span> <span class="n">V</span>
+
+        <span class="k">return</span> <span class="n">X</span>
+
+    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Apply dimensionality reduction on X.</span>
+
+<span class="sd">        X is projected on the first principal components previous extracted</span>
+<span class="sd">        from a training set.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            New data, where n_samples in the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X_new : array-like, shape (n_samples, n_components)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;mean_&#39;</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">X</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">X</span>
+
+    <span class="k">def</span> <span class="nf">fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model with X and apply the dimensionality reduction on X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            New data, where n_samples in the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X_new : array-like, shape (n_samples, n_components)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">inverse_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Transform data back to its original space.</span>
+
+<span class="sd">        Returns an array X_original whose transform would be X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_components)</span>
+<span class="sd">            New data, where n_samples in the number of samples</span>
+<span class="sd">            and n_components is the number of components.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X_original array-like, shape (n_samples, n_features)</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        If whitening is enabled, inverse_transform does not compute the</span>
+<span class="sd">        exact inverse operation of transform.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;mean_&#39;</span><span class="p">)</span>
+
+        <span class="n">X_original</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">X_original</span> <span class="o">=</span> <span class="n">X_original</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span>
+        <span class="k">return</span> <span class="n">X_original</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
