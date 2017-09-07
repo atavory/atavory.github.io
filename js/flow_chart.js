@@ -1,16 +1,17 @@
 var flowChart = function () {
 
-var width=80, 
-    height=0;
+var width=1000, 
+    height=1000;
 
 var my = function (selection) {
     var cola_ = undefined;
 
-    cola_ = cola.d3adaptor(d3)
-    .linkDistance(100)
-    .avoidOverlaps(true)
-    .handleDisconnected(false)
-    .size([width, height]);
+    cola_ = cola
+        .d3adaptor(d3)
+        .linkDistance(100)
+        .avoidOverlaps(true)
+        .handleDisconnected(false)
+        .size([width, height]);
 
     cola_
         .avoidOverlaps(true)
@@ -23,8 +24,7 @@ var my = function (selection) {
     var group = svg.selectAll(".flowChartGroup")
         .data(graph.groups)
     .enter().append("rect")
-        .attr("class", "flowChartGroup")
-        .style("fill", "white");
+        .attr("class", "flowChartGroup");
 
     var pad = 3;
     var node = svg.selectAll(".flowChartNode")
@@ -34,9 +34,7 @@ var my = function (selection) {
         .attr("width", function (d) { return d.width; })
         .attr("height", function (d) { 
             return d.height; 
-        })
-        .style("fill", "white")
-        .style("stroke", "grey");
+        });
 
     var label = svg.selectAll(".flowChartLabel")
         .data(graph.nodes)
@@ -61,9 +59,10 @@ var my = function (selection) {
         .append("line")
         .attr("class", "flowChartLink");
 
-    cola_.on("tick", function () {
+    my.tick = function() {
         link
             .attr("x1", function (d) { 
+				console.log(d.source.x)
                 return d.source.x + d.source.width / 2; 
             })
             .attr("y1", function (d) { 
@@ -74,8 +73,13 @@ var my = function (selection) {
             })
             .attr("y2", function (d) { return d.target.y; });
 
-        node.attr("x", function (d) { return d.x - d.width / 2; })
-            .attr("y", function (d) { return d.y - d.height / 2; });
+        node.attr("x", function (d) { 
+				console.log(d.x);
+				return 100;
+				return d.x - d.width / 2; })
+            .attr("y", function (d) { 
+				return 100;	
+					return d.y - d.height / 2; });
         
         group.attr("x", function (d) { return d.bounds.x - pad; })
             .attr("y", function (d) { return d.bounds.y - pad; })
@@ -85,8 +89,8 @@ var my = function (selection) {
         label.attr("x", function (d) { return d.x; })
             .attr("y", function (d) {
                 // console.log(d);
-                var h = this.getBBox().height;
-                return d.y + h/4;
+                // var h = this.getBBox().height;
+                // return d.y + h/4;
             });
 
         groupLabel
@@ -94,21 +98,26 @@ var my = function (selection) {
                 return d.bounds.x; 
             })
             .attr("y", function (d) {
-                console.log(d.bounds);
+                // console.log(d.bounds);
                 return d.bounds.y - 2 * pad;
             });
-    });
+
+    }
+
+    cola_.on("tick", my.tick);
 
 }
+
     my.width = function(value) {
           if (!arguments.length) return width;
-          width = value;
+          width = 100;
+        console.log(width);
           return my;
         };
 
     my.height = function(value) {
             if (!arguments.length) return height;
-            height = value;
+            height = 100;
             return my;
         };
 return my;
