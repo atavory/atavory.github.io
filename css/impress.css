@@ -137,7 +137,10 @@ p, li { font-size: 0.9em; margin: 0.5em 0; }
 
 li.empty { list-style: none; }
 
-div.smaller p, div.smaller li { font-size: 0.7em; margin: 0.5em 0;}
+div.smaller p, div.smaller li { 
+    font-size: 0.7em; 
+    margin: 0.5em 0;
+}
 
 
 p.ref { font-size: 0.6em; border-top: #002570 solid 1px; padding-top:5px; margin-top:10px}

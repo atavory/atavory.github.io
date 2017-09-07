@@ -1,30 +1,25 @@
-.flowChartNode {
-  stroke: #fff;
-  stroke-width: 1.5px;
-}
-
-.flowChartGroup {
-  stroke: grey;
-  stroke-width: 1.5px;
-  opacity: 0.7;
-}
-
 .flowChartLink {
-  stroke: grey;
-  stroke-width: 1px;
-  stroke-opacity: 1;
+    stroke: grey;
+    stroke-width: 1px;
+}
+
+.flowChartNode { 
+    fill: white;
+    stroke: grey;
 }
 
 .flowChartLabel {
-    fill: black;
-    font-family: monospace;
-    font-size: 15px;
+    font-size: 0.5em; 
     text-anchor: middle;
 }
 
-.flowChartGroupLabel {
-    fill: black;
-    font-size: 15px;
-    text-anchor: left;
+.flowChartGroup { 
+    font-size: 0.3em; 
+    fill: white;
+    stroke: darkgrey;
 }
 
+.flowChartGroupLabel {
+    font-size: 0.25em; 
+    text-anchor: left;
+}

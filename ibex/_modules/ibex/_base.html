@@ -1,0 +1,505 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>ibex._base &#8212; ibex 0.1.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for ibex._base</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+
+
+<span class="kn">import</span> <span class="nn">collections</span>
+<span class="kn">import</span> <span class="nn">functools</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">base</span>
+<span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">pipeline</span>
+<span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">exceptions</span>
+<span class="kn">from</span> <span class="nn">sklearn.externals</span> <span class="k">import</span> <span class="n">joblib</span>
+
+<span class="kn">from</span> <span class="nn">._utils</span> <span class="k">import</span> <span class="n">verify_x_type</span><span class="p">,</span> <span class="n">verify_y_type</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[]</span>
+
+
+<span class="c1"># Tmp Ami - uts, docs</span>
+<span class="k">def</span> <span class="nf">_make_pipeline_steps</span><span class="p">(</span><span class="n">objs</span><span class="p">):</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">o</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">objs</span><span class="p">]</span>
+    <span class="n">name_counts</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">Counter</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
+    <span class="n">name_inds</span> <span class="o">=</span> <span class="n">name_counts</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">unique_names</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">name_counts</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">unique_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">name_counts</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">-</span> <span class="n">name_inds</span><span class="p">[</span><span class="n">name</span><span class="p">]))</span>
+            <span class="n">name_inds</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">unique_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">unique_names</span><span class="p">,</span> <span class="n">objs</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="FrameMixin"><a class="viewcode-back" href="../../api_ibex_frame_mixin.html#ibex.FrameMixin">[docs]</a><span class="k">class</span> <span class="nc">FrameMixin</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A base class for steps taking pandas entities, not numpy entities.</span>
+
+<span class="sd">    Subclass this step to indicate that a step takes pandas entities.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">        This is a simple, illustrative &quot;identity&quot; transformer,</span>
+<span class="sd">        which simply relays its input.</span>
+
+<span class="sd">        &gt;&gt;&gt; import pandas as pd</span>
+<span class="sd">        &gt;&gt;&gt; from sklearn import base</span>
+<span class="sd">        &gt;&gt;&gt; import ibex</span>
+<span class="sd">        &gt;&gt;&gt;</span>
+<span class="sd">        &gt;&gt;&gt; class Id(</span>
+<span class="sd">        ...            base.BaseEstimator, # (1)</span>
+<span class="sd">        ...            base.TransformerMixin, # (2)</span>
+<span class="sd">        ...            ibex.FrameMixin): # (3)</span>
+<span class="sd">        ...</span>
+<span class="sd">        ...     def fit(self, X, y=None):</span>
+<span class="sd">        ...         self.x_columns = X.columns # (4)</span>
+<span class="sd">        ...         if y is not None and isinstance(y, pd.DataFrame):</span>
+<span class="sd">        ...             self.y_columns = y.columns</span>
+<span class="sd">        ...         return self</span>
+<span class="sd">        ...</span>
+<span class="sd">        ...     def transform(self, X, *args, **kwargs):</span>
+<span class="sd">        ...         return X[self.x_columns] # (5)</span>
+
+<span class="sd">        Note the following general points:</span>
+
+<span class="sd">        1. We subclass :class:`sklearn.base.BaseEstimator`, as this is an estimator.</span>
+
+<span class="sd">        2. We subclass :class:`sklearn.base.TransformerMixin`, as, in this case, this is specifically a transformer.</span>
+
+<span class="sd">        3. We subclass :class:`ibex.FrameMixin`, as this estimator deals with ``pandas`` entities.</span>
+
+<span class="sd">        4. In ``fit``, we make sure to set :py:attr:`ibex.FrameMixin.x_columns`;, and, if relevant,</span>
+<span class="sd">        :py:attr:`ibex.FrameMixin.y_columns` (if ``y`` is a :class:`pandas.DataFrame`); this will ensure that the</span>
+<span class="sd">        transformer will &quot;remember&quot; the columns it should see in further calls.</span>
+
+<span class="sd">        5. In ``transform``, we first use ``x_columns``. This will verify the columns of ``X``, and also reorder</span>
+<span class="sd">        them according to the original order seen in ``fit`` (if needed).</span>
+
+<span class="sd">        Suppose we define two :class:`pandas.DataFrame` objects, ``X_1`` and ``X_2``, with different columns:</span>
+
+<span class="sd">        &gt;&gt;&gt; import pandas as pd</span>
+<span class="sd">        &gt;&gt;&gt;</span>
+<span class="sd">        &gt;&gt;&gt; X_1 = pd.DataFrame({&#39;a&#39;: [1, 2, 3], &#39;b&#39;: [3, 4, 5]})</span>
+<span class="sd">        &gt;&gt;&gt; X_2 = X_1.rename(columns={&#39;b&#39;: &#39;d&#39;})</span>
+
+<span class="sd">        The following ``fit``-``transform`` combination will work:</span>
+
+<span class="sd">        &gt;&gt;&gt; Id().fit(X_1).transform(X_1)</span>
+<span class="sd">        a  b</span>
+<span class="sd">        0  1  3</span>
+<span class="sd">        1  2  4</span>
+<span class="sd">        2  3  5</span>
+
+<span class="sd">        The following ``fit``-``transform`` combination will fail:</span>
+
+<span class="sd">        &gt;&gt;&gt; try:</span>
+<span class="sd">        ...     Id().fit(X_1).transform(X_2)</span>
+<span class="sd">        ... except KeyError:</span>
+<span class="sd">        ...     print(&#39;caught&#39;)</span>
+<span class="sd">        caught</span>
+
+<span class="sd">        The following ``transform`` will fail, as the estimator was not fitted:</span>
+
+<span class="sd">        &gt;&gt;&gt; from sklearn import exceptions</span>
+<span class="sd">        &gt;&gt;&gt; try:</span>
+<span class="sd">        ...     Id().transform(X_2)</span>
+<span class="sd">        ... except exceptions.NotFittedError:</span>
+<span class="sd">        ...     print(&#39;caught&#39;)</span>
+<span class="sd">        caught</span>
+
+<span class="sd">        Steps can be piped into each other:</span>
+
+<span class="sd">        &gt;&gt;&gt; (Id() | Id()).fit(X_1).transform(X_1)</span>
+<span class="sd">        a  b</span>
+<span class="sd">        0  1  3</span>
+<span class="sd">        1  2  4</span>
+<span class="sd">        2  3  5</span>
+
+<span class="sd">        Steps can be added:</span>
+
+<span class="sd">        &gt;&gt;&gt; (Id() + Id()).fit(X_1).transform(X_1)</span>
+<span class="sd">        a  b  a  b</span>
+<span class="sd">        0  1  3  1  3</span>
+<span class="sd">        1  2  4  2  4</span>
+<span class="sd">        2  3  5  3  5</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">x_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The X columns set in the last call to fit.</span>
+
+<span class="sd">        Set this property at fit, and call it in other methods:</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__x_cols</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">NotFittedError</span><span class="p">()</span>
+
+    <span class="nd">@x_columns</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">x_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__x_cols</span> <span class="o">=</span> <span class="n">columns</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">y_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The y columns set in the last call to fit.</span>
+
+<span class="sd">        Set this property at fit, and call it in other methods:</span>
+
+<span class="sd">        .. versionadded:: 0.1.2</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__y_cols</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">NotFittedError</span><span class="p">()</span>
+
+    <span class="nd">@y_columns</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">y_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__y_cols</span> <span class="o">=</span> <span class="n">columns</span>
+
+<div class="viewcode-block" id="FrameMixin.__or__"><a class="viewcode-back" href="../../api_ibex_frame_mixin.html#ibex.FrameMixin.__or__">[docs]</a>    <span class="k">def</span> <span class="nf">__or__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Pipes the result of this step to other.</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            other: A different step object whose class subclasses this one.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :py:class:`ibex.sklearn.pipeline.Pipeline`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Pipeline</span><span class="p">):</span>
+            <span class="n">selfs</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">selfs</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Pipeline</span><span class="p">):</span>
+            <span class="n">others</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">steps</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">others</span> <span class="o">=</span> <span class="p">[</span><span class="n">other</span><span class="p">]</span>
+
+        <span class="n">combined</span> <span class="o">=</span> <span class="n">selfs</span> <span class="o">+</span> <span class="n">others</span>
+
+        <span class="k">return</span> <span class="n">Pipeline</span><span class="p">(</span><span class="n">_make_pipeline_steps</span><span class="p">(</span><span class="n">combined</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="FrameMixin.__add__"><a class="viewcode-back" href="../../api_ibex_frame_mixin.html#ibex.FrameMixin.__add__">[docs]</a>    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :py:class:`ibex.sklearn.pipeline.FeatureUnion`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">FeatureUnion</span><span class="p">):</span>
+            <span class="n">self_features</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer_list</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">self_features</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">FeatureUnion</span><span class="p">):</span>
+            <span class="n">other_features</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">transformer_list</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">other_features</span> <span class="o">=</span> <span class="p">[</span><span class="n">other</span><span class="p">]</span>
+
+        <span class="n">combined</span> <span class="o">=</span> <span class="n">self_features</span> <span class="o">+</span> <span class="n">other_features</span>
+
+        <span class="k">return</span> <span class="n">FeatureUnion</span><span class="p">(</span><span class="n">_make_pipeline_steps</span><span class="p">(</span><span class="n">combined</span><span class="p">))</span></div></div>
+
+
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;FrameMixin&#39;</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_transform</span><span class="p">(</span><span class="n">transformer</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">transformer</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">*=</span> <span class="n">weight</span>
+    <span class="k">return</span> <span class="n">res</span>
+
+
+<span class="k">def</span> <span class="nf">_fit_transform</span><span class="p">(</span><span class="n">transformer</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">transformer</span><span class="p">,</span> <span class="s1">&#39;fit_transform&#39;</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">transformer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">transformer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">*=</span> <span class="n">weight</span>
+    <span class="k">return</span> <span class="n">res</span>
+
+
+<div class="viewcode-block" id="FeatureUnion"><a class="viewcode-back" href="../../api_ibex_sklearn_pipeline_feature_union.html#ibex.FeatureUnion">[docs]</a><span class="k">class</span> <span class="nc">FeatureUnion</span><span class="p">(</span><span class="n">pipeline</span><span class="o">.</span><span class="n">FeatureUnion</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">TransformerMixin</span><span class="p">,</span> <span class="n">FrameMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Concatenates results of multiple transformer objects.</span>
+<span class="sd">    This estimator applies a list of transformer objects in parallel to the</span>
+<span class="sd">    input data, then concatenates the results. This is useful to combine</span>
+<span class="sd">    several feature extraction mechanisms into a single transformer.</span>
+
+<span class="sd">    Arguments:</span>
+
+<span class="sd">        transformer_list: list of (string, transformer) tuples.</span>
+<span class="sd">            List of transformer objects to be applied to the data.</span>
+<span class="sd">            The first half of each tuple is the name of the transformer.</span>
+
+<span class="sd">        n_jobs: int, optional.</span>
+<span class="sd">            Number of jobs to run in parallel (default 1).</span>
+
+<span class="sd">        transformer_weights: dict, optional</span>
+<span class="sd">            Multiplicative weights for features per transformer.</span>
+<span class="sd">            Keys are transformer names, values the weights.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">        &gt;&gt;&gt; import pandas as pd</span>
+<span class="sd">        &gt;&gt;&gt; X = pd.DataFrame({&#39;a&#39;: [1, 2, 3], &#39;b&#39;: [10, -3, 4]})</span>
+
+<span class="sd">        &gt;&gt;&gt; from ibex.sklearn import preprocessing as pd_preprocessing</span>
+<span class="sd">        &gt;&gt;&gt; from ibex.sklearn import pipeline as pd_pipeline</span>
+
+<span class="sd">        &gt;&gt;&gt; trn = pd_pipeline.FeatureUnion([</span>
+<span class="sd">        ...     (&#39;std&#39;, pd_preprocessing.StandardScaler()),</span>
+<span class="sd">        ...     (&#39;asb&#39;, pd_preprocessing.MaxAbsScaler())])</span>
+<span class="sd">        &gt;&gt;&gt; trn.fit_transform(X, *args, **kwargs)</span>
+<span class="sd">                a         b         a    b</span>
+<span class="sd">        0 -1.224745  1.192166  0.333333  1.0</span>
+<span class="sd">        1  0.000000 -1.254912  0.666667 -0.3</span>
+<span class="sd">        2  1.224745  0.062746  1.000000  0.4</span>
+
+<span class="sd">        &gt;&gt;&gt; from ibex import trans</span>
+<span class="sd">        &gt;&gt;&gt;</span>
+<span class="sd">        &gt;&gt;&gt; trn = pd_preprocessing.StandardScaler() + pd_preprocessing.MaxAbsScaler()</span>
+<span class="sd">        &gt;&gt;&gt; trn.fit_transform(X, *args, **kwargs)</span>
+<span class="sd">                a         b         a    b</span>
+<span class="sd">        0 -1.224745  1.192166  0.333333  1.0</span>
+<span class="sd">        1  0.000000 -1.254912  0.666667 -0.3</span>
+<span class="sd">        2  1.224745  0.062746  1.000000  0.4</span>
+
+<span class="sd">        &gt;&gt;&gt; trn = trans(pd_preprocessing.StandardScaler(), out_cols=[&#39;std_scale_a&#39;, &#39;std_scale_b&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; trn += trans(pd_preprocessing.MaxAbsScaler(), out_cols=[&#39;max_scale_a&#39;, &#39;max_scale_b&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; trn.fit_transform(X, *args, **kwargs)</span>
+<span class="sd">        std_scale_a  std_scale_b  max_scale_a  max_scale_b</span>
+<span class="sd">        0    -1.224745     1.192166     0.333333          1.0</span>
+<span class="sd">        1     0.000000    -1.254912     0.666667         -0.3</span>
+<span class="sd">        2     1.224745     0.062746     1.000000          0.4</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Tmp Ami - document as_index</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transformer_list</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">transformer_weights</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">as_index</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">FeatureUnion</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">transformer_list</span><span class="p">,</span>
+            <span class="n">n_jobs</span><span class="p">,</span>
+            <span class="n">transformer_weights</span><span class="p">)</span>
+        <span class="n">FrameMixin</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_as_index</span> <span class="o">=</span> <span class="n">as_index</span>
+
+    <span class="c1"># Tmp Ami - get docstrings from sklearn.</span>
+<div class="viewcode-block" id="FeatureUnion.fit_transform"><a class="viewcode-back" href="../../api_ibex_sklearn_pipeline_feature_union.html#ibex.FeatureUnion.fit_transform">[docs]</a>    <span class="k">def</span> <span class="nf">fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fits the transformer using ``X`` (and possibly ``y``). Transforms</span>
+<span class="sd">        ``X`` using the transformers, uses :func:`pandas.concat`</span>
+<span class="sd">        to horizontally concatenate the results.</span>
+
+<span class="sd">        Returns:</span>
+
+<span class="sd">            ``self``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">verify_x_type</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">verify_y_type</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+        <span class="n">Xts</span> <span class="o">=</span> <span class="n">joblib</span><span class="o">.</span><span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">)(</span>
+            <span class="n">joblib</span><span class="o">.</span><span class="n">delayed</span><span class="p">(</span><span class="n">_fit_transform</span><span class="p">)(</span><span class="n">trans</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_params</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">trans</span><span class="p">,</span> <span class="n">weight</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_iter</span><span class="p">())</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__concat</span><span class="p">(</span><span class="n">Xts</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FeatureUnion.transform"><a class="viewcode-back" href="../../api_ibex_sklearn_pipeline_feature_union.html#ibex.FeatureUnion.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Transforms ``X`` using the transformers, uses :func:`pandas.concat`</span>
+<span class="sd">        to horizontally concatenate the results.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">verify_x_type</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+        <span class="n">Xts</span> <span class="o">=</span> <span class="n">joblib</span><span class="o">.</span><span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">)(</span>
+            <span class="n">joblib</span><span class="o">.</span><span class="n">delayed</span><span class="p">(</span><span class="n">_transform</span><span class="p">)(</span><span class="n">trans</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">trans</span><span class="p">,</span> <span class="n">weight</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_iter</span><span class="p">())</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__concat</span><span class="p">(</span><span class="n">Xts</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_iter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer_weights</span>
+        <span class="k">if</span> <span class="n">weights</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">return</span> <span class="p">((</span><span class="n">name</span><span class="p">,</span> <span class="n">trans</span><span class="p">,</span> <span class="n">weights</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">trans</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer_list</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__concat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Xts</span><span class="p">):</span>
+        <span class="n">conc</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">Xts</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">cols</span> <span class="o">=</span> <span class="n">conc</span><span class="o">.</span><span class="n">columns</span>
+        <span class="n">tups</span> <span class="o">=</span> <span class="p">[(</span><span class="n">c</span><span class="p">,</span> <span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="k">else</span> <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cols</span><span class="p">]</span>
+        <span class="n">max_tup_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tups</span><span class="p">)</span>
+        <span class="n">tups</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">max_tup_len</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">))</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">tups</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_as_index</span><span class="p">:</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_iter</span><span class="p">()]</span>
+            <span class="n">mults</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="k">for</span> <span class="n">X</span> <span class="ow">in</span> <span class="n">Xts</span><span class="p">]</span>
+            <span class="n">tup_heads</span> <span class="o">=</span> <span class="p">[(</span><span class="n">name</span><span class="p">,</span> <span class="p">)</span> <span class="o">*</span> <span class="n">m</span> <span class="k">for</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">mults</span><span class="p">)]</span>
+            <span class="n">tup_heads</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="o">.</span><span class="n">from_iterable</span><span class="p">(</span><span class="n">tup_heads</span><span class="p">))</span>
+            <span class="n">tups</span> <span class="o">=</span> <span class="p">[(</span><span class="n">h</span><span class="p">,</span> <span class="p">)</span> <span class="o">+</span> <span class="n">t</span> <span class="k">for</span> <span class="n">h</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">tup_heads</span><span class="p">,</span> <span class="n">tups</span><span class="p">)]</span>
+
+        <span class="n">conc</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">MultiIndex</span><span class="o">.</span><span class="n">from_tuples</span><span class="p">(</span><span class="n">tups</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">conc</span></div>
+
+
+<span class="n">FeatureUnion</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">=</span> <span class="s1">&#39;FeatureUnion&#39;</span>
+
+<span class="n">_wrapped</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;get_feature_names&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;get_params&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;set_params&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="k">for</span> <span class="n">wrap</span> <span class="ow">in</span> <span class="n">_wrapped</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">functools</span><span class="o">.</span><span class="n">update_wrapper</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">FeatureUnion</span><span class="p">,</span> <span class="n">wrap</span><span class="p">),</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">pipeline</span><span class="o">.</span><span class="n">FeatureUnion</span><span class="p">,</span> <span class="n">wrap</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;FeatureUnion&#39;</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="Pipeline"><a class="viewcode-back" href="../../api_ibex_sklearn_pipeline_pipeline.html#ibex.Pipeline">[docs]</a><span class="k">class</span> <span class="nc">Pipeline</span><span class="p">(</span><span class="n">pipeline</span><span class="o">.</span><span class="n">Pipeline</span><span class="p">,</span> <span class="n">FrameMixin</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<span class="k">class</span> <span class="nc">InOpChecker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f_name</span><span class="p">):</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="s1">&#39;_ibex_adapter_in_op_</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="nb">hash</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">f_name</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__set</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">threading</span><span class="o">.</span><span class="n">local</span><span class="p">(),</span> <span class="n">flag</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">est</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">id</span><span class="p">(</span><span class="n">est</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__set</span>
+
+    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">est</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="n">est</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">est</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__set</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="n">est</span><span class="p">))</span>
+
+
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;Pipeline&#39;</span><span class="p">]</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  <li><a href="../ibex.html">ibex</a><ul>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

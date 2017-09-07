@@ -1,0 +1,240 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Verification and Processing &#8212; ibex 0.1.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Transforming" href="function_transformer.html" />
+    <link rel="prev" title="Adapting Estimators" href="frame_adapter.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="verification-and-processing">
+<span id="id1"></span><h1>Verification and Processing<a class="headerlink" href="#verification-and-processing" title="Permalink to this headline">¶</a></h1>
+<p>Since <code class="docutils literal"><span class="pre">sklearn</span></code> is defined in terms of <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.13)"><code class="xref py py-class docutils literal"><span class="pre">numpy.ndarray</span></code></a> (and not <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>), Ibex estimators perform verification and processing on their inputs and outputs.</p>
+<p>In this chapter we’ll use a <code class="docutils literal"><span class="pre">DataFrame</span></code> <code class="docutils literal"><span class="pre">X</span></code>, with columns <code class="docutils literal"><span class="pre">'a'</span></code> and <code class="docutils literal"><span class="pre">'b'</span></code>, and (implied) index <code class="docutils literal"><span class="pre">1,</span> <span class="pre">2,</span> <span class="pre">3</span></code>.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]})</span>
+</pre></div>
+</div>
+<p>a scaling transformer <code class="docutils literal"><span class="pre">trn</span></code> which is <code class="docutils literal"><span class="pre">fit</span></code>-ted on <code class="docutils literal"><span class="pre">X</span></code></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">preprocessing</span> <span class="k">as</span> <span class="n">pd_preprocessing</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span> <span class="o">=</span> <span class="n">pd_preprocessing</span><span class="o">.</span><span class="n">StandardScaler</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>and a linear-regression predictor <code class="docutils literal"><span class="pre">prd</span></code> which is also <code class="docutils literal"><span class="pre">fit</span></code>-ted on <code class="docutils literal"><span class="pre">X</span></code></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">linear_model</span> <span class="k">as</span> <span class="n">pd_linear_model</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span> <span class="o">=</span> <span class="n">pd_linear_model</span><span class="o">.</span><span class="n">LinearRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]))</span>
+</pre></div>
+</div>
+<div class="section" id="input-verification">
+<h2>Input Verification<a class="headerlink" href="#input-verification" title="Permalink to this headline">¶</a></h2>
+<p>Following the call to <code class="docutils literal"><span class="pre">fit</span></code>, we can apply further methods of <code class="docutils literal"><span class="pre">trn</span></code> to any <code class="docutils literal"><span class="pre">DataFrame</span></code> with the same column-set. For example, this is OK</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">X_1</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X_1</span><span class="p">)</span>
+<span class="go">      a    b</span>
+<span class="go">0 -1... -1...</span>
+<span class="go">1  1...  1...</span>
+<span class="go">2  3...  3...</span>
+</pre></div>
+</div>
+<p>but this is not</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">X_2</span> <span class="o">=</span> <span class="n">X_1</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="s1">&#39;c&#39;</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X_2</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="c">...</span>
+<span class="gr">KeyError</span>: <span class="n">&quot;...&#39;b&#39;...not in index&quot;</span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>Once an estimator has been <code class="docutils literal"><span class="pre">fit</span></code>-ed, the order of columns of further inputs no longer matters:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X_1</span><span class="p">[[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">]])</span>
+<span class="go">      a    b</span>
+<span class="go">0 -1... -1...</span>
+<span class="go">1  1...  1...</span>
+<span class="go">2  3...  3...</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X_1</span><span class="p">[[</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">]])</span>
+<span class="go">      a    b</span>
+<span class="go">0 -1... -1...</span>
+<span class="go">1  1...  1...</span>
+<span class="go">2  3...  3...</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal"><span class="pre">step</span></code> will reorder the <code class="docutils literal"><span class="pre">DataFrame</span></code> to the same order of columns seen by <code class="docutils literal"><span class="pre">fit</span></code>.</p>
+</div>
+<div class="section" id="output-processing">
+<span id="verification-and-processing-output"></span><h2>Output Processing<a class="headerlink" href="#output-processing" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="indexes">
+<h3>Indexes<a class="headerlink" href="#indexes" title="Permalink to this headline">¶</a></h3>
+<p>The index of a returned <code class="docutils literal"><span class="pre">DataFrame</span></code> or <code class="docutils literal"><span class="pre">Series</span></code> objects, is that of the input:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">X_1</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]},</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X_1</span><span class="p">)</span>
+<span class="go">      a    b</span>
+<span class="go">10 -1... -1...</span>
+<span class="go">20  1...  1...</span>
+<span class="go">30  3...  3...</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_1</span><span class="p">)</span>
+<span class="go">10    3...</span>
+<span class="go">20    4...</span>
+<span class="go">30    5...</span>
+<span class="go">dtype: ...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="dataframe-columns">
+<span id="verification-and-processing-output-dataframe-columns"></span><h3><code class="docutils literal"><span class="pre">DataFrame</span></code> Columns<a class="headerlink" href="#dataframe-columns" title="Permalink to this headline">¶</a></h3>
+<p>In general, the columns of an outputted <code class="docutils literal"><span class="pre">DataFrame</span></code> object are those on which the estimator was <code class="docutils literal"><span class="pre">fit</span></code>-ted:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X_1</span><span class="p">[[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">]])</span>
+<span class="go">      a    b</span>
+<span class="go">10 -1... -1...</span>
+<span class="go">20  1...  1...</span>
+<span class="go">30  3...  3...</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X_1</span><span class="p">[[</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">]])</span>
+<span class="go">      a    b</span>
+<span class="go">10 -1... -1...</span>
+<span class="go">20  1...  1...</span>
+<span class="go">30  3...  3...</span>
+</pre></div>
+</div>
+<p>Some outputted <code class="docutils literal"><span class="pre">DataFrame</span></code> objects have a number of columns that is different from that of the input. If this is the case, the resulting <code class="docutils literal"><span class="pre">DataFrame</span></code>’s columns will all be blank strings (<code class="docutils literal"><span class="pre">''</span></code>):</p>
+<p># Tmp Ami</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">decomposition</span> <span class="k">as</span> <span class="n">pd_decomposition</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pd_decomposition</span><span class="o">.</span><span class="n">PCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">  comp_0</span>
+<span class="go">0 -0.707107</span>
+<span class="go">1  0.707107</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In some cases, we might want greater control over the naming of output columns. For example, when transforming a 2-component PCA, we might want to name the <code class="docutils literal"><span class="pre">DataFrame</span></code> columns <code class="docutils literal"><span class="pre">'pc1'</span></code> and <code class="docutils literal"><span class="pre">'pc2'</span></code>. <a class="reference internal" href="function_transformer.html#function-transformer-specifying-output-columns"><span class="std std-ref">Specifying Output Columns</span></a> in <a class="reference internal" href="function_transformer.html#function-transformer"><span class="std std-ref">Transforming</span></a> shows how to do this.</p>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Verification and Processing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#input-verification">Input Verification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#output-processing">Output Processing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#indexes">Indexes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dataframe-columns"><code class="docutils literal"><span class="pre">DataFrame</span></code> Columns</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="frame_adapter.html" title="previous chapter">Adapting Estimators</a></li>
+      <li>Next: <a href="function_transformer.html" title="next chapter">Transforming</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/input_verification_and_output_processing.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/input_verification_and_output_processing.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

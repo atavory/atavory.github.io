@@ -1796,12 +1796,12 @@
         </div>
         <div class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
         <h3>1. Dynamic Loading</h3><img src="generated/import_seq.png"></div>
-        <div class="step slide" data-x="5614" data-y="40" data-z="-10" data-scale="0.0001">
+        <div class="step slide" data-x="5614" data-y="30" data-z="10" data-scale="0.01">
             <h3><code>sys.meta_path</code></h3>Register loader class for <code>import</code>s.
         </div>
         <div class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
         <h3>1. Dynamic Loading</h3><img src="generated/import_seq.png"></div>
-        <div class="step slide" data-x="5614" data-y="42" data-z="-10" data-scale="0.0001">
+        <div class="step slide" data-x="5634" data-y="30" data-z="10" data-scale="0.01">
             <h3><code>dir</code></h3>
             <div class="smaller">
                 <pre class='brush: python; gutter: false; toolbar: false'>
@@ -2688,13 +2688,31 @@
       }
     </script>
     <script>
+    var width = 960,
 
-var div = div = d3.select('#concat_manip_columns');
-var rect = div.node().getBoundingClientRect();
-console.log(rect);
-var svg = div.append("svg")
-    .attr("width", rect.width)
-    .attr("height", rect.height);
+        height = 200;
+
+
+
+
+    var cola = cola.d3adaptor(d3)
+
+        .linkDistance(100)
+
+        .avoidOverlaps(true)
+
+        .handleDisconnected(false)
+
+        .size([width, height]);
+
+
+
+    var svg = d3.select("#concat_manip_columns").append("svg")
+
+        .attr("width", width)
+
+        .attr("height", height);
+
 
 var graph = {
         "nodes":[
@@ -2752,87 +2770,137 @@ var graph = {
             ]
 };
 
-svg.graph = graph;
+        cola
+        .avoidOverlaps(true)
+        .flowLayout('x', 150)
 
-var chart = flowChart()
-    .width(rect.width)
-    .height(rect.height);
-chart(svg);
+            .nodes(graph.nodes)
 
-</script>
-    <script>
+            .links(graph.links)
 
-var div = div = d3.select('#concat_manip_columns_with_feature_importance');
-var rect = div.node().getBoundingClientRect();
-console.log(rect);
-var svg = div.append("svg")
-    .attr("width", rect.width)
-    .attr("height", rect.height);
+            .groups(graph.groups)
 
-var graph = {
-        "nodes":[
-                  {"name":"X0","width":60,"height":40},
-                  {"name":"X1","width":60,"height":40},
-                  {"name":"","width":1,"height":1},
-                  {"name":"SelectKBest","width":160,"height":40},
-                  {"name":"PCA","width":60,"height":40},
-                  {"name":"","width":1,"height":1},
-                  {"name":"RandomForestRegressor","width":260,"height":40},
-                  {"name":"feature_importances_","width":260,"height":40},
-                ],
-        "links":[
-                  {"source":0,"target":2},
-                  {"source":1,"target":2},
-                  {"source":2,"target":3},
-                  {"source":2,"target":4},
-                  {"source":3,"target":5},
-                  {"source":4,"target":5},
-                  {"source":5,"target":6},
-                  {"source":6,"target":7}
-                ],
-        "groups":[
-                  {"name": "Input", "leaves":[0, 1]},
-                  {"name": "Transformers", "leaves":[3,4]}
-                ],
-    "constraints":[
+            .start();
 
-              {"type":"alignment",
 
-                       "axis":"x",
 
-                       "offsets":[
+        var group = svg.selectAll(".group")
 
-                                 {"node":"1", "offset":"0"},
+            .data(graph.groups)
 
-                                 {"node":"2", "offset":"0"},
+          .enter().append("rect")
 
-                                 {"node":"3", "offset":"0"}
+            .attr("rx", 8).attr("ry", 8)
 
-                               ]},
+            .attr("class", "flowChartGroup");
 
-              {"type":"alignment",
 
-                       "axis":"y",
 
-                       "offsets":[
+		var groupLabel = svg.selectAll(".flowChartGroupLabel")
+			.data(graph.groups)
+		.enter()
+			.append("text")
+			.attr("class", "flowChartGroupLabel")
+			.text(function (d) { 
+				console.log(d.name);
+				return d.name; 
+			});
 
-                                 {"node":"0", "offset":"0"},
+        var link = svg.selectAll(".link")
 
-                                 {"node":"1", "offset":"0"},
+            .data(graph.links)
 
-                                 {"node":"4", "offset":"0"}
+          .enter().append("line")
 
-                               ]}
+            .attr("class", "link");
 
-            ]
-};
 
-svg.graph = graph;
 
-var chart = flowChart()
-    .width(rect.width)
-    .height(rect.height);
-chart(svg);
+        var pad = 3;
+
+        var node = svg.selectAll(".node")
+
+            .data(graph.nodes)
+
+          .enter().append("rect")
+
+            .attr("class", "node")
+
+            .attr("width", function (d) { return d.width - 2 * pad; })
+
+            .attr("height", function (d) { return d.height - 2 * pad; })
+
+            .attr("rx", 5).attr("ry", 5)
+            .attr("class", "flowChartNode");
+
+
+
+
+        var label = svg.selectAll(".label")
+
+            .data(graph.nodes)
+
+           .enter().append("text")
+
+            .attr("class", "flowChartLabel")
+
+            .text(function (d) { return d.name; });
+
+
+
+        node.append("title")
+
+            .text(function (d) { return d.name; });
+
+
+
+        cola.on("tick", function () {
+
+            link.attr("x1", function (d) { return d.source.x; })
+
+                .attr("y1", function (d) { return d.source.y; })
+
+                .attr("x2", function (d) { return d.target.x; })
+
+                .attr("y2", function (d) { return d.target.y; });
+
+
+
+            node.attr("x", function (d) { return d.x - d.width / 2 + pad; })
+
+                .attr("y", function (d) { return d.y - d.height / 2 + pad; });
+
+            
+
+            group.attr("x", function (d) { return d.bounds.x; })
+
+                 .attr("y", function (d) { return d.bounds.y; })
+
+                .attr("width", function (d) { return d.bounds.width(); })
+
+                .attr("height", function (d) { return d.bounds.height(); });
+
+
+
+            label.attr("x", function (d) { return d.x; })
+
+                 .attr("y", function (d) {
+
+                     var h = this.getBBox().height;
+
+                     return d.y + h/4;
+
+                 });
+
+			groupLabel
+				.attr("x", function (d) { 
+					return d.bounds.x; 
+				})
+				.attr("y", function (d) {
+					// console.log(d.bounds);
+					return d.bounds.y - 2 * pad;
+				});
+        });
 
 </script>
 </body>

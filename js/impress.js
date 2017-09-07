@@ -16,6 +16,8 @@
  *  source:  http://github.com/bartaz/impress.js/
  */
 
+var curStep = undefined;
+
 var prevTranslateX = 0;
 var prevTranslateY = 0;
 var prevTranslateZ = 0;
@@ -281,6 +283,7 @@ var prevTranslateZ = 0;
         // but the event is triggered only if the step is different than
         // last entered step.
         var onStepEnter = function (step) {
+            // console.log(step);
             if (lastEntered !== step) {
                 triggerEvent(step, "impress:stepenter");
                 lastEntered = step;
@@ -304,6 +307,7 @@ var prevTranslateZ = 0;
         // but the event is triggered only if the step is the same as
         // last entered step.
         var onSubStepActive = function (step) {
+            // console.log(curStep, step);
             //if (lastSubActivated === step) {
                 triggerEvent(step, "impress:substepactive");
             //    lastSubActivated = null;
@@ -474,10 +478,12 @@ var prevTranslateZ = 0;
             
             body.classList.add("impress-on-" + el.id);
 
+            curStep = step;
+
             var translateX = step.translate.x + prevTranslateX;
             var translateY = step.translate.y + prevTranslateY;
             var translateZ = step.translate.z + prevTranslateZ;
-            console.log(translateX, translateY, translateZ);
+            // console.log(translateX, translateY, translateZ);
             
             // compute target state of the canvas based on given step
             var target = {
