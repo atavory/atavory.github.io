@@ -2790,8 +2790,6 @@ var graph = {
 
           .enter().append("rect")
 
-            .attr("rx", 8).attr("ry", 8)
-
             .attr("class", "flowChartGroup");
 
 
@@ -2830,20 +2828,15 @@ var graph = {
 
             .attr("height", function (d) { return d.height - 2 * pad; })
 
-            .attr("rx", 5).attr("ry", 5)
             .attr("class", "flowChartNode");
 
 
 
 
         var label = svg.selectAll(".label")
-
             .data(graph.nodes)
-
            .enter().append("text")
-
             .attr("class", "flowChartLabel")
-
             .text(function (d) { return d.name; });
 
 
@@ -2855,14 +2848,18 @@ var graph = {
 
 
         cola.on("tick", function () {
-
-            link.attr("x1", function (d) { return d.source.x; })
-
-                .attr("y1", function (d) { return d.source.y; })
-
-                .attr("x2", function (d) { return d.target.x; })
-
-                .attr("y2", function (d) { return d.target.y; });
+        link
+            .attr("x1", function (d) { 
+				console.log(d.source.x)
+                return d.source.x + d.source.width / 2; 
+            })
+            .attr("y1", function (d) { 
+                return d.source.y; 
+            })
+            .attr("x2", function (d) { 
+                return d.target.x - d.target.width / 2; 
+            })
+            .attr("y2", function (d) { return d.target.y; });
 
 
 
