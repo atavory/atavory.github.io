@@ -9,12 +9,14 @@ skinparam artifact {
     BorderColor lightgrey
 }
 
-rectangle X0
-rectangle X1
+rectangle input {
+    rectangle X0
+    rectangle X1
+    interface " " as c0
+}
 
 rectangle SelectKBest
 rectangle PCA
-interface " " as c0
 interface " " as c1
 rectangle RandomForestRegressor
 X0 --> c0
