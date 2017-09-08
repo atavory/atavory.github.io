@@ -17,4 +17,4 @@ env = Environment(BUILDERS={
 for f_name in glob.glob('*.plantuml'):
     src, target = f_name, os.path.join('generated', os.path.splitext(f_name)[0] + '.png')
     env.PlantUMLBuilder(target, src)
-env.TidyBuilder('index.html.tidy', 'index.html')
+#env.TidyBuilder('index.html.tidy', 'index.html')
