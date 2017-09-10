@@ -1,17 +1,22 @@
 @startuml
 
-skinparam monochrome true
 skinparam shadowing false
 
 left to right direction
 
-frame " " <<input>> {
-    cloud X
+skinparam interface {
+    borderColor black
 }
-rectangle SelectKBest
-rectangle PCA
-interface " " as c1
-rectangle RandomForestRegressor
+
+skinparam component {
+    arrowColor Black
+}
+
+cloud X #red
+rectangle SelectKBest #white
+rectangle PCA #white
+interface " " as c1 #white
+rectangle RandomForestRegressor #white
 X --> SelectKBest
 X --> PCA
 SelectKBest --> c1

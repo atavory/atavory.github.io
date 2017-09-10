@@ -1,19 +1,24 @@
 @startuml
 
-skinparam monochrome true
 skinparam shadowing false
 
 left to right direction
 
-frame " " <<input>> {
-    database X0
-    database X1
-    interface " " as c0
+skinparam interface {
+    borderColor black
 }
-rectangle SelectKBest
-rectangle PCA
-interface " " as c1
-rectangle RandomForestRegressor
+
+skinparam component {
+    arrowColor Black
+}
+
+database X0 #red
+database X1 #red
+interface " " as c0 #white
+rectangle SelectKBest #white
+rectangle PCA #white
+interface " " as c1 #white
+rectangle RandomForestRegressor #white
 X0 --> c0
 X1 --> c0 
 c0 --> SelectKBest
