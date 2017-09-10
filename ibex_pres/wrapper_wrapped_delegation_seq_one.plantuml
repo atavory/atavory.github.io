@@ -1,0 +1,21 @@
+@startuml
+
+skinparam monochrome true
+skinparam shadowing false
+
+actor user
+
+participant Wrapped
+
+participant wrapped
+
+autonumber 1 "<font color=black>"
+user -[#black]> Wrapped : **predict(X)**
+autonumber 2 "<font color=grey>"
+Wrapped -[#grey]> Wrapped : validate; strip
+Wrapped -[#grey]> Wrapped : predict(Xt)
+wrapped -[#grey]> Wrapped : yt
+Wrapped -[#grey]> Wrapped : add metadata
+Wrapped -[#grey]> user : y
+
+@enduml

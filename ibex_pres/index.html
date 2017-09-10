@@ -6,8 +6,7 @@
     <meta content="width=1024" name="viewport">
     <meta content="yes" name="apple-mobile-web-app-capable">
     <title>Ibex</title>
-    <meta content="Ibex" name="description">
-    <meta content="Ami Tavory" name="author">
+    <meta content="Ibex" name="description"> <meta content="Ami Tavory" name="author">
     <link href="../css/impress.css" rel="stylesheet">
     <link href="../css/shThemeDefault.css" rel="stylesheet">
     <link href="../css/css-tooltips.css" rel="stylesheet">
@@ -41,8 +40,19 @@
     <script type="text/javascript">
       $(document).ready(function() {
         document.addEventListener('impress:stepenter', function(event) {
+          console.log(event.target.id);
+
           if (event.target.id.search('outline') != -1) {
-            $(".other").fadeTo("slow", 0.33);
+                $(".other").fadeTo("slow", 0.33);
+          }
+          if (event.target.id.search('import_seq_1') != -1) {
+                switchImage("#import_seq_0_img",  "generated/import_seq_five.png");
+          }
+          if (event.target.id.search('import_seq_2') != -1) {
+                switchImage("#import_seq_0_img",  "generated/import_seq_seven.png");
+          }
+          if (event.target.id.search('import_seq_3') != -1) {
+                switchImage("#import_seq_0_img",  "generated/import_seq_nine.png");
           }
         }, false);
         document.addEventListener('impress:stepleave', function(event) {
@@ -354,7 +364,7 @@
         <div class="step slide" data-scale="0.01" data-x="1512" data-y="39.4" data-z="10">
             <h3>NMF Decomposition</h3>
             <div>
-                <div class="smaller">
+                <div class="smaller" style="float: left">
                     <table class="data">
                         <tbody>
                             <tr>
@@ -380,7 +390,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="smaller">
+                <div class="smaller" style="float: left">
                     <table class="data">
                         <tbody>
                             <tr>
@@ -730,8 +740,7 @@
         </div>
         <div class="step slide" data-scale="1" data-x="4200" data-y="0" id="outline-intro-4">
             <h2>Outline</h2>
-            <div>
-            <div class="c9">
+            <div style="float: left">
                 <ul class="outline">
                     <li class="other">Motivation</li>
                     <li class="current">
@@ -746,7 +755,12 @@
                     </li>
                     <li class="other">Conclusions</li>
                 </ul>
-            </div><img src="images/logo.jpeg" class="c10"></div>
+            </div>
+            <div style="float: left">
+                <div>
+                <img src="generated/ibex_class_diagram_pandas.png">
+                </div>
+            </div>
         </div>
         <div class="step slide" data-scale="0.01" data-x="4200" data-y="30" data-z="10">
             <h2>Layers</h2>
@@ -1770,27 +1784,33 @@
         <div class="step slide" data-scale="1" data-x="5600" data-y="0" id="outline-intro-5">
             <h2>Outline</h2>
             <div>
-            <div class="">
-                <ul class="outline">
-                    <li class="other">Motivation</li>
-                    <li class="other">
-                        <div class="c8">
-                            Interface
-                        </div>
-                    </li>
-                    <li class="current">
-                        <div class="c8">
-                            Implementation
-                        </div>
-                    </li>
-                    <li class="other">Conclusions</li>
-                </ul>
-            </div><img src="images/logo.jpeg" class="c10"></div>
+                <div style="float: left">
+                    <ul class="outline">
+                        <li class="other">Motivation</li>
+                        <li class="other">
+                            <div class="c8">
+                                Interface
+                            </div>
+                        </li>
+                        <li class="current">
+                            <div class="c8">
+                                Implementation
+                            </div>
+                        </li>
+                        <li class="other">Conclusions</li>
+                    </ul>
+                </div>
+                <div style="float: left">
+                    <div>
+                    <img src="images/logo.jpeg" class="c10">
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="step slide" data-scale="0.01" data-x="5600" data-y="30" data-z="10">
+        <div id="wrapper_wrapped_generated" class="step slide" data-scale="0.01" data-x="5600" data-y="30" data-z="10">
             <h2>Straightforward Approach: Compose</h2>
             <div class="smaller">
-                <pre class="brush: python; gutter: true; toolbar: false highlight: []">            
+                <pre class="brush: python; gutter: true; toolbar: false">            
             class Wrapper(BaseEstimator, RegressorMixin, FrameMixing):
                 def __init__(self, *args, **kwargs):
                     self.wrapped = LinearRegression(*args, **kwargs)
@@ -1798,7 +1818,14 @@
             ...
             </pre>
             </div>
-            <div class="substep smaller"><img src="generated/wrapper_wrapped_delegation.png"></div>
+            <div class="substep smaller">
+                <img id="wrapper_wrapped_generated_img"src="generated/wrapper_wrapped_delegation.png">
+            </div>
+            <div class="substep smaller"></div>
+            <div class="substep smaller"></div>
+            <div class="substep smaller"></div>
+            <div class="substep smaller"></div>
+            <div class="substep smaller"></div>
         </div>
         <div class="step slide" data-scale="0.01" data-x="5600" data-y="40" data-z="10">
             <h3 class="baddy">1. <code>sklearn</code> Too Large/Dynamic For Manual Wrapping</h3>
@@ -1806,14 +1833,22 @@
                 <svg height="800" id="sklearn-classes" width="1000"></svg>
             </div>
         </div>
-        <div class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
-        <h3>1. Dynamic Loading</h3><img src="generated/import_seq.png"></div>
-        <div class="step slide" data-x="5614" data-y="30" data-z="10" data-scale="0.01">
+        <div id="import_seq_0" class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
+        <h3>1. Dynamic Loading</h3>
+            <div class="smaller">
+                <img id="import_seq_0_img" src="generated/import_seq_one.png">
+            </div>
+            <div class="substep"></div>
+            <div class="substep"></div>
+            <div class="substep"></div>
+        </div>
+        <div class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.0003", data-rotate-x="-50">
             <h3><code>sys.meta_path</code></h3>Register loader class for <code>import</code>s.
         </div>
-        <div class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
-        <h3>1. Dynamic Loading</h3><img src="generated/import_seq.png"></div>
-        <div class="step slide" data-x="5634" data-y="30" data-z="10" data-scale="0.01">
+        <div id="import_seq_1" class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
+            <div class="substep"></div>
+        </div>
+        <div class="step slide" data-x="5614.3" data-y="40.75" data-z="10" data-scale="0.0003", data-rotate-x="-50">
             <h3><code>dir</code></h3>
             <div class="smaller">
                 <pre class='brush: python; gutter: false; toolbar: false'>
@@ -1828,9 +1863,10 @@
                 </pre>
             </div>
         </div>
-        <div class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
-        <h3>1. Dynamic Loading</h3><img src="generated/import_seq.png"></div>
-        <div class="step slide" data-x="5614" data-y="44" data-z="-10" data-scale="0.0001">
+        <div id="import_seq_2" class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
+            <div class="substep"></div>
+        </div>
+        <div class="step slide" data-x="5615.6" data-y="41.2" data-z="10" data-scale="0.0003", data-rotate-x="-50">
             <h3><code>inspect</code></h3>
             <div class="smaller">
                 <pre class='brush: python; gutter: false; toolbar: false'>
@@ -1841,8 +1877,9 @@
                 </pre>
             </div>
         </div>
-        <div class="step slide" data-x="17007" data-y="0" data-z="0" data-scale="0.01">
-        <h3>1. Dynamic Loading</h3><img src="generated/import_seq.png"></div>
+        <div id="import_seq_3" class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
+        </div>
+        <div class="step slide" data-x="17007" data-y="0" data-z="0" data-scale="0.01"></div>
         <div class="step slide" data-x="17007" data-y="10" data-z="0" data-scale="0.01">
             <h3 class="baddy">2. Scikit-Learn Estimator Idiosyncrasies</h3>
             <div class="smaller substep c20">
@@ -2700,35 +2737,76 @@
       }
     </script>
     <script>
+        var switchImage = function (id, src) {
+            d3.select(id)
+                .transition()
+                .delay(220)
+                .attr("src", src);
+        }
+
       $(document).ready(function() {
         document.addEventListener('impress:substepactive', function(event) {
             var parent_id = event.target.parentNode.id,
                 ind =Array.prototype.indexOf.call(event.target.parentNode.childNodes, event.target);
-            console.log(parent_id, ind);
+
+            console.log(ind, parent_id);
+
+            if (parent_id.localeCompare("import_seq_0") == 0 && ind == 5) {
+                switchImage("#import_seq_0_img",  "generated/import_seq_two.png");
+            }
+            if (parent_id.localeCompare("import_seq_0") == 0 && ind == 7) {
+                switchImage("#import_seq_0_img",  "generated/import_seq_three.png");
+            }
+            if (parent_id.localeCompare("import_seq_0") == 0 && ind == 9) {
+                switchImage("#import_seq_0_img",  "generated/import_seq_four.png");
+            }
+
+            if (parent_id.localeCompare("import_seq_1") == 0 && ind == 1) {
+                switchImage("#import_seq_0_img",  "generated/import_seq_six.png");
+            }
+
+            if (parent_id.localeCompare("import_seq_2") == 0 && ind == 1) {
+                switchImage("#import_seq_0_img",  "generated/import_seq_eight.png");
+            }
+
+            if (parent_id.localeCompare("wrapper_wrapped_generated") == 0 && ind == 5) {
+                switchImage("#wrapper_wrapped_generated_img",  "generated/wrapper_wrapped_delegation_seq_one.png");
+            }
+            if (parent_id.localeCompare("wrapper_wrapped_generated") == 0 && ind == 7) {
+                switchImage("#wrapper_wrapped_generated_img",  "generated/wrapper_wrapped_delegation_seq_two.png");
+            }
+            if (parent_id.localeCompare("wrapper_wrapped_generated") == 0 && ind == 9) {
+                switchImage("#wrapper_wrapped_generated_img",  "generated/wrapper_wrapped_delegation_seq_three.png");
+            }
+            if (parent_id.localeCompare("wrapper_wrapped_generated") == 0 && ind == 11) {
+                switchImage("#wrapper_wrapped_generated_img",  "generated/wrapper_wrapped_delegation_seq_four.png");
+            }
+            if (parent_id.localeCompare("wrapper_wrapped_generated") == 0 && ind == 13) {
+                switchImage("#wrapper_wrapped_generated_img",  "generated/wrapper_wrapped_delegation_seq_five.png");
+            }
+            if (parent_id.localeCompare("wrapper_wrapped_generated") == 0 && ind == 15) {
+                switchImage("#wrapper_wrapped_generated_img",  "generated/wrapper_wrapped_delegation_seq_six.png");
+            }
 
             if (parent_id.localeCompare("example_1_substeps") == 0 && ind == 1) {
-                d3.select("#example_1_substeps_img")
-                    .transition()
-                    .delay(110)
-                    .attr("src", "generated/col_aggregating_further_transformations_xs_focus.png");
+                switchImage(
+                    "#example_1_substeps_img",  
+                    "generated/col_aggregating_further_transformations_xs_focus.png");
             }
             if (parent_id.localeCompare("example_1_substeps") == 0 && ind == 3) {
-                d3.select("#example_1_substeps_img")
-                    .transition()
-                    .delay(220)
-                    .attr("src", "generated/col_aggregating_further_transformations_transormers_focus.png");
+                switchImage(
+                    "#example_1_substeps_img",  
+                    "generated/col_aggregating_further_transformations_transormers_focus.png");
             }
             if (parent_id.localeCompare("example_1_substeps") == 0 && ind == 5) {
-                d3.select("#example_1_substeps_img")
-                    .transition()
-                    .delay(220)
-                    .attr("src", "generated/col_aggregating_further_transformations_transformers_predictor_focus.png");
+                switchImage(
+                    "#example_1_substeps_img",  
+                    "generated/col_aggregating_further_transformations_transformers_predictor_focus.png");
             }
             if (parent_id.localeCompare("example_1_substeps") == 0 && ind == 7) {
-                d3.select("#example_1_substeps_img")
-                    .transition()
-                    .delay(220)
-                    .attr("src", "generated/col_aggregating_further_transformations.png");
+                switchImage(
+                    "#example_1_substeps_img",  
+                    "generated/col_aggregating_further_transformations.png");
             }
         })
       });
