@@ -409,11 +409,9 @@ svg .substep.previous {
 }
 
 div.abs-box {
-  width: 1280px;
   position: relative;
 }
 div.abs-box > :not(.base) {
-  width: 1280px;
   position: absolute;
   top: 0;
   left: 0;

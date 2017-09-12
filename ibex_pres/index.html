@@ -53,13 +53,19 @@ var StepGroup = function(elems) {
     }
 
     comp.notify_substep_active = function(id, step) {
-        var relevant_substeps = comp._substeps.filter(function (e) {return e['id'].localeCompare(id) == 0; })
+        var activeInds = comp
+            ._substeps
+            .filter(function (e) {return e["id"].localeCompare(id) == 0 && e["step"] == step; })
+            .map(function (e) {return e["active_ind"]; });
+        console.log(activeInds);
 
-        for (var e of relevant_substeps) {
-            d3.select("#" + elems[e["active_ind"]])
+        for (var i = 0; i < elems.length; ++i) {
+            d3.select("#" + elems[i])
                 .transition()
                 .duration(220)
-                .style("opacity", e["step"] == step? 1: 0);
+                .style(
+                    "opacity", 
+                    activeInds.indexOf(i) == -1? 0: 1);
         }
 
         return comp;
@@ -791,21 +797,23 @@ var StepGroup = function(elems) {
                 <div class="abs-box base">
                     <div class="abs-box">
                         <div class="smaller">
-                        <img id="outline_both_1" src="generated/ibex_class_diagram_np.png" style="opacity: 1">
+                        <img id="outlineClsGroup_img_1" src="generated/ibex_class_diagram_np.png" style="opacity: 1">
                         </div>
                     </div>
                     <div class="abs-box">
                         <div class="smaller">
-                        <img id="outline_both_2" src="generated/ibex_class_diagram_pandas.png" style="opacity: 0">
+                        <img id="outlineClsGroup_img_2" src="generated/ibex_class_diagram_pandas.png" style="opacity: 0">
                         </div>
                     </div>
                     <div class="abs-box">
                         <div class="smaller">
-                        <img id="outline_both_2" src="images/logo.jpeg" style="opacity: 0">
+                        <img id="outlineClsGroup_img_3" src="images/logo.jpeg" style="opacity: 0">
                         </div>
                     </div>
                 </div>
             </div>
+            <div class="substep smaller"></div>
+            <div class="substep smaller"></div>
         </div>
         <div class="step slide" data-scale="0.01" data-x="4200" data-y="30" data-z="10">
             <h2>Layers</h2>
@@ -2800,6 +2808,14 @@ var StepGroup = function(elems) {
             .add_substep("example_1_substeps", 5, 3)
             .add_substep("example_1_substeps", 7, 0)
 
+        var outlineClsGroup = StepGroup([
+            "outlineClsGroup_img_1",
+            "outlineClsGroup_img_2",
+            "outlineClsGroup_img_3"]);
+        outlineClsGroup
+            .add_substep("outline-intro-4", 7, 1)
+            .add_substep("outline-intro-4", 9, 2);
+
       $(document).ready(function() {
         document.addEventListener('impress:stepenter', function(event) {
 
@@ -2830,7 +2846,11 @@ var StepGroup = function(elems) {
             var parent_id = event.target.parentNode.id,
                 ind =Array.prototype.indexOf.call(event.target.parentNode.childNodes, event.target);
 
+            console.log(parent_id, ind);
+
             example_1_group
+                .notify_substep_active(parent_id, ind);
+            outlineClsGroup
                 .notify_substep_active(parent_id, ind);
 
             if (parent_id.localeCompare("import_seq_0") == 0 && ind == 5) {
@@ -2868,13 +2888,6 @@ var StepGroup = function(elems) {
             }
             if (parent_id.localeCompare("wrapper_wrapped_generated") == 0 && ind == 15) {
                 switchImage("#wrapper_wrapped_generated_img",  "generated/wrapper_wrapped_delegation_seq_six.png");
-            }
-
-            if (parent_id.localeCompare("outline-intro-4") == 0 && ind == 7) {
-                switchImage("#outline_ibex_cd_img",  "generated/ibex_class_diagram_pandas.png");
-            }
-            if (parent_id.localeCompare("outline-intro-4") == 0 && ind == 9) {
-                switchImage("#outline_ibex_cd_img",  "images/logo.jpeg");
             }
         })
       });

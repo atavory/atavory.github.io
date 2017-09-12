@@ -14,6 +14,38 @@ env = Environment(BUILDERS={
     'PrettyBuilder': PrettyBuilder
 })
 
+
+import_seq_pre = [
+    'actor user'
+]
+import_seq_lines = [
+    ('user', 'runtime', 'import ibex.sklearn.linear_model'),
+    ('runtime', 'ibex', 'import ibex'),
+    ('runtime', 'ibex.sklearn', 'import ibex.sklearn'),
+    ('ibex.sklearn', 'ibex.sklearn', 'register sys.metapath'),
+    ('runtime', 'loader', 'import ibex.sklearn.linear_model'),
+    ('loader', 'sklearn.linear_model', 'dir'),
+    ('sklearn.linear_model', 'loader', 'members'),
+    ('loader', 'loader', 'inspect'),
+    ('loader', 'loader', 'wrap'),
+]
+
+
+wrapper_wrapped_pre = [
+    'actor user',
+    'participant Wrapped',
+    'participant wrapped',
+]
+wrapper_wrapped_lines = [
+    ('user', 'Wrapped', 'predict(X)'),
+    ('Wrapped', 'Wrapped', 'validate; strip'),
+    ('Wrapped', 'Wrapped', 'predict(Xt)'),
+    ('wrapped', 'Wrapped', 'yt'),
+    ('Wrapped', 'Wrapped', 'add metadata'),
+    ('Wrapped', 'user', 'y'),
+]
+
+
 for f_name in glob.glob('*.plantuml'):
     src, target = f_name, os.path.join('generated', os.path.splitext(f_name)[0] + '.png')
     env.PlantUMLBuilder(target, src)
