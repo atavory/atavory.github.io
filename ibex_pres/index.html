@@ -69,28 +69,6 @@ var StepGroup = function(elems) {
 };
     </script>
     <script type="text/javascript">
-      $(document).ready(function() {
-        document.addEventListener('impress:stepenter', function(event) {
-
-          if (event.target.id.search('outline') != -1) {
-                $(".other").fadeTo("slow", 0.33);
-          }
-          if (event.target.id.search("example_1_substeps") != -1) {
-          }
-          if (event.target.id.search('import_seq_1') != -1) {
-                switchImage("#import_seq_0_img",  "generated/import_seq_five.png");
-          }
-          if (event.target.id.search('import_seq_2') != -1) {
-                switchImage("#import_seq_0_img",  "generated/import_seq_seven.png");
-          }
-          if (event.target.id.search('import_seq_3') != -1) {
-                switchImage("#import_seq_0_img",  "generated/import_seq_nine.png");
-          }
-        }, false);
-        document.addEventListener('impress:stepleave', function(event) {
-          $(".other").fadeTo("slow", 1);
-        }, false);
-      });
     </script>
     <style type="text/css">
     div.c20 {background: url('images/baddy_bg.png'); background-repeat: no-repeat; background-position: 50% 80%;}
@@ -810,12 +788,24 @@ var StepGroup = function(elems) {
                 </ul>
             </div>
             <div style="height: 400px; float: left">
-                <div>
-                <img id="outline_ibex_cd_img" src="generated/ibex_class_diagram_np.png">
+                <div class="abs-box base">
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="outline_both_1" src="generated/ibex_class_diagram_np.png" style="opacity: 1">
+                        </div>
+                    </div>
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="outline_both_2" src="generated/ibex_class_diagram_pandas.png" style="opacity: 0">
+                        </div>
+                    </div>
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="outline_both_2" src="images/logo.jpeg" style="opacity: 0">
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="substep"></div>
-            <div class="substep"></div>
         </div>
         <div class="step slide" data-scale="0.01" data-x="4200" data-y="30" data-z="10">
             <h2>Layers</h2>
@@ -2798,22 +2788,47 @@ var StepGroup = function(elems) {
                 .attr("src", src);
         }
 
+        var example_1_group = StepGroup([
+            "example_1_substeps_img_1",
+            "example_1_substeps_img_2",
+            "example_1_substeps_img_3",
+            "example_1_substeps_img_4",
+        ]);
+        example_1_group
+            .add_substep("example_1_substeps", 1, 1)
+            .add_substep("example_1_substeps", 3, 2)
+            .add_substep("example_1_substeps", 5, 3)
+            .add_substep("example_1_substeps", 7, 0)
+
+      $(document).ready(function() {
+        document.addEventListener('impress:stepenter', function(event) {
+
+          console.log(event.forward);
+
+          if (event.target.id.search('outline') != -1) {
+                $(".other").fadeTo("slow", 0.33);
+          }
+          if (event.target.id.search("example_1_substeps") != -1) {
+          }
+          if (event.target.id.search('import_seq_1') != -1) {
+                switchImage("#import_seq_0_img",  "generated/import_seq_five.png");
+          }
+          if (event.target.id.search('import_seq_2') != -1) {
+                switchImage("#import_seq_0_img",  "generated/import_seq_seven.png");
+          }
+          if (event.target.id.search('import_seq_3') != -1) {
+                switchImage("#import_seq_0_img",  "generated/import_seq_nine.png");
+          }
+        }, false);
+        document.addEventListener('impress:stepleave', function(event) {
+          $(".other").fadeTo("slow", 1);
+        }, false);
+      });
+
       $(document).ready(function() {
         document.addEventListener('impress:substepactive', function(event) {
             var parent_id = event.target.parentNode.id,
                 ind =Array.prototype.indexOf.call(event.target.parentNode.childNodes, event.target);
-
-            var example_1_group = StepGroup([
-                "example_1_substeps_img_1",
-                "example_1_substeps_img_2",
-                "example_1_substeps_img_3",
-                "example_1_substeps_img_4",
-            ]);
-            example_1_group
-                .add_substep("example_1_substeps", 1, 1)
-                .add_substep("example_1_substeps", 3, 2)
-                .add_substep("example_1_substeps", 5, 3)
-                .add_substep("example_1_substeps", 7, 0)
 
             example_1_group
                 .notify_substep_active(parent_id, ind);
@@ -2860,17 +2875,6 @@ var StepGroup = function(elems) {
             }
             if (parent_id.localeCompare("outline-intro-4") == 0 && ind == 9) {
                 switchImage("#outline_ibex_cd_img",  "images/logo.jpeg");
-            }
-
-            if (parent_id.localeCompare("example_1_substeps") == 0 && ind == 1) {
-                switchImage(
-                    "#example_1_substeps_img",  
-                    "generated/col_aggregating_further_transformations_xs_focus.png");
-            }
-            if (parent_id.localeCompare("example_1_substeps") == 0 && ind == 3) {
-                switchImage(
-                    "#example_1_substeps_img",  
-                    "generated/col_aggregating_further_transformations_transormers_focus.png");
             }
         })
       });

@@ -115,6 +115,7 @@ var prevTranslateZ = 0;
     var triggerEvent = function (el, eventName, detail) {
         var event = document.createEvent("CustomEvent");
         event.initCustomEvent(eventName, true, true, detail);
+        event.forward = el.forward;
         el.dispatchEvent(event);
     };
     
@@ -674,6 +675,7 @@ var prevTranslateZ = 0;
             forEach.call(next.subSteps, clearSub);
             next.subSteps.active = null;
         }
+        next.forward = true;
         return goto(next);
     };
  
@@ -706,6 +708,7 @@ var prevTranslateZ = 0;
             setActive(next.subSteps[next.subSteps.length - 1]);
             next.subSteps.active = next.subSteps.length - 1;
         }
+        next.forward = false;
         return goto(next);
     };
  

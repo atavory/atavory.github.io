@@ -8,29 +8,36 @@
         BorderColor lightgrey
     }
 
-    package "Plotting" {
-        [seaborn]
-        [bokeh]
-        [matplotlib]
+    skinparam rectangle {
+        FontColor<<pandas>> black
+        FontColor<<numpy>> grey
+        BorderColor<<pandas>> black
+        BorderColor<<numpy>> grey
+    }
+    
+    package "Plotting" as Plotting { 
+        rectangle seaborn<<pandas>>
+        rectangle bokeh<<pandas>>
+        rectangle matplotlib<<numpy>>
     }
 
     package "Machine Learning" {
-        [sklearn]
-        [**ibex**]
+        rectangle sklearn<<numpy>>
+        rectangle ibex<<pandas>> #grey
     }
 
     package "Data Structures" {
-        [numpy]
-        [pandas]
+        rectangle numpy<<numpy>>
+        rectangle pandas<<pandas>>
     }
 
-    [sklearn] -> [numpy] : interfaced by
-    [matplotlib] -> [numpy] : interfaced by
-    [pandas] ..> [numpy] : implemented over
-    [seaborn] -> [pandas] : interfaced by
-    [bokeh] -> [pandas] : interfaced by
-    [seaborn] ..-> [matplotlib] : implemented over
-    [**ibex**] -> [pandas] : interfaced by
-    [**ibex**] ..-> [sklearn] : implemented over
+    [sklearn] -[#grey]> [numpy] : <color grey>interfaced by</color>
+    [matplotlib] -[#grey]> [numpy] : <color grey>interfaced by</color>
+    pandas ..[#black]> [numpy] : <color black>implemented over</color>
+    seaborn -[#black]> pandas : <color black>interfaced by</color>
+    [bokeh] -[#black]> pandas : <color black>interfaced by</color>
+    [seaborn] ..[#black]-> [matplotlib] : <color black>implemented over</color>
+    ibex -[#black]> pandas : <color black>interfaced by</color> 
+    ibex ..[#black]-> [sklearn] : implemented over
 
 @enduml
