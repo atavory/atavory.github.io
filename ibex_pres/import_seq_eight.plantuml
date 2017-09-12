@@ -14,7 +14,7 @@ runtime -[#grey]> loader: import ibex.sklearn.linear_model
 loader -[#grey]> sklearn.linear_model: dir
 sklearn.linear_model -[#black]> loader: members
 autonumber 8 "<font color=black>"
-loader -[#black]> loader: **inspect**
+loader -[#black]> loader: __inspect__
 autonumber 9 "<font color=grey>"
 loader -[#grey]> loader: wrap
 

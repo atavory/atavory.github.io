@@ -8,7 +8,7 @@ actor user
 autonumber 1 "<font color=grey>"
 user -[#grey]> runtime: import ibex.sklearn.linear_model
 autonumber 2 "<font color=black>"
-runtime -[#black]> ibex: **import ibex**
+runtime -[#black]> ibex: __import ibex__
 autonumber 3 "<font color=grey>"
 runtime -[#grey]> ibex.sklearn: import ibex.sklearn
 ibex.sklearn -[#grey]> ibex.sklearn: register sys.metapath

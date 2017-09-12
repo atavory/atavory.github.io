@@ -6,7 +6,7 @@ skinparam shadowing false
 actor user
 
 autonumber 1
-user -[#black]> runtime: **import ibex.sklearn.linear_model**
+user -[#black]> runtime: __import ibex.sklearn.linear_model__
 autonumber 2 "<font color=grey>"
 runtime -[#grey]> ibex: import ibex
 runtime -[#grey]> ibex.sklearn: import ibex.sklearn

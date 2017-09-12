@@ -13,7 +13,7 @@ ibex.sklearn -[#black]> ibex.sklearn: register sys.metapath
 runtime -[#grey]> loader: import ibex.sklearn.linear_model
 loader -[#grey]> sklearn.linear_model: dir
 autonumber 7 "<font color=black>"
-sklearn.linear_model -[#black]> loader: **members**
+sklearn.linear_model -[#black]> loader: __members__
 autonumber 8 "<font color=grey>"
 loader -[#grey]> loader: inspect
 loader -[#grey]> loader: wrap

@@ -9,7 +9,6 @@
     <meta content="Ibex" name="description"> <meta content="Ami Tavory" name="author">
     <link href="../css/impress.css" rel="stylesheet">
     <link href="../css/shThemeDefault.css" rel="stylesheet">
-    <link href="../css/css-tooltips.css" rel="stylesheet">
     <link href="../css/flow_chart.css" rel="stylesheet">
     <link href="css/pres.css" rel="stylesheet">
     <link href="images/logo.ico" rel="shortcut icon" type="x-icon">
@@ -37,13 +36,46 @@
     <script src="../js/d3.v4.js"></script>
     <script src="../js/cola.js"></script>
     <script src="../js/flow_chart.js"></script>
+    <script>
+var StepGroup = function(elems) {
+    var comp = {
+        "_substeps": []
+    };
+
+    comp.elems = function() {
+        return elems;
+    }
+
+    comp.add_substep = function(id, step, active_ind) {
+        comp._substeps.push({"id": id, "step": step, "active_ind": active_ind});
+
+        return comp;
+    }
+
+    comp.notify_substep_active = function(id, step) {
+        var relevant_substeps = comp._substeps.filter(function (e) {return e['id'].localeCompare(id) == 0; })
+
+        for (var e of relevant_substeps) {
+            d3.select("#" + elems[e["active_ind"]])
+                .transition()
+                .duration(220)
+                .style("opacity", e["step"] == step? 1: 0);
+        }
+
+        return comp;
+    }
+
+    return comp;
+};
+    </script>
     <script type="text/javascript">
       $(document).ready(function() {
         document.addEventListener('impress:stepenter', function(event) {
-          console.log(event.target.id);
 
           if (event.target.id.search('outline') != -1) {
                 $(".other").fadeTo("slow", 0.33);
+          }
+          if (event.target.id.search("example_1_substeps") != -1) {
           }
           if (event.target.id.search('import_seq_1') != -1) {
                 switchImage("#import_seq_0_img",  "generated/import_seq_five.png");
@@ -111,7 +143,28 @@
         </div>
         <div class="step slide" data-scale="0.01" data-x="1400" data-y="30" data-z="10">
         <h2>Example 1: Concatenate &amp; Manipulate Columns</h2>
-            <img id="example_1_substeps_img" src="generated/col_aggregating_further_transformations.png">
+            <div class="bs-box base">
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="example_1_substeps_img_1" src="generated/col_aggregating_further_transformations.png" style="opacity: 1">
+                    </div>
+                </div>
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="example_1_substeps_img_2" src="generated/col_aggregating_further_transformations_xs_focus.png" style="opacity: 0">
+                    </div>
+                </div>
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="example_1_substeps_img_3" src="generated/col_aggregating_further_transformations_transormers_focus.png" style="opacity: 0">
+                    </div>
+                </div>
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="example_1_substeps_img_4" src="generated/col_aggregating_further_transformations_transformers_predictor_focus.png" style="opacity: 0">
+                    </div>
+                </div>
+            </div>
         </div>
         <div id="example_1_substeps" class="step slide abs-box base smaller" data-scale="0.01" data-x="1400" data-y="33" data-z="10">
             <div class="abs-box substep smaller">
@@ -2750,7 +2803,20 @@
             var parent_id = event.target.parentNode.id,
                 ind =Array.prototype.indexOf.call(event.target.parentNode.childNodes, event.target);
 
-            console.log(ind, parent_id);
+            var example_1_group = StepGroup([
+                "example_1_substeps_img_1",
+                "example_1_substeps_img_2",
+                "example_1_substeps_img_3",
+                "example_1_substeps_img_4",
+            ]);
+            example_1_group
+                .add_substep("example_1_substeps", 1, 1)
+                .add_substep("example_1_substeps", 3, 2)
+                .add_substep("example_1_substeps", 5, 3)
+                .add_substep("example_1_substeps", 7, 0)
+
+            example_1_group
+                .notify_substep_active(parent_id, ind);
 
             if (parent_id.localeCompare("import_seq_0") == 0 && ind == 5) {
                 switchImage("#import_seq_0_img",  "generated/import_seq_two.png");
@@ -2806,18 +2872,41 @@
                     "#example_1_substeps_img",  
                     "generated/col_aggregating_further_transformations_transormers_focus.png");
             }
-            if (parent_id.localeCompare("example_1_substeps") == 0 && ind == 5) {
-                switchImage(
-                    "#example_1_substeps_img",  
-                    "generated/col_aggregating_further_transformations_transformers_predictor_focus.png");
-            }
-            if (parent_id.localeCompare("example_1_substeps") == 0 && ind == 7) {
-                switchImage(
-                    "#example_1_substeps_img",  
-                    "generated/col_aggregating_further_transformations.png");
-            }
         })
       });
 </script>
 </body>
-</html>
+<from __future__ import print_function
+from analytics.bamboo import Bamboo
+from string import Template
+
+
+appids = {
+    '175256709340227': 'ONAVO_ACOUNT_ID',
+    '1658924884387696': 'ONAVO_APROTECT_ID'}
+
+
+date = '2017-06-07'
+
+
+query = Template("""
+select
+    *
+from
+    test_fct_onv_android_daily_app_updates
+where
+    ds='$date'
+$limit
+""").substitute(
+    date=date,
+    limit='')
+
+
+df = Bamboo().query_presto(
+    'onavo',
+    query)
+df.appid = df.appid.map(appids)
+
+
+print(df.head())
+print(df.appid.groupby(df.appid).count())/html>

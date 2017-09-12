@@ -10,7 +10,7 @@ user -[#grey]> runtime: import ibex.sklearn.linear_model
 runtime -[#grey]> ibex: import ibex
 runtime -[#grey]> ibex.sklearn: import ibex.sklearn
 autonumber 4 "<font color=black>"
-ibex.sklearn -[#black]> ibex.sklearn: **register sys.metapath**
+ibex.sklearn -[#black]> ibex.sklearn: <color grey>register sys.metapath</color>
 autonumber 5 "<font color=grey>"
 runtime -[#grey]> loader: import ibex.sklearn.linear_model
 loader -[#grey]> sklearn.linear_model: dir

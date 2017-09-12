@@ -15,6 +15,6 @@ loader -[#grey]> sklearn.linear_model: dir
 sklearn.linear_model -[#black]> loader: members
 loader -[#grey]> loader: inspect
 autonumber 9 "<font color=black>"
-loader -[#black]> loader: **wrap**
+loader -[#black]> loader: __wrap__
 
 @enduml
