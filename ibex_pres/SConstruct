@@ -46,6 +46,30 @@ wrapper_wrapped_lines = [
 ]
 
 
+def make_seq(base_name, pre, lines):
+    for i, _ in enumerate(lines):
+        text = []
+        text.append('@startuml')
+        text.append('')
+        text.append('skinparam monochrome true')
+        text.append('skinparam shadowing false')
+        text.append('')
+        text.extend(pre)
+        text.append('')
+        for j, l in enumerate(lines):
+            color = 'black' if i == j else 'grey'
+            back = 'grey' if i == j else 'white'
+            text.append('autonumber %d "<font color=%s>"' % (j + 1, color))
+            text.append('%s -[#%s]> %s: <back:%s>%s</back>' % (l[0], color, l[1], back, l[2]))
+        text.append('')
+        text.append('@enduml')
+        open('%s_%d.plantuml' % (base_name, i + 1), 'w').write('\n'.join(text))
+
+
+make_seq('wrapper_wrapped', wrapper_wrapped_pre, wrapper_wrapped_lines)
+make_seq('import_seq', import_seq_pre, import_seq_lines)
+
+
 for f_name in glob.glob('*.plantuml'):
     src, target = f_name, os.path.join('generated', os.path.splitext(f_name)[0] + '.png')
     env.PlantUMLBuilder(target, src)

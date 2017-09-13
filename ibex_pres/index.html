@@ -46,7 +46,7 @@ var StepGroup = function(elems) {
         return elems;
     }
 
-    comp.add_substep = function(id, step, active_ind) {
+    comp.addStep = function(id, step, active_ind) {
         comp._substeps.push({"id": id, "step": step, "active_ind": active_ind});
 
         return comp;
@@ -1860,7 +1860,7 @@ var StepGroup = function(elems) {
                 </div>
             </div>
         </div>
-        <div id="wrapper_wrapped_generated" class="step slide" data-scale="0.01" data-x="5600" data-y="30" data-z="10">
+        <div class="step slide" data-scale="0.01" data-x="5600" data-y="28" data-z="10">
             <h2>Straightforward Approach: Compose</h2>
             <div class="smaller">
                 <pre class="brush: python; gutter: true; toolbar: false">            
@@ -1869,11 +1869,43 @@ var StepGroup = function(elems) {
                     self.wrapped = LinearRegression(*args, **kwargs)
 
             ...
-            </pre>
+                </pre>
             </div>
-            <div class="substep smaller">
-                <img id="wrapper_wrapped_generated_img"src="generated/wrapper_wrapped_delegation.png">
-            </div>
+        </div>
+        <div id="wrapper_wrapped_generated" class="step slide" data-scale="0.01" data-x="5600" data-y="30" data-z="10">
+                <div class="abs-box base">
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="wrapper_wrapped_1" src="generated/wrapper_wrapped_1.png" style="opacity: 0">
+                        </div>
+                    </div>
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="wrapper_wrapped_2" src="generated/wrapper_wrapped_2.png" style="opacity: 0">
+                        </div>
+                    </div>
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="wrapper_wrapped_3" src="generated/wrapper_wrapped_3.png" style="opacity: 0">
+                        </div>
+                    </div>
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="wrapper_wrapped_4" src="generated/wrapper_wrapped_4.png" style="opacity: 0">
+                        </div>
+                    </div>
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="wrapper_wrapped_5" src="generated/wrapper_wrapped_5.png" style="opacity: 0">
+                        </div>
+                    </div>
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="wrapper_wrapped_6" src="generated/wrapper_wrapped_6.png" style="opacity: 0">
+                        </div>
+                    </div>
+                </div>
+            <div class="substep smaller"></div>
             <div class="substep smaller"></div>
             <div class="substep smaller"></div>
             <div class="substep smaller"></div>
@@ -1888,10 +1920,23 @@ var StepGroup = function(elems) {
         </div>
         <div id="import_seq_0" class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
         <h3>1. Dynamic Loading</h3>
-            <div class="smaller">
-                <img id="import_seq_0_img" src="generated/import_seq_one.png">
+            <div class="abs-box base" style="height: 700px">
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="import_seq_1_img" src="generated/import_seq_1.png" style="opacity: 1">
+                    </div>
+                </div>
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="import_seq_2_img" src="generated/import_seq_2.png" style="opacity: 0">
+                    </div>
+                </div>
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="import_seq_3_img" src="generated/import_seq_3.png" style="opacity: 0">
+                    </div>
+                </div>
             </div>
-            <div class="substep"></div>
             <div class="substep"></div>
             <div class="substep"></div>
         </div>
@@ -2796,25 +2841,59 @@ var StepGroup = function(elems) {
                 .attr("src", src);
         }
 
-        var example_1_group = StepGroup([
+        var example1Group = StepGroup([
             "example_1_substeps_img_1",
             "example_1_substeps_img_2",
             "example_1_substeps_img_3",
             "example_1_substeps_img_4",
         ]);
-        example_1_group
-            .add_substep("example_1_substeps", 1, 1)
-            .add_substep("example_1_substeps", 3, 2)
-            .add_substep("example_1_substeps", 5, 3)
-            .add_substep("example_1_substeps", 7, 0)
+        example1Group
+            .addStep("example_1_substeps", 1, 1)
+            .addStep("example_1_substeps", 3, 2)
+            .addStep("example_1_substeps", 5, 3)
+            .addStep("example_1_substeps", 7, 0)
+
+        var wrapperWrappedGroup = StepGroup([
+            "wrapper_wrapped_1",
+            "wrapper_wrapped_2",
+            "wrapper_wrapped_3",
+            "wrapper_wrapped_4",
+            "wrapper_wrapped_5",
+            "wrapper_wrapped_6",
+        ]);
+        wrapperWrappedGroup
+            .addStep("wrapper_wrapped_generated", 3, 0)
+            .addStep("wrapper_wrapped_generated", 5, 1)
+            .addStep("wrapper_wrapped_generated", 7, 2)
+            .addStep("wrapper_wrapped_generated", 9, 3)
+            .addStep("wrapper_wrapped_generated", 11, 4)
+            .addStep("wrapper_wrapped_generated", 13, 5)
 
         var outlineClsGroup = StepGroup([
             "outlineClsGroup_img_1",
             "outlineClsGroup_img_2",
             "outlineClsGroup_img_3"]);
         outlineClsGroup
-            .add_substep("outline-intro-4", 7, 1)
-            .add_substep("outline-intro-4", 9, 2);
+            .addStep("outline-intro-4", 7, 1)
+            .addStep("outline-intro-4", 9, 2);
+
+        var importSeq0Group = StepGroup([
+            "import_seq_1_img",
+            "import_seq_2_img",
+            "import_seq_3_img",
+        ]);
+        importSeq0Group
+            .addStep("import_seq_0", 5, 1)
+            .addStep("import_seq_0", 7, 2);
+
+        var importSeq1Group = StepGroup([
+            "import_seq_4_img",
+            "import_seq_2_img",
+            "import_seq_3_img",
+        ]);
+        importSeq0Group
+            .addStep("import_seq_0", 5, 1)
+            .addStep("import_seq_0", 7, 2);
 
       $(document).ready(function() {
         document.addEventListener('impress:stepenter', function(event) {
@@ -2825,15 +2904,6 @@ var StepGroup = function(elems) {
                 $(".other").fadeTo("slow", 0.33);
           }
           if (event.target.id.search("example_1_substeps") != -1) {
-          }
-          if (event.target.id.search('import_seq_1') != -1) {
-                switchImage("#import_seq_0_img",  "generated/import_seq_five.png");
-          }
-          if (event.target.id.search('import_seq_2') != -1) {
-                switchImage("#import_seq_0_img",  "generated/import_seq_seven.png");
-          }
-          if (event.target.id.search('import_seq_3') != -1) {
-                switchImage("#import_seq_0_img",  "generated/import_seq_nine.png");
           }
         }, false);
         document.addEventListener('impress:stepleave', function(event) {
@@ -2848,47 +2918,14 @@ var StepGroup = function(elems) {
 
             console.log(parent_id, ind);
 
-            example_1_group
+            example1Group
                 .notify_substep_active(parent_id, ind);
             outlineClsGroup
                 .notify_substep_active(parent_id, ind);
-
-            if (parent_id.localeCompare("import_seq_0") == 0 && ind == 5) {
-                switchImage("#import_seq_0_img",  "generated/import_seq_two.png");
-            }
-            if (parent_id.localeCompare("import_seq_0") == 0 && ind == 7) {
-                switchImage("#import_seq_0_img",  "generated/import_seq_three.png");
-            }
-            if (parent_id.localeCompare("import_seq_0") == 0 && ind == 9) {
-                switchImage("#import_seq_0_img",  "generated/import_seq_four.png");
-            }
-
-            if (parent_id.localeCompare("import_seq_1") == 0 && ind == 1) {
-                switchImage("#import_seq_0_img",  "generated/import_seq_six.png");
-            }
-
-            if (parent_id.localeCompare("import_seq_2") == 0 && ind == 1) {
-                switchImage("#import_seq_0_img",  "generated/import_seq_eight.png");
-            }
-
-            if (parent_id.localeCompare("wrapper_wrapped_generated") == 0 && ind == 5) {
-                switchImage("#wrapper_wrapped_generated_img",  "generated/wrapper_wrapped_delegation_seq_one.png");
-            }
-            if (parent_id.localeCompare("wrapper_wrapped_generated") == 0 && ind == 7) {
-                switchImage("#wrapper_wrapped_generated_img",  "generated/wrapper_wrapped_delegation_seq_two.png");
-            }
-            if (parent_id.localeCompare("wrapper_wrapped_generated") == 0 && ind == 9) {
-                switchImage("#wrapper_wrapped_generated_img",  "generated/wrapper_wrapped_delegation_seq_three.png");
-            }
-            if (parent_id.localeCompare("wrapper_wrapped_generated") == 0 && ind == 11) {
-                switchImage("#wrapper_wrapped_generated_img",  "generated/wrapper_wrapped_delegation_seq_four.png");
-            }
-            if (parent_id.localeCompare("wrapper_wrapped_generated") == 0 && ind == 13) {
-                switchImage("#wrapper_wrapped_generated_img",  "generated/wrapper_wrapped_delegation_seq_five.png");
-            }
-            if (parent_id.localeCompare("wrapper_wrapped_generated") == 0 && ind == 15) {
-                switchImage("#wrapper_wrapped_generated_img",  "generated/wrapper_wrapped_delegation_seq_six.png");
-            }
+            wrapperWrappedGroup
+                .notify_substep_active(parent_id, ind);
+            importSeq0Group
+                .notify_substep_active(parent_id, ind);
         })
       });
 </script>

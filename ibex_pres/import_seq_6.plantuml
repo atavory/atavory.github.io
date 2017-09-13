@@ -5,11 +5,23 @@ skinparam shadowing false
 
 actor user
 
-user -> runtime: 1. import ibex.sklearn.linear_model
-runtime -> ibex: 2. import ibex
-runtime -> ibex.sklearn: 3. import ibex.sklearn
-ibex.sklearn -> ibex.sklearn: 4. register sys.metapath
-runtime -> loader: 5. import ibex.sklearn.linear_model
-loader -> sklearn.linear_model: 6. dir
+autonumber 1 "<font color=grey>"
+user -[#grey]> runtime: <back:white>import ibex.sklearn.linear_model</back>
+autonumber 2 "<font color=grey>"
+runtime -[#grey]> ibex: <back:white>import ibex</back>
+autonumber 3 "<font color=grey>"
+runtime -[#grey]> ibex.sklearn: <back:white>import ibex.sklearn</back>
+autonumber 4 "<font color=grey>"
+ibex.sklearn -[#grey]> ibex.sklearn: <back:white>register sys.metapath</back>
+autonumber 5 "<font color=grey>"
+runtime -[#grey]> loader: <back:white>import ibex.sklearn.linear_model</back>
+autonumber 6 "<font color=black>"
+loader -[#black]> sklearn.linear_model: <back:grey>dir</back>
+autonumber 7 "<font color=grey>"
+sklearn.linear_model -[#grey]> loader: <back:white>members</back>
+autonumber 8 "<font color=grey>"
+loader -[#grey]> loader: <back:white>inspect</back>
+autonumber 9 "<font color=grey>"
+loader -[#grey]> loader: <back:white>wrap</back>
 
 @enduml
