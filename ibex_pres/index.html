@@ -60,13 +60,13 @@ var StepGroup = function(elems) {
     }
 
     comp.notifyStepEnter = function(id) {
-        // Tmp Ami
-        return;
-        
+        console.log(id, comp._steps);
         var activeInds = comp
             ._steps
             .filter(function (e) {return e["id"].localeCompare(id) == 0; })
             .map(function (e) {return e["activeInd"]; });
+        if (activeInds.length == 0)
+            return;
         console.log(activeInds);
 
         for (var i = 0; i < elems.length; ++i) {
@@ -1976,7 +1976,16 @@ var StepGroup = function(elems) {
             <div class="substep"></div>
         </div>
         <div class="step slide" data-x="5613.8" data-y="39.2" data-z="10" data-scale="0.0003", data-rotate-x="-50">
-            <h3><code>sys.meta_path</code></h3>Register loader class for <code>import</code>s.
+            <h3><code>sys.meta_path</code></h3>
+            <div class="smaller">
+                <pre class='brush: python; gutter: true; toolbar: false'>
+                class ModuleLoader(object):
+                    def find_module(self, full_name, _=None):
+                    ...
+
+                sys.meta_path.append(ModuleLoader())
+                </pre>
+            </div>
         </div>
         <div id="import_seq_1" class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
             <h3>1. Dynamic Loading</h3>
@@ -1997,7 +2006,6 @@ var StepGroup = function(elems) {
                     </div>
                 </div>
             </div>
-            <div class="substep"></div>
             <div class="substep"></div>
             <div class="substep"></div>
         </div>
@@ -2025,7 +2033,6 @@ var StepGroup = function(elems) {
                     </div>
                 </div>
             </div>
-            <div class="substep"></div>
         </div>
         <div class="step slide" data-x="5615.4" data-y="40.5" data-z="10" data-scale="0.0003", data-rotate-x="-50">
             <h3><code>inspect</code></h3>
@@ -2047,7 +2054,6 @@ var StepGroup = function(elems) {
                     </div>
                 </div>
             </div>
-            <div class="substep"></div>
         </div>
         <div class="step slide" data-x="17007" data-y="10" data-z="0" data-scale="0.01">
             <h3 class="baddy">2. Scikit-Learn Estimator Idiosyncrasies</h3>
@@ -2956,6 +2962,7 @@ var StepGroup = function(elems) {
             "import_seq_4_img",
         ]);
         importSeq0Group
+            .addStep("import_seq_0", 0)
             .addSubstep("import_seq_0", 5, 1)
             .addSubstep("import_seq_0", 7, 2)
             .addSubstep("import_seq_0", 9, 3);
@@ -2966,22 +2973,22 @@ var StepGroup = function(elems) {
             "import_seq_7_img",
         ]);
         importSeq1Group
-            .addSubstep("import_seq_1", 5, 0)
-            .addSubstep("import_seq_1", 7, 1)
-            .addSubstep("import_seq_1", 9, 2)
-            .addSubstep("import_seq_1", 11, 3);
+            .addStep("import_seq_1", 0)
+            .addSubstep("import_seq_1", 5, 1)
+            .addSubstep("import_seq_1", 7, 2)
+            .addSubstep("import_seq_1", 9, 3);
 
         var importSeq2Group = StepGroup([
             "import_seq_8_img",
         ]);
         importSeq2Group
-            .addSubstep("import_seq_2", 5, 0);
+            .addStep("import_seq_2", 0);
 
         var importSeq3Group = StepGroup([
             "import_seq_9_img",
         ]);
         importSeq3Group
-            .addSubstep("import_seq_3", 5, 0);
+            .addStep("import_seq_3", 0);
 
       $(document).ready(function() {
             document.addEventListener('impress:stepenter', function(event) {
