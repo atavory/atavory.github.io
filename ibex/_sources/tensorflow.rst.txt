@@ -6,7 +6,21 @@
 .. versionadded:: 1.2
 
 
-Ibex wraps :mod:`tensorflow.contrib.keras.wrappers.scikit_learn`. Keras has only two scikit-learn type estimators: :class:`tensorflow.contrib.keras.wrappers.scikit_learn.KerasClassifier` and :class:`tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor`), but the mapping is not a simple wrapping as with other libraries, as it seems that these estimators are not quite 
+
+General Idea
+------------
+
+Ibex wraps :mod:`tensorflow.contrib.keras.wrappers.scikit_learn`, which has only two scikit-learn type estimators: :class:`tensorflow.contrib.keras.wrappers.scikit_learn.KerasClassifier` and :class:`tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor`), with a number of changes to make them more 
+`scikit-learn compliant <http://scikit-learn.org/stable/developers/contributing.html#apis-of-scikit-learn-objects>`_ (see :ref:`_tensorflow_diffs`).
+
+
+
+.. _tensorflow_diffs:
+
+Differences From :mod:`tensorflow.contrib.keras.wrappers.scikit_learn`
+------------------------------------------------------------------
+
+but the mapping is not a simple wrapping as with other libraries, as it seems that these estimators are not quite 
 `conforming to the sickit-learn protocol <http://scikit-learn.org/stable/developers/contributing.html#apis-of-scikit-learn-objects>`_:
 
 1. In :mod:`tensorflow.contrib.keras.wrappers.scikit_learn`, :class:`KerasClassifier` and :class:`KerasRegressor` do not subclass :class:`ClassifierMixin` and :class:`sklearn.base.RegressorMixin` (from :mod:`sklearn.base`), respectively. Conversely, 

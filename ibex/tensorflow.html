@@ -47,7 +47,14 @@
 <div class="versionadded">
 <p><span class="versionmodified">New in version 1.2.</span></p>
 </div>
-<p>Ibex wraps <code class="xref py py-mod docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn</span></code>. Keras has only two scikit-learn type estimators: <code class="xref py py-class docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn.KerasClassifier</span></code> and <code class="xref py py-class docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor</span></code>), but the mapping is not a simple wrapping as with other libraries, as it seems that these estimators are not quite
+<div class="section" id="general-idea">
+<h2>General Idea<a class="headerlink" href="#general-idea" title="Permalink to this headline">¶</a></h2>
+<p>Ibex wraps <code class="xref py py-mod docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn</span></code>, which has only two scikit-learn type estimators: <code class="xref py py-class docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn.KerasClassifier</span></code> and <code class="xref py py-class docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor</span></code>), with a number of changes to make them more
+<a class="reference external" href="http://scikit-learn.org/stable/developers/contributing.html#apis-of-scikit-learn-objects">scikit-learn compliant</a> (see <span class="xref std std-ref">_tensorflow_diffs</span>).</p>
+</div>
+<div class="section" id="differences-from-tensorflow-contrib-keras-wrappers-scikit-learn">
+<span id="tensorflow-diffs"></span><h2>Differences From <code class="xref py py-mod docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn</span></code><a class="headerlink" href="#differences-from-tensorflow-contrib-keras-wrappers-scikit-learn" title="Permalink to this headline">¶</a></h2>
+<p>but the mapping is not a simple wrapping as with other libraries, as it seems that these estimators are not quite
 <a class="reference external" href="http://scikit-learn.org/stable/developers/contributing.html#apis-of-scikit-learn-objects">conforming to the sickit-learn protocol</a>:</p>
 <p>1. In <code class="xref py py-mod docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn</span></code>, <code class="xref py py-class docutils literal"><span class="pre">KerasClassifier</span></code> and <code class="xref py py-class docutils literal"><span class="pre">KerasRegressor</span></code> do not subclass <code class="xref py py-class docutils literal"><span class="pre">ClassifierMixin</span></code> and <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.RegressorMixin.html#sklearn.base.RegressorMixin" title="(in scikit-learn v0.19.0)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.RegressorMixin</span></code></a> (from <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.base" title="(in scikit-learn v0.19.0)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.base</span></code></a>), respectively. Conversely,
 in <code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code>, they do.</p>
@@ -121,6 +128,7 @@ skinparam shadowing false
 <p class="last">Ibex does not modify the code of <code class="docutils literal"><span class="pre">tensorflow</span></code> in any way. It is absolutely possibly to <code class="docutils literal"><span class="pre">import</span></code> and use both <code class="docutils literal"><span class="pre">tensorflow</span></code> and <code class="docutils literal"><span class="pre">ibex.tensorflow</span></code> simultaneously.</p>
 </div>
 </div>
+</div>
 
 
           </div>
@@ -143,7 +151,11 @@ skinparam shadowing false
 <li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
 <li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="docutils literal"><span class="pre">tensorflow</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#general-idea">General Idea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#differences-from-tensorflow-contrib-keras-wrappers-scikit-learn">Differences From <code class="docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
 <li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
