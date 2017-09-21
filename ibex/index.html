@@ -57,7 +57,7 @@
 </ul>
 <p>(You might also want to check out the excellent <a class="reference external" href="https://pypi.python.org/pypi/sklearn-pandas">pandas-sklearn</a> which has the same aims, but takes a very different
 approach.)</p>
-<p>The full documentation at <a class="reference external" href="http://ibex.readthedocs.io/en/latest/?badge=latest"><img alt="github_pages_ibex" src="https://atavory.github.io/ibex/_static/github_pages.png" /></a> defines these matters in detail, but the library has an extremely-small <a class="reference external" href="https://atavory.github.io/ibex/overview.html">interface</a>.</p>
+<p>The full documentation at <a class="reference external" href="https://atavory.github.io/ibex/"><img alt="github_pages_ibex" src="http://ibex.readthedocs.io/en/latest/_static/github-pages.png" /></a> defines these matters in detail, but the library has an extremely-small <a class="reference external" href="https://atavory.github.io/ibex/overview.html">interface</a>.</p>
 <div class="section" id="tl-dr">
 <h2>TL;DR<a class="headerlink" href="#tl-dr" title="Permalink to this headline">¶</a></h2>
 <p>The following short example shows the main points of the library. It is an adaptation of the scikit-learn example <a class="reference external" href="http://scikit-learn.org/stable/auto_examples/plot_feature_stacker.html#sphx-glr-auto-examples-plot-feature-stacker-py">Concatenating multiple feature extraction methods</a>. In this example, we build a classifier for the <a class="reference external" href="http://scikit-learn.org/stable/auto_examples/datasets/plot_iris_dataset.html">iris dataset</a> using a combination of <a class="reference external" href="https://en.wikipedia.org/wiki/Principal_component_analysis">PCA</a>, <a class="reference external" href="https://en.wikipedia.org/wiki/Feature_selection#Subset_selection">univariate feature selection</a>, and a <a class="reference external" href="https://en.wikipedia.org/wiki/Support_vector_machine">support vecor machine classifier</a>.</p>
@@ -106,10 +106,10 @@ approach.)</p>
 </div>
 <p>So what does this add to the original version?</p>
 <ol class="arabic simple">
-<li>The estimators perform <a class="reference external" href="http://ibex.readthedocs.io/en/latest/input_verification_and_output_processing.html">verification and processing</a> on the inputs and outputs. They verify column names following calls to <code class="docutils literal"><span class="pre">fit</span></code>, and index results according to those of the inputs. This helps catch bugs.</li>
-<li>It allows <a class="reference external" href="http://ibex.readthedocs.io/en/latest/extending.html">writing Pandas-munging estimators</a> (see also <a class="reference external" href="movielens_simple_row_aggregating_features.ipynb">Multiple-Row Features In The Movielens Dataset</a>).</li>
+<li>The estimators perform <a class="reference external" href="https://atavory.github.io/ibex/input_verification_and_output_processing.html">verification and processing</a> on the inputs and outputs. They verify column names following calls to <code class="docutils literal"><span class="pre">fit</span></code>, and index results according to those of the inputs. This helps catch bugs.</li>
+<li>It allows <a class="reference external" href="https://atavory.github.io/ibex/extending.html">writing Pandas-munging estimators</a> (see also <a class="reference external" href="movielens_simple_row_aggregating_features.ipynb">Multiple-Row Features In The Movielens Dataset</a>).</li>
 <li>Using <code class="docutils literal"><span class="pre">DataFrame</span></code> metadata, it allows writing more complex meta-learning algorithms, such as stacking and nested labeled and stratified cross validation.</li>
-<li>The pipeline syntax is succinct and clear (see <a class="reference external" href="http://ibex.readthedocs.io/en/latest/pipeline_motivation.html">Motivation For Shorter Combinations</a>).</li>
+<li>The pipeline syntax is succinct and clear (see <a class="reference external" href="https://atavory.github.io/ibex/pipeline_motivation.html">Motivation For Shorter Combinations</a>).</li>
 </ol>
 </div>
 </div>
