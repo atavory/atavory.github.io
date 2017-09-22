@@ -64,10 +64,33 @@
 <span class="c1"># Tmp Ami - add kw_args, inverse shit</span>
 <div class="viewcode-block" id="FunctionTransformer"><a class="viewcode-back" href="../../api_ibex_sklearn_preprocessing_functiontransformer.html#ibex.sklearn.preprocessing.FunctionTransformer">[docs]</a><span class="k">class</span> <span class="nc">FunctionTransformer</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">TransformerMixin</span><span class="p">,</span> <span class="n">FrameMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Transforms them functions.</span>
+<span class="sd">    Transforms using a function.</span>
+
+<span class="sd">    Arguments:</span>
+
+<span class="sd">        func: One of:</span>
+
+<span class="sd">            * ``None``</span>
+<span class="sd">            * a callable</span>
+<span class="sd">            * a step</span>
+
+<span class="sd">        in_cols: One of:</span>
+
+<span class="sd">            * ``None``</span>
+<span class="sd">            * a string</span>
+<span class="sd">            * a list of strings</span>
+
+<span class="sd">        out_cols:</span>
+
+<span class="sd">        pass_y: Boolean indicating whether to pass the ``y`` argument to</span>
+
+<span class="sd">        kw_args:</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">        An :py:class:`sklearn.preprocessing.FunctionTransformer` object.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Tmp Ami - This is now a public class; make params take defaults</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">in_cols</span><span class="p">,</span> <span class="n">out_cols</span><span class="p">,</span> <span class="n">pass_y</span><span class="p">,</span> <span class="n">kw_args</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">in_cols</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out_cols</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pass_y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">kw_args</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="n">FrameMixin</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
         <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
