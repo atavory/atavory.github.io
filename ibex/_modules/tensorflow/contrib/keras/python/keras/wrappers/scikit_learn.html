@@ -1,0 +1,468 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>tensorflow.contrib.keras.python.keras.wrappers.scikit_learn &#8212; ibex 0.1.1 documentation</title>
+    <link rel="stylesheet" href="../../../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../../../',
+        VERSION:     '0.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../../../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for tensorflow.contrib.keras.python.keras.wrappers.scikit_learn</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2015 The TensorFlow Authors. All Rights Reserved.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1"># ==============================================================================</span>
+<span class="sd">&quot;&quot;&quot;API wrapper allowing to use certain Keras models with the Scikit-Learn API.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">types</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">tensorflow.contrib.keras.python.keras.models</span> <span class="k">import</span> <span class="n">Sequential</span>
+<span class="kn">from</span> <span class="nn">tensorflow.contrib.keras.python.keras.utils.np_utils</span> <span class="k">import</span> <span class="n">to_categorical</span>
+<span class="kn">from</span> <span class="nn">tensorflow.python.util</span> <span class="k">import</span> <span class="n">tf_inspect</span>
+
+
+<span class="k">class</span> <span class="nc">BaseWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Base class for the Keras scikit-learn wrapper.</span>
+
+<span class="sd">  Warning: This class should not be used directly.</span>
+<span class="sd">  Use descendant classes instead.</span>
+
+<span class="sd">  Arguments:</span>
+<span class="sd">      build_fn: callable function or class instance</span>
+<span class="sd">      **sk_params: model parameters &amp; fitting parameters</span>
+
+<span class="sd">  The build_fn should construct, compile and return a Keras model, which</span>
+<span class="sd">  will then be used to fit/predict. One of the following</span>
+<span class="sd">  three values could be passed to build_fn:</span>
+<span class="sd">  1. A function</span>
+<span class="sd">  2. An instance of a class that implements the __call__ method</span>
+<span class="sd">  3. None. This means you implement a class that inherits from either</span>
+<span class="sd">  `KerasClassifier` or `KerasRegressor`. The __call__ method of the</span>
+<span class="sd">  present class will then be treated as the default build_fn.</span>
+
+<span class="sd">  `sk_params` takes both model parameters and fitting parameters. Legal model</span>
+<span class="sd">  parameters are the arguments of `build_fn`. Note that like all other</span>
+<span class="sd">  estimators in scikit-learn, &#39;build_fn&#39; should provide default values for</span>
+<span class="sd">  its arguments, so that you could create the estimator without passing any</span>
+<span class="sd">  values to `sk_params`.</span>
+
+<span class="sd">  `sk_params` could also accept parameters for calling `fit`, `predict`,</span>
+<span class="sd">  `predict_proba`, and `score` methods (e.g., `epochs`, `batch_size`).</span>
+<span class="sd">  fitting (predicting) parameters are selected in the following order:</span>
+
+<span class="sd">  1. Values passed to the dictionary arguments of</span>
+<span class="sd">  `fit`, `predict`, `predict_proba`, and `score` methods</span>
+<span class="sd">  2. Values passed to `sk_params`</span>
+<span class="sd">  3. The default values of the `keras.models.Sequential`</span>
+<span class="sd">  `fit`, `predict`, `predict_proba` and `score` methods</span>
+
+<span class="sd">  When using scikit-learn&#39;s `grid_search` API, legal tunable parameters are</span>
+<span class="sd">  those you could pass to `sk_params`, including fitting parameters.</span>
+<span class="sd">  In other words, you could use `grid_search` to search for the best</span>
+<span class="sd">  `batch_size` or `epochs` as well as the model parameters.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">build_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">sk_params</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">build_fn</span> <span class="o">=</span> <span class="n">build_fn</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sk_params</span> <span class="o">=</span> <span class="n">sk_params</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">check_params</span><span class="p">(</span><span class="n">sk_params</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">check_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Checks for user typos in &quot;params&quot;.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        params: dictionary; the parameters to be checked</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: if any member of `params` is not a valid argument.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">legal_params_fns</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">Sequential</span><span class="o">.</span><span class="n">fit</span><span class="p">,</span> <span class="n">Sequential</span><span class="o">.</span><span class="n">predict</span><span class="p">,</span> <span class="n">Sequential</span><span class="o">.</span><span class="n">predict_classes</span><span class="p">,</span>
+        <span class="n">Sequential</span><span class="o">.</span><span class="n">evaluate</span>
+    <span class="p">]</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_fn</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">legal_params_fns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="fm">__call__</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">build_fn</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">FunctionType</span><span class="p">)</span> <span class="ow">and</span>
+          <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">build_fn</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">)):</span>
+      <span class="n">legal_params_fns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">build_fn</span><span class="o">.</span><span class="fm">__call__</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">legal_params_fns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">build_fn</span><span class="p">)</span>
+
+    <span class="n">legal_params</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">legal_params_fns</span><span class="p">:</span>
+      <span class="n">legal_params</span> <span class="o">+=</span> <span class="n">tf_inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">fn</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">legal_params</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">legal_params</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">params_name</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">params_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">legal_params</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">params_name</span> <span class="o">!=</span> <span class="s1">&#39;nb_epoch&#39;</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> is not a legal parameter&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">params_name</span><span class="p">))</span>
+
+  <span class="k">def</span> <span class="nf">get_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>  <span class="c1"># pylint: disable=unused-argument</span>
+    <span class="sd">&quot;&quot;&quot;Gets parameters for this estimator.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        **params: ignored (exists for API compatibility).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Dictionary of parameter names mapped to their values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sk_params</span><span class="p">)</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;build_fn&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_fn</span><span class="p">})</span>
+    <span class="k">return</span> <span class="n">res</span>
+
+  <span class="k">def</span> <span class="nf">set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Sets the parameters of this estimator.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        **params: Dictionary of parameter names mapped to their values.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        self</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">check_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sk_params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span>
+
+  <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Constructs a new model with `build_fn` &amp; fit the model to `(x, y)`.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        x : array-like, shape `(n_samples, n_features)`</span>
+<span class="sd">            Training samples where n_samples in the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+<span class="sd">        y : array-like, shape `(n_samples,)` or `(n_samples, n_outputs)`</span>
+<span class="sd">            True labels for X.</span>
+<span class="sd">        **kwargs: dictionary arguments</span>
+<span class="sd">            Legal arguments are the arguments of `Sequential.fit`</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        history : object</span>
+<span class="sd">            details about the training history at each epoch.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_fn</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__call__</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_sk_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="fm">__call__</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">build_fn</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">FunctionType</span><span class="p">)</span> <span class="ow">and</span>
+          <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">build_fn</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">)):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_fn</span><span class="p">(</span>
+          <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_sk_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">build_fn</span><span class="o">.</span><span class="fm">__call__</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_fn</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_sk_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">build_fn</span><span class="p">))</span>
+
+    <span class="n">loss_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">loss</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">loss_name</span><span class="p">,</span> <span class="s1">&#39;__name__&#39;</span><span class="p">):</span>
+      <span class="n">loss_name</span> <span class="o">=</span> <span class="n">loss_name</span><span class="o">.</span><span class="vm">__name__</span>
+    <span class="k">if</span> <span class="n">loss_name</span> <span class="o">==</span> <span class="s1">&#39;categorical_crossentropy&#39;</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+      <span class="n">y</span> <span class="o">=</span> <span class="n">to_categorical</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+    <span class="n">fit_args</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_sk_params</span><span class="p">(</span><span class="n">Sequential</span><span class="o">.</span><span class="n">fit</span><span class="p">))</span>
+    <span class="n">fit_args</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="n">history</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_args</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">history</span>
+
+  <span class="k">def</span> <span class="nf">filter_sk_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">override</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Filters `sk_params` and return those in `fn`&#39;s arguments.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        fn : arbitrary function</span>
+<span class="sd">        override: dictionary, values to override sk_params</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        res : dictionary dictionary containing variables</span>
+<span class="sd">            in both sk_params and fn&#39;s arguments.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">override</span> <span class="o">=</span> <span class="n">override</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">fn_args</span> <span class="o">=</span> <span class="n">tf_inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">fn</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sk_params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">fn_args</span><span class="p">:</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">name</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">override</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span>
+
+
+<span class="k">class</span> <span class="nc">KerasClassifier</span><span class="p">(</span><span class="n">BaseWrapper</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Implementation of the scikit-learn classifier API for Keras.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="KerasClassifier.fit"><a class="viewcode-back" href="../../../../../../../api_ibex_tensorflow_contrib_keras_wrappers_scikit_learn_keras_classifier.html#ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasClassifier.fit">[docs]</a>  <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Constructs a new model with `build_fn` &amp; fit the model to `(x, y)`.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        x : array-like, shape `(n_samples, n_features)`</span>
+<span class="sd">            Training samples where n_samples in the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+<span class="sd">        y : array-like, shape `(n_samples,)` or `(n_samples, n_outputs)`</span>
+<span class="sd">            True labels for X.</span>
+<span class="sd">        **kwargs: dictionary arguments</span>
+<span class="sd">            Legal arguments are the arguments of `Sequential.fit`</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        history : object</span>
+<span class="sd">            details about the training history at each epoch.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: In case of invalid shape for `y` argument.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+      <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Invalid shape for y: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">n_classes_</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">KerasClassifier</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="KerasClassifier.predict"><a class="viewcode-back" href="../../../../../../../api_ibex_tensorflow_contrib_keras_wrappers_scikit_learn_keras_classifier.html#ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasClassifier.predict">[docs]</a>  <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the class predictions for the given test data.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        x: array-like, shape `(n_samples, n_features)`</span>
+<span class="sd">            Test samples where n_samples in the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+<span class="sd">        **kwargs: dictionary arguments</span>
+<span class="sd">            Legal arguments are the arguments</span>
+<span class="sd">            of `Sequential.predict_classes`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        preds: array-like, shape `(n_samples,)`</span>
+<span class="sd">            Class predictions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_sk_params</span><span class="p">(</span><span class="n">Sequential</span><span class="o">.</span><span class="n">predict_classes</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">classes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict_classes</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">[</span><span class="n">classes</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="KerasClassifier.predict_proba"><a class="viewcode-back" href="../../../../../../../api_ibex_tensorflow_contrib_keras_wrappers_scikit_learn_keras_classifier.html#ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasClassifier.predict_proba">[docs]</a>  <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns class probability estimates for the given test data.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        x: array-like, shape `(n_samples, n_features)`</span>
+<span class="sd">            Test samples where n_samples in the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+<span class="sd">        **kwargs: dictionary arguments</span>
+<span class="sd">            Legal arguments are the arguments</span>
+<span class="sd">            of `Sequential.predict_classes`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        proba: array-like, shape `(n_samples, n_outputs)`</span>
+<span class="sd">            Class probability estimates.</span>
+<span class="sd">            In the case of binary classification,</span>
+<span class="sd">            tp match the scikit-learn API,</span>
+<span class="sd">            will return an array of shape &#39;(n_samples, 2)&#39;</span>
+<span class="sd">            (instead of `(n_sample, 1)` as in Keras).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_sk_params</span><span class="p">(</span><span class="n">Sequential</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">probs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="c1"># check if binary classification</span>
+    <span class="k">if</span> <span class="n">probs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="c1"># first column is probability of class 0 and second is of class 1</span>
+      <span class="n">probs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="mi">1</span> <span class="o">-</span> <span class="n">probs</span><span class="p">,</span> <span class="n">probs</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">probs</span></div>
+
+  <span class="k">def</span> <span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the mean accuracy on the given test data and labels.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        x: array-like, shape `(n_samples, n_features)`</span>
+<span class="sd">            Test samples where n_samples in the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+<span class="sd">        y: array-like, shape `(n_samples,)` or `(n_samples, n_outputs)`</span>
+<span class="sd">            True labels for x.</span>
+<span class="sd">        **kwargs: dictionary arguments</span>
+<span class="sd">            Legal arguments are the arguments of `Sequential.evaluate`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        score: float</span>
+<span class="sd">            Mean accuracy of predictions on X wrt. y.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If the underlying model isn&#39;t configured to</span>
+<span class="sd">            compute accuracy. You should pass `metrics=[&quot;accuracy&quot;]` to</span>
+<span class="sd">            the `.compile()` method of the model.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_sk_params</span><span class="p">(</span><span class="n">Sequential</span><span class="o">.</span><span class="n">evaluate</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="n">loss_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">loss</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">loss_name</span><span class="p">,</span> <span class="s1">&#39;__name__&#39;</span><span class="p">):</span>
+      <span class="n">loss_name</span> <span class="o">=</span> <span class="n">loss_name</span><span class="o">.</span><span class="vm">__name__</span>
+    <span class="k">if</span> <span class="n">loss_name</span> <span class="o">==</span> <span class="s1">&#39;categorical_crossentropy&#39;</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+      <span class="n">y</span> <span class="o">=</span> <span class="n">to_categorical</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+    <span class="n">outputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+      <span class="n">outputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">outputs</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">output</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">metrics_names</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
+      <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;acc&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">output</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The model is not configured to compute accuracy. &#39;</span>
+                     <span class="s1">&#39;You should pass `metrics=[&quot;accuracy&quot;]` to &#39;</span>
+                     <span class="s1">&#39;the `model.compile()` method.&#39;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">KerasRegressor</span><span class="p">(</span><span class="n">BaseWrapper</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Implementation of the scikit-learn regressor API for Keras.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="KerasRegressor.predict"><a class="viewcode-back" href="../../../../../../../api_ibex_tensorflow_contrib_keras_wrappers_scikit_learn_keras_regressor.html#ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor.predict">[docs]</a>  <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns predictions for the given test data.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        x: array-like, shape `(n_samples, n_features)`</span>
+<span class="sd">            Test samples where n_samples in the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+<span class="sd">        **kwargs: dictionary arguments</span>
+<span class="sd">            Legal arguments are the arguments of `Sequential.predict`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        preds: array-like, shape `(n_samples,)`</span>
+<span class="sd">            Predictions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_sk_params</span><span class="p">(</span><span class="n">Sequential</span><span class="o">.</span><span class="n">predict</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span></div>
+
+  <span class="k">def</span> <span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the mean loss on the given test data and labels.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        x: array-like, shape `(n_samples, n_features)`</span>
+<span class="sd">            Test samples where n_samples in the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+<span class="sd">        y: array-like, shape `(n_samples,)`</span>
+<span class="sd">            True labels for X.</span>
+<span class="sd">        **kwargs: dictionary arguments</span>
+<span class="sd">            Legal arguments are the arguments of `Sequential.evaluate`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        score: float</span>
+<span class="sd">            Mean accuracy of predictions on X wrt. y.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_sk_params</span><span class="p">(</span><span class="n">Sequential</span><span class="o">.</span><span class="n">evaluate</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+      <span class="k">return</span> <span class="n">loss</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">loss</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../../../index.html">
+              <img class="logo" src="../../../../../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../../../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

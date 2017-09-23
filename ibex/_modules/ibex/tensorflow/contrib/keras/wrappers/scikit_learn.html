@@ -1,0 +1,413 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>ibex.tensorflow.contrib.keras.wrappers.scikit_learn &#8212; ibex 0.1.1 documentation</title>
+    <link rel="stylesheet" href="../../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../../',
+        VERSION:     '0.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for ibex.tensorflow.contrib.keras.wrappers.scikit_learn</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Wrappers for :mod:`tensorflow.contrib.keras.wrappers.sklearn`.</span>
+
+<span class="sd">.. versionadded:: 1.2</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">import</span> <span class="nn">types</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">base</span>
+<span class="kn">from</span> <span class="nn">tensorflow.contrib</span> <span class="k">import</span> <span class="n">keras</span>
+<span class="kn">import</span> <span class="nn">six</span>
+
+<span class="kn">from</span> <span class="nn">......_base</span> <span class="k">import</span> <span class="n">FrameMixin</span><span class="p">,</span> <span class="n">verify_x_type</span><span class="p">,</span> <span class="n">verify_y_type</span>
+<span class="kn">from</span> <span class="nn">......_utils</span> <span class="k">import</span> <span class="n">update_method_wrapper</span><span class="p">,</span> <span class="n">update_class_wrapper</span>
+<span class="kn">from</span> <span class="nn">......_utils</span> <span class="k">import</span> <span class="n">wrapped_fn_names</span>
+
+
+<span class="k">class</span> <span class="nc">KerasEstimator</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">FrameMixin</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">build_fn</span><span class="p">,</span> <span class="o">**</span><span class="n">sk_params</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_build_fn</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sk_params</span> <span class="o">=</span> <span class="n">build_fn</span><span class="p">,</span> <span class="n">sk_params</span>
+
+    <span class="c1"># Tmp Ami - find how to show in sphinx</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">history_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns:</span>
+
+<span class="sd">            A :class:`tensorflow.contrib.keras.wrappers.scikit_learn` object describing the fit.</span>
+
+<span class="sd">        Note:</span>
+
+<span class="sd">            Should not be used before a call to ``fit``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_history</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">=</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_params</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        <span class="k">return</span> <span class="s1">&#39;Adapter[&#39;</span> <span class="o">+</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;](&#39;</span> <span class="o">+</span> <span class="n">params</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">deep</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sk_params</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;build_fn&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_fn</span>
+        <span class="k">return</span> <span class="n">d</span>
+
+    <span class="k">def</span> <span class="nf">set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">sk_params</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_build_fn</span> <span class="o">=</span> <span class="n">sk_params</span><span class="p">[</span><span class="s1">&#39;build_fn&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_x</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inv</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">X</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">x_columns</span><span class="p">]</span><span class="o">.</span><span class="n">as_matrix</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">inv</span> <span class="k">else</span> <span class="n">X</span><span class="o">.</span><span class="n">as_matrix</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="KerasClassifier"><a class="viewcode-back" href="../../../../../../api_ibex_tensorflow_contrib_keras_wrappers_scikit_learn_keras_classifier.html#ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasClassifier">[docs]</a><span class="k">class</span> <span class="nc">KerasClassifier</span><span class="p">(</span><span class="n">KerasEstimator</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">ClassifierMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A tensorflow/keras classifier.</span>
+
+<span class="sd">    Arguments:</span>
+
+<span class="sd">        build_fn: Function returning a :class:`tensorflow.contrib.Model` object.</span>
+<span class="sd">        classes: All possible values of the classes.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">        &gt;&gt;&gt; import pandas as pd</span>
+<span class="sd">        &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">        &gt;&gt;&gt; from ibex.sklearn import datasets</span>
+<span class="sd">        &gt;&gt;&gt; from ibex.tensorflow.contrib.keras.wrappers.scikit_learn import KerasClassifier as PdKerasClassifier</span>
+<span class="sd">        &gt;&gt;&gt; import tensorflow</span>
+<span class="sd">        ...</span>
+<span class="sd">        ...</span>
+<span class="sd">        &gt;&gt;&gt; iris = datasets.load_iris()</span>
+<span class="sd">        &gt;&gt;&gt; features = iris[&#39;feature_names&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; iris = pd.DataFrame(</span>
+<span class="sd">        ...     np.c_[iris[&#39;data&#39;], iris[&#39;target&#39;]],</span>
+<span class="sd">        ...     columns=features+[&#39;class&#39;])</span>
+<span class="sd">        ...</span>
+<span class="sd">        &gt;&gt;&gt; def _build_classifier_nn():</span>
+<span class="sd">        ...     model = tensorflow.contrib.keras.models.Sequential()</span>
+<span class="sd">        ...     model.add(tensorflow.contrib.keras.layers.Dense(8, input_dim=4, activation=&#39;relu&#39;))</span>
+<span class="sd">        ...     model.add(tensorflow.contrib.keras.layers.Dense(3, activation=&#39;softmax&#39;))</span>
+<span class="sd">        ...     model.compile(loss=&#39;categorical_crossentropy&#39;, optimizer=&#39;adagrad&#39;, metrics=[&#39;accuracy&#39;])</span>
+<span class="sd">        ...     return model</span>
+<span class="sd">        ...</span>
+<span class="sd">        &gt;&gt;&gt; clf = PdKerasClassifier(</span>
+<span class="sd">        ...     build_fn=_build_classifier_nn,</span>
+<span class="sd">        ...     classes=iris[&#39;class&#39;].unique(),</span>
+<span class="sd">        ...     verbose=0)</span>
+<span class="sd">        &gt;&gt;&gt; clf.fit(iris[features], iris[&#39;class&#39;])</span>
+<span class="sd">        Adapter[KerasClassifier](verbose=0,build_fn=&lt;function _build_classifier_nn at ...&gt;,classes=[ 0.  1.  2.])</span>
+<span class="sd">        &gt;&gt;&gt; clf.history_</span>
+<span class="sd">        &lt;tensorflow.contrib.keras.python.keras.callbacks.History object at ...&gt;</span>
+<span class="sd">        &gt;&gt;&gt; clf.fit(iris[features], iris[&#39;class&#39;]).predict(iris[features])</span>
+<span class="sd">        0      ...</span>
+<span class="sd">        1      ...</span>
+<span class="sd">        2      ...</span>
+<span class="sd">        3      ...</span>
+<span class="sd">        4      ...</span>
+<span class="sd">        ...</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">build_fn</span><span class="p">,</span> <span class="n">classes</span><span class="p">,</span> <span class="o">**</span><span class="n">sk_params</span><span class="p">):</span>
+        <span class="n">KerasEstimator</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">build_fn</span><span class="p">,</span> <span class="o">**</span><span class="n">sk_params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_classes</span> <span class="o">=</span> <span class="n">classes</span>
+
+    <span class="k">def</span> <span class="nf">get_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">deep</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">KerasEstimator</span><span class="o">.</span><span class="n">get_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">deep</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;classes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_classes</span>
+        <span class="k">return</span> <span class="n">d</span>
+
+    <span class="k">def</span> <span class="nf">set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">sk_params</span><span class="p">):</span>
+        <span class="n">KerasEstimator</span><span class="o">.</span><span class="n">set_params</span><span class="p">(</span><span class="o">**</span><span class="n">sk_params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_classes</span> <span class="o">=</span> <span class="n">sk_params</span><span class="p">[</span><span class="s1">&#39;classes&#39;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="KerasClassifier.fit"><a class="viewcode-back" href="../../../../../../api_ibex_tensorflow_contrib_keras_wrappers_scikit_learn_keras_classifier.html#ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasClassifier.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fits the transformer using ``X`` ``y``.</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            X: A :class:`pandas.DataFrame` object.</span>
+<span class="sd">            y: A :class:`pandas.Series` object whose each entry is in classes.</span>
+
+<span class="sd">        Returns:</span>
+
+<span class="sd">            ``self``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">verify_x_type</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">verify_y_type</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_columns</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">columns</span>
+        <span class="c1"># Tmp Ami - should go in utils</span>
+        <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">X</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">index</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Indexes do not match&#39;</span><span class="p">)</span>
+        <span class="n">uX</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_x</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+        <span class="n">uy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_y</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_y_columns</span> <span class="o">=</span> <span class="n">uy</span><span class="o">.</span><span class="n">columns</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_est</span> <span class="o">=</span> <span class="n">keras</span><span class="o">.</span><span class="n">wrappers</span><span class="o">.</span><span class="n">scikit_learn</span><span class="o">.</span><span class="n">KerasRegressor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_build_fn</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_sk_params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_history</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_est</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">uX</span><span class="p">,</span> <span class="n">uy</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">verify_x_type</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">uX</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_x</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_est</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">uX</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_y_columns</span><span class="p">)</span><span class="o">.</span><span class="n">idxmax</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">verify_x_type</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">uX</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">x_columns</span><span class="p">]</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_est</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">uX</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_y_columns</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_y</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="n">dummies</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">get_dummies</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">dummies</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">dummies</span><span class="o">.</span><span class="n">columns</span> <span class="k">else</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_classes</span><span class="p">}</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">d</span><span class="p">)[</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_classes</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">df</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">classes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns:</span>
+
+<span class="sd">            The values of classes classified.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_classes</span></div>
+
+
+<div class="viewcode-block" id="KerasRegressor"><a class="viewcode-back" href="../../../../../../api_ibex_tensorflow_contrib_keras_wrappers_scikit_learn_keras_regressor.html#ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor">[docs]</a><span class="k">class</span> <span class="nc">KerasRegressor</span><span class="p">(</span><span class="n">KerasEstimator</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">RegressorMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A tensorflow/keras regressor.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">        &gt;&gt;&gt; import pandas as pd</span>
+<span class="sd">        &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">        &gt;&gt;&gt; from ibex.sklearn import datasets</span>
+<span class="sd">        &gt;&gt;&gt; from ibex.tensorflow.contrib.keras.wrappers.scikit_learn import KerasRegressor as PdKerasRegressor</span>
+<span class="sd">        &gt;&gt;&gt; import tensorflow</span>
+<span class="sd">        ...</span>
+<span class="sd">        ...</span>
+<span class="sd">        &gt;&gt;&gt; iris = datasets.load_iris()</span>
+<span class="sd">        &gt;&gt;&gt; features = iris[&#39;feature_names&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; iris = pd.DataFrame(</span>
+<span class="sd">        ...     np.c_[iris[&#39;data&#39;], iris[&#39;target&#39;]],</span>
+<span class="sd">        ...     columns=features+[&#39;class&#39;])</span>
+<span class="sd">        ...</span>
+<span class="sd">        &gt;&gt;&gt; def build_regressor_nn():</span>
+<span class="sd">        ...     model = tensorflow.contrib.keras.models.Sequential()</span>
+<span class="sd">        ...     model.add(</span>
+<span class="sd">        ...         tensorflow.contrib.keras.layers.Dense(20, input_dim=4, activation=&#39;relu&#39;))</span>
+<span class="sd">        ...     model.add(</span>
+<span class="sd">        ...         tensorflow.contrib.keras.layers.Dense(1))</span>
+<span class="sd">        ...     model.compile(loss=&#39;mean_squared_error&#39;, optimizer=&#39;adagrad&#39;)</span>
+<span class="sd">        ...     return model</span>
+<span class="sd">        ...</span>
+<span class="sd">        &gt;&gt;&gt; prd = PdKerasRegressor(</span>
+<span class="sd">        ...     build_fn=build_regressor_nn,</span>
+<span class="sd">        ...     verbose=0)</span>
+<span class="sd">        &gt;&gt;&gt; prd.fit(iris[features], iris[&#39;class&#39;])</span>
+<span class="sd">        Adapter[KerasRegressor](verbose=0,build_fn=&lt;function build_regressor_nn at ...&gt;)</span>
+<span class="sd">        &gt;&gt;&gt; prd.history_</span>
+<span class="sd">        &lt;tensorflow.contrib.keras.python.keras.callbacks.History object at ...&gt;</span>
+<span class="sd">        &gt;&gt;&gt; prd.fit(iris[features], iris[&#39;class&#39;]).predict(iris[features])</span>
+<span class="sd">        0      ...</span>
+<span class="sd">        1      ...</span>
+<span class="sd">        2      ...</span>
+<span class="sd">        3      ...</span>
+<span class="sd">        4      ...</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">build_fn</span><span class="p">,</span> <span class="o">**</span><span class="n">sk_params</span><span class="p">):</span>
+        <span class="n">KerasEstimator</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">build_fn</span><span class="p">,</span> <span class="o">**</span><span class="n">sk_params</span><span class="p">)</span>
+
+<div class="viewcode-block" id="KerasRegressor.fit"><a class="viewcode-back" href="../../../../../../api_ibex_tensorflow_contrib_keras_wrappers_scikit_learn_keras_regressor.html#ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fits the transformer using ``X`` ``y``.</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            X: A :class:`pandas.DataFrame` object.</span>
+<span class="sd">            y: A :class:`pandas.Series` object.</span>
+
+<span class="sd">        Returns:</span>
+
+<span class="sd">            ``self``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">verify_x_type</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">verify_y_type</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_columns</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">columns</span>
+        <span class="c1"># Tmp Ami - should go in utils</span>
+        <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">X</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">index</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Indexes do not match&#39;</span><span class="p">)</span>
+        <span class="n">uX</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_x</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+        <span class="n">uy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_y</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_est</span> <span class="o">=</span> <span class="n">keras</span><span class="o">.</span><span class="n">wrappers</span><span class="o">.</span><span class="n">scikit_learn</span><span class="o">.</span><span class="n">KerasRegressor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_build_fn</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_sk_params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_history</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_est</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">uX</span><span class="p">,</span> <span class="n">uy</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">verify_x_type</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">uX</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_x</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_est</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">uX</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_wrapped_call_res</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_y</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">y</span><span class="o">.</span><span class="n">values</span>
+
+    <span class="k">def</span> <span class="nf">_process_wrapped_call_res</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inv</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">res</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">inv</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">x_columns</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">x_columns</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">==</span> <span class="n">res</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                    <span class="n">columns</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">columns</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39; &#39;</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+                <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">GeneratorType</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__adapter_process_wrapped_call_res</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">res</span></div>
+
+
+<span class="k">for</span> <span class="n">est</span><span class="p">,</span> <span class="n">adp</span> <span class="ow">in</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">keras</span><span class="o">.</span><span class="n">wrappers</span><span class="o">.</span><span class="n">scikit_learn</span><span class="o">.</span><span class="n">KerasClassifier</span><span class="p">,</span> <span class="n">KerasClassifier</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">keras</span><span class="o">.</span><span class="n">wrappers</span><span class="o">.</span><span class="n">scikit_learn</span><span class="o">.</span><span class="n">KerasRegressor</span><span class="p">,</span> <span class="n">KerasRegressor</span><span class="p">)]:</span>
+    <span class="k">for</span> <span class="n">wrap</span> <span class="ow">in</span> <span class="n">wrapped_fn_names</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">wrap</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;fit&#39;</span><span class="p">]:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">est</span><span class="p">,</span> <span class="n">wrap</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">adp</span><span class="p">,</span> <span class="n">wrap</span><span class="p">):</span>
+            <span class="nb">delattr</span><span class="p">(</span><span class="n">adp</span><span class="p">,</span> <span class="n">wrap</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span>  <span class="nb">hasattr</span><span class="p">(</span><span class="n">adp</span><span class="p">,</span> <span class="n">wrap</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">elif</span> <span class="n">six</span><span class="o">.</span><span class="n">callable</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">adp</span><span class="p">,</span> <span class="n">wrap</span><span class="p">)):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">update_method_wrapper</span><span class="p">(</span><span class="n">adp</span><span class="p">,</span> <span class="n">est</span><span class="p">,</span> <span class="n">wrap</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="k">pass</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;KerasClassifier&#39;</span><span class="p">,</span> <span class="s1">&#39;KerasRegressor&#39;</span><span class="p">]</span>
+
+
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../../index.html">
+              <img class="logo" src="../../../../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../../../index.html">Module code</a><ul>
+  <li><a href="../../../../../ibex.html">ibex</a><ul>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
