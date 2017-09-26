@@ -428,6 +428,10 @@ div.abs-box > :not(.base) {
   display: none;
 }
 
+code {
+    font-family: monospace;
+}
+
 
 rect:hover {stroke:#fff;}
 
