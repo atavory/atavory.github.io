@@ -466,9 +466,7 @@ var StepGroup = function(elems) {
 
             <u>Lemma 1:</u> In the first segment, the regret compared to expert \(j\) is at most $$-2 \ln \left( \underline{w}_{n + 1}^j \right)$$
 
-            <div class="substep">
-                <img src="images/final_weight_regret.png" style="width: 65%">
-            </div>
+                <img src="images/giving_banana_to_monkey.jpg" style="width: 65%">
 
         </div>
         <div class="step slide" data-scale="0.01" data-x="4214" data-y="70" data-z="10">
@@ -505,21 +503,31 @@ var StepGroup = function(elems) {
         <div class="step slide" data-scale="0.01" data-x="4228" data-y="65" data-z="10">
             <h2>Small Loss &rarr; High Weight</h2>
 
-            <u>Lemma 2:</u> In the first segment, the regret compared to expert \(j\) is at most $$-2 \ln \left( \underline{w}_{n + 1}^j \right)$$
+            <u>Lemma 2:</u> 
+            For any expert \(j\) and periods \(i', i''\),
+            $$
+            \frac{\overline{w}_{i'}^j}{\underline{w}_{i''}^j}
+            \geq
+            e^{-\eta \sum_{i' \leq i \leq i''} L\left(\hat{y}_i^j, y_i\right)}
+            (1 - \alpha)^{i'' - i'}
+            $$
 
-            <div class="substep">
-                <img src="images/final_weight_regret.png" style="width: 65%">
-            </div>
+                <img src="images/happy_monkey_banana.jpg" style="width: 40%">
 
         </div>
+        <div class="step slide" data-scale="0.01" data-x="4200" data-y="70" data-z="10">
+        </div>
         <div class="step slide" data-scale="0.01" data-x="4228" data-y="75" data-z="10">
-            <h2>Small Loss &rarr; High Weight</h2>
+            <h2>"And Everbody Has A Share!"</h2>
 
-            <u>Lemma 3:</u> In the first segment, the regret compared to expert \(j\) is at most $$-2 \ln \left( \underline{w}_{n + 1}^j \right)$$
+            For any experts \(j', j''\) and period \(i\),
 
-            <div class="substep">
-                <img src="images/final_weight_regret.png" style="width: 65%">
-            </div>
+            <u>Lemma 3:</u> 
+            $$ 
+            \frac{\underline{w}_{i + 1}^{j'}}{\overline{w}_i^{j''}} \geq \frac{\alpha}{m - 1}.
+            $$
+
+                <img src="images/monkeys_sharing_bananas.jpg" style="width: 65%">
 
         </div>
     </div>
