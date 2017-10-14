@@ -1,0 +1,30 @@
+@startuml
+
+skinparam shadowing false
+
+left to right direction
+
+skinparam interface {
+    borderColor black
+}
+
+skinparam component {
+    arrowColor Black
+}
+
+database X0 #red
+database X1 #red
+interface " " as c0 #white
+rectangle SelectKBest #white
+rectangle PCA #white
+interface " " as c1 #white
+rectangle RandomForestRegressor #white
+X0 --> c0
+X1 --> c0 
+c0 --> SelectKBest
+c0 --> PCA
+SelectKBest --> c1
+PCA --> c1
+c1 --> RandomForestRegressor
+
+@enduml

@@ -1,0 +1,21 @@
+@startuml
+
+skinparam monochrome true
+skinparam shadowing false
+
+actor user
+
+autonumber 1 "<font color=grey>"
+user -[#grey]> runtime: import ibex.sklearn.linear_model
+runtime -[#grey]> ibex: import ibex
+runtime -[#grey]> ibex.sklearn: import ibex.sklearn
+ibex.sklearn -[#grey]> ibex.sklearn: register sys.metapath
+autonumber 5 "<font color=black>"
+runtime -[#black]> loader: __import ibex.sklearn.linear_model__
+autonumber 6 "<font color=grey>"
+loader -[#grey]> sklearn.linear_model: dir
+sklearn.linear_model -[#grey]> loader: members
+loader -[#grey]> loader: inspect
+loader -[#grey]> loader: wrap
+
+@enduml

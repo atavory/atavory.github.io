@@ -1,0 +1,3095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta content="HTML Tidy for HTML5 for Mac OS X version 5.4.0" name="generator">
+    <meta charset="utf-8">
+    <meta content="width=1024" name="viewport">
+    <meta content="yes" name="apple-mobile-web-app-capable">
+    <title>Ibex</title>
+    <meta content="Ibex" name="description"> <meta content="Ami Tavory" name="author">
+    <link href="../css/impress.css" rel="stylesheet">
+    <link href="../css/shThemeDefault.css" rel="stylesheet">
+    <link href="../css/flow_chart.css" rel="stylesheet">
+    <link href="css/pres.css" rel="stylesheet">
+    <link href="images/logo.ico" rel="shortcut icon" type="x-icon">
+    <style>
+      .node circle {
+        fill                : #999;
+      }
+      .node text {
+        font                : 10px sans-serif;
+      }
+      .node--internal circle {
+        fill                : #555;
+      }
+      .node--internal text {
+        text-shadow         : 0 1px 0 #fff, 0 -1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff;
+      }
+      .link {
+        fill                : none;
+        stroke              : #555;
+        stroke-opacity      : 0.4;
+        stroke-width        : 1.5px;
+      }
+    </style>
+    <script src="../js/jquery-3.2.1.min.js"></script>
+    <script src="../js/d3.v4.js"></script>
+    <script src="../js/flow_chart.js"></script>
+    <script>
+var StepGroup = function(elems) {
+    var comp = {
+        "_steps": [],
+        "_substeps": []
+    };
+
+    comp.elems = function() {
+        return elems;
+    }
+
+    comp.addStep = function(id, activeInd) {
+        comp._steps.push({"id": id, "activeInd": activeInd});
+
+        return comp;
+    }
+
+    comp.addSubstep = function(id, step, activeInd) {
+        comp._substeps.push({"id": id, "step": step, "activeInd": activeInd});
+
+        return comp;
+    }
+
+    comp.notifyStepEnter = function(id) {
+        console.log(id, comp._steps);
+        var activeInds = comp
+            ._steps
+            .filter(function (e) {return e["id"].localeCompare(id) == 0; })
+            .map(function (e) {return e["activeInd"]; });
+        if (activeInds.length == 0)
+            return;
+        console.log(activeInds);
+
+        for (var i = 0; i < elems.length; ++i) {
+            d3.select("#" + elems[i])
+                .transition()
+                .duration(220)
+                .style(
+                    "opacity", 
+                    activeInds.indexOf(i) == -1? 0: 1);
+        }
+
+        return comp;
+    }
+
+    comp.notifySubstepActive = function(id, step) {
+        var activeInds = comp
+            ._substeps
+            .filter(function (e) {return e["id"].localeCompare(id) == 0 && e["step"] == step; })
+            .map(function (e) {return e["activeInd"]; });
+        console.log(activeInds);
+
+        for (var i = 0; i < elems.length; ++i) {
+            d3.select("#" + elems[i])
+                .transition()
+                .duration(220)
+                .style(
+                    "opacity", 
+                    activeInds.indexOf(i) == -1? 0: 1);
+        }
+
+        return comp;
+    }
+
+    return comp;
+};
+    </script>
+    <script type="text/javascript">
+    </script>
+    <style type="text/css">
+    table.c19 {width:30%; float: bottom}
+    table.c18 {width:30%; float: right}
+    table.c17 {width:30%; float: left}
+    tr.c16 {text-align: right;}
+    span.c15 {text-decoration: underline}
+    div.c14 {background: url('images/baddy_bg.png'); background-repeat: no-repeat; background-position: 50% 20%;}
+    div.c13 {width:40%; float: left}
+    div.c12 {width: 100%; margin-top: 240px}
+    div.c11 {width:30%; float: left}
+    img.c10 {float: left}
+    div.c9 {float: left}
+    div.c8 {width: 350px; border-left: 1px solid grey; border-right: 1px solid grey}
+    p.c7 {text-align: center}
+    div.c6 {display: inline-block; margin-right: 40px}
+    div.c5 {display: inline-block}
+    div.c4 {align: center}
+    img.c3 {display: inline-block}
+    table.c2 {display: inline-block}
+    div.c1 {background: url('images/logo.jpeg'); background-repeat: no-repeat}
+    </style>
+</head>
+<body class="impress-not-supported">
+    <div class="fallback-message">
+        <p>Your browser <b>doesn&#39;t support the features required</b> by impress.js, so you are presented with a simplified
+        version of this presentation.</p>
+        <p>For the best experience please use the latest <b>Chrome</b> , <b>Safari</b> or <b>Firefox</b> browser.</p>
+    </div>
+    <div id="impress">
+        <div class="step slide c1" data-scale="1" data-x="0" data-y="0">
+            <center>
+            <h1>Ibex</h1>
+            <h2>Making Scikit-Learn Run On Top Of Pandas</h2>
+            <h3><div>Ami Tavory</div><div>Shahar Azulay, Tali Raveh-Sadka</div></h3>
+            </center>
+        </div>
+        <div class="step slide" data-scale="1" data-x="1400" data-y="0" id="outline-intro">
+            <h2>Outline</h2>
+            <ul class="outline">
+                <li class="current">Motivation
+                    <ul>
+                        <li class="current">Examples</li>
+                        <li class="other">Main Points</li>
+                    </ul>
+                </li>
+                <li class="other">Interface</li>
+                <li class="other">Implementation</li>
+                <li class="other">Conclusions</li>
+            </ul>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="1400" data-y="30" data-z="10">
+        <h2>Example 1: Concatenate &amp; Manipulate Columns</h2>
+            <div class="bs-box base">
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="example_1_substeps_img_1" src="generated/col_aggregating_further_transformations.png" style="opacity: 1">
+                    </div>
+                </div>
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="example_1_substeps_img_2" src="generated/col_aggregating_further_transformations_xs_focus.png" style="opacity: 0">
+                    </div>
+                </div>
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="example_1_substeps_img_3" src="generated/col_aggregating_further_transformations_transormers_focus.png" style="opacity: 0">
+                    </div>
+                </div>
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="example_1_substeps_img_4" src="generated/col_aggregating_further_transformations_transformers_predictor_focus.png" style="opacity: 0">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="example_1_substeps" class="step slide abs-box base smaller" data-scale="0.01" data-x="1400" data-y="33" data-z="10">
+            <div class="abs-box substep smaller">
+                <pre class="brush: python; gutter: true; toolbar: false highlight: [1]">            
+            X = np.c_[X0, X1]
+
+            features = make_union(SelectKBest(k=1), PCA(n_components=2))
+            prd = make_pipeline(
+                features,
+                RandomForestRegressor())
+
+            prd.fit(X, y)
+                </pre>
+            </div>
+            <div class="abs-box substep smaller">
+                <pre class="brush: python; gutter: true; toolbar: false highlight: [3]">            
+            X = np.c_[X0, X1]
+
+            features = make_union(SelectKBest(k=1), PCA(n_components=2))
+            prd = make_pipeline(
+                features,
+                RandomForestRegressor())
+
+            prd.fit(X, y)
+                </pre>
+            </div>
+            <div class="abs-box substep smaller">
+                <pre class="brush: python; gutter: true; toolbar: false highlight: [4, 5, 6]">            
+            X = np.c_[X0, X1]
+
+            features = make_union(SelectKBest(k=1), PCA(n_components=2))
+            prd = make_pipeline(
+                features,
+                RandomForestRegressor())
+
+            prd.fit(X, y)
+                </pre>
+            </div>
+            <div class="abs-box substep smaller">
+                <pre class="brush: python; gutter: true; toolbar: false highlight: [8]">            
+            X = np.c_[X0, X1]
+
+            features = make_union(SelectKBest(k=1), PCA(n_components=2))
+            prd = make_pipeline(
+                features,
+                RandomForestRegressor())
+
+            prd.fit(X, y)
+                </pre>
+            </div>
+        </div>
+        <div class="step slide abs-box base" data-scale="0.01" data-x="1400" data-y="36" data-z="10">
+            <div class="abs-box substep smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">            
+            &gt;&gt;&gt; X0
+            array([[23.2, 21.8], ..., ..., ..., ])
+            </pre>
+            </div>
+            <div class="abs-box substep smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">            
+            &gt;&gt;&gt; X1
+            array([[9, 8, 78], ..., ..., ..., ])
+                        </pre>
+            </div>
+            <div class="abs-box substep smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">            
+            &gt;&gt;&gt; X
+            array([[21.8, 0.3, 9.8], ..., ..., ..., ])
+            </pre>
+            </div>
+            <div class="abs-box substep smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">            
+            &gt;&gt;&gt; prd.feature_importances_
+            array([0.1, 0.3, 0.7])
+            </pre>
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="1414" data-y="37" data-z="10">
+            <h3 class="baddy">Results Interpretability</h3>
+            <img src="generated/col_aggregating_further_transformations_with_feature_importances_.png">
+            <div class="smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">          
+            &gt;&gt;&gt; prd.feature_importances_
+            array([0.1, 0.3, 0.7])
+        </pre>
+            </div>
+            <ul>
+                <li class="substep">What do these numbers mean?</li>
+                <li class="substep">Which original column does the first number represent?</li>
+            </ul>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="1414" data-y="47" data-z="10">
+            <h3 class="baddy">Column Maintenance</h3>
+            <div class="substep">
+            <h4>Possible Train Scenario</h4><img src="generated/train_col_aggregating_further_transformations.png"></div>
+            <div class="substep">
+            <h4>Possible Deployment Scenario</h4><img src=
+            "generated/deployment_col_aggregating_further_transformations.png"></div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="1500" data-y="30" data-z="10">
+            <h2>Example 2: Latent Factor Features</h2>
+            <div class="smaller">
+            <table class="data c2">
+                <tbody>
+                    <tr>
+                        <th>User</th>
+                        <th>Movie</th>
+                        <th>Rating</th>
+                    </tr>
+                    <tr>
+                        <td class="roni">Roni</td>
+                        <td class="frozen">Frozen</td>
+                        <td class="rating">5</td>
+                    </tr>
+                    <tr>
+                        <td class="roni">Roni</td>
+                        <td class="mulan">Mulan</td>
+                        <td class="rating">4</td>
+                    </tr>
+                    <tr>
+                        <td class="yarden">Yarden</td>
+                        <td class="mulan">Mulan</td>
+                        <td class="rating">1</td>
+                    </tr>
+                    <tr>
+                        <td class="anat">Anat</td>
+                        <td class="mulan">Mulan</td>
+                        <td class="rating">1</td>
+                    </tr>
+                    <tr>
+                        <td class="anat">Anat</td>
+                        <td class="shrek">Shrek</td>
+                        <td class="rating">2</td>
+                    </tr>
+                    <tr>
+                        <td class="yarden">Yarden</td>
+                        <td class="shrek">Shrek</td>
+                        <td class="rating">3</td>
+                    </tr>
+                    <tr>
+                        <td class="yarden">Yarden</td>
+                        <td class="frozen">Frozen</td>
+                        <td class="rating">5</td>
+                    </tr>
+                    <tr>
+                        <td class="anat">Anat</td>
+                        <td class="frozen">Frozen</td>
+                        <td class="rating">5</td>
+                    </tr>
+                    <tr>
+                        <td class="roni">Roni</td>
+                        <td class="shrek">Shrek</td>
+                        <td class="rating">5</td>
+                    </tr>
+                </tbody>
+            </table><img class="substep c3" src="generated/grid_search_cv_nmf_random_forest_regressor.png"></div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="1500" data-y="40" data-z="10">
+            <h3>Original</h3>
+            <div class="smaller">
+                <table class="data">
+                    <tbody>
+                        <tr>
+                            <th>User</th>
+                            <th>Movie</th>
+                            <th>Rating</th>
+                        </tr>
+                        <tr>
+                            <td class="roni">Roni</td>
+                            <td class="frozen">Frozen</td>
+                            <td class="rating">5</td>
+                        </tr>
+                        <tr>
+                            <td class="roni">Roni</td>
+                            <td class="mulan">Mulan</td>
+                            <td class="rating">4</td>
+                        </tr>
+                        <tr>
+                            <td class="yarden">Yarden</td>
+                            <td class="mulan">Mulan</td>
+                            <td class="rating">1</td>
+                        </tr>
+                        <tr>
+                            <td class="anat">Anat</td>
+                            <td class="mulan">Mulan</td>
+                            <td class="rating">1</td>
+                        </tr>
+                        <tr>
+                            <td class="anat">Anat</td>
+                            <td class="shrek">Shrek</td>
+                            <td class="rating">2</td>
+                        </tr>
+                        <tr>
+                            <td class="yarden">Yarden</td>
+                            <td class="shrek">Shrek</td>
+                            <td class="rating">3</td>
+                        </tr>
+                        <tr>
+                            <td class="yarden">Yarden</td>
+                            <td class="frozen">Frozen</td>
+                            <td class="rating">5</td>
+                        </tr>
+                        <tr>
+                            <td class="anat">Anat</td>
+                            <td class="frozen">Frozen</td>
+                            <td class="rating">5</td>
+                        </tr>
+                        <tr>
+                            <td class="roni">Roni</td>
+                            <td class="shrek">Shrek</td>
+                            <td class="rating">5</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="step slide c4" data-scale="0.01" data-x="1505.6" data-y="39.3" data-z="10">
+            <h3>Pivot</h3>
+            <div class="smaller">
+                <table class="data">
+                    <tbody>
+                        <tr>
+                            <td></td>
+                            <th class="frozen">Frozen</th>
+                            <th class="shrek">Shrek</th>
+                            <th class="mulan">Mulan</th>
+                        </tr>
+                        <tr>
+                            <th class="roni">Roni</th>
+                            <td>5</td>
+                            <td>5</td>
+                            <td>4</td>
+                        </tr>
+                        <tr>
+                            <th class="yarden">Yarden</th>
+                            <td>5</td>
+                            <td>3</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <th class="anat">Anat</th>
+                            <td>5</td>
+                            <td>2</td>
+                            <td>1</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="1512" data-y="39.4" data-z="10">
+            <h3>NMF Decomposition</h3>
+            <div>
+                <div class="smaller" style="float: left">
+                    <table class="data">
+                        <tbody>
+                            <tr>
+                                <th>User</th>
+                                <th>user_0</th>
+                                <th>user_1</th>
+                            </tr>
+                            <tr>
+                                <td class="roni">Roni</td>
+                                <td class="roni">0.1</td>
+                                <td class="roni">1.3</td>
+                            </tr>
+                            <tr>
+                                <td class="yarden">Yarden</td>
+                                <td class="yarden">1.1</td>
+                                <td class="yarden">1.4</td>
+                            </tr>
+                            <tr>
+                                <td class="anat">Anat</td>
+                                <td class="anat">0.2</td>
+                                <td class="anat">9.8</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="smaller" style="float: left">
+                    <table class="data">
+                        <tbody>
+                            <tr>
+                                <th>Movie</th>
+                                <th>movie_0</th>
+                                <th>movie_1</th>
+                            </tr>
+                            <tr>
+                                <td class="frozen">Frozen</td>
+                                <td class="frozen">10</td>
+                                <td class="frozen">20</td>
+                            </tr>
+                            <tr>
+                                <td class="shrek">Shrek</td>
+                                <td class="shrek">20.1</td>
+                                <td class="shrek">30.4</td>
+                            </tr>
+                            <tr>
+                                <td class="mulan">Mulan</td>
+                                <td class="mulan">12</td>
+                                <td class="mulan">13</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="1500" data-y="40" data-z="10"></div>
+        <div class="step slide" data-scale="0.01" data-x="1500" data-y="47" data-z="10">
+            <h3>Merge With Long Format</h3>
+            <div class="smaller">
+                <table class="data">
+                    <tbody>
+                        <tr>
+                            <th>User</th>
+                            <th>Movie</th>
+                            <th>user_0</th>
+                            <th>user_1</th>
+                            <th>movie_0</th>
+                            <th>movie_1</th>
+                        </tr>
+                        <tr>
+                            <td class="roni">Roni</td>
+                            <td class="frozen">Frozen</td>
+                            <td class="roni">0.1</td>
+                            <td class="roni">1.3</td>
+                            <td class="frozen">10</td>
+                            <td class="frozen">20</td>
+                        </tr>
+                        <tr>
+                            <td class="roni">Roni</td>
+                            <td class="mulan">Mulan</td>
+                            <td class="roni">0.1</td>
+                            <td class="roni">1.3</td>
+                            <td class="mulan">12</td>
+                            <td class="mulan">13</td>
+                        </tr>
+                        <tr>
+                            <td class="yarden">Yarden</td>
+                            <td class="mulan">Mulan</td>
+                            <td class="yarden">1.1</td>
+                            <td class="yarden">1.4</td>
+                            <td class="mulan">12</td>
+                            <td class="mulan">13</td>
+                        </tr>
+                        <tr>
+                            <td class="anat">Anat</td>
+                            <td class="mulan">Mulan</td>
+                            <td class="anat">0.2</td>
+                            <td class="anat">9.8</td>
+                            <td class="mulan">12</td>
+                            <td class="mulan">13</td>
+                        </tr>
+                        <tr>
+                            <td class="anat">Anat</td>
+                            <td class="shrek">Shrek</td>
+                            <td class="anat">0.2</td>
+                            <td class="anat">9.8</td>
+                            <td class="shrek">20.1</td>
+                            <td class="shrek">30.4</td>
+                        </tr>
+                        <tr>
+                            <td class="yarden">Yarden</td>
+                            <td class="shrek">Shrek</td>
+                            <td class="yarden">1.1</td>
+                            <td class="yarden">1.4</td>
+                            <td class="shrek">20.1</td>
+                            <td class="shrek">30.4</td>
+                        </tr>
+                        <tr>
+                            <td class="yarden">Yarden</td>
+                            <td class="frozen">Frozen</td>
+                            <td class="yarden">1.1</td>
+                            <td class="yarden">1.4</td>
+                            <td class="frozen">10</td>
+                            <td class="frozen">20</td>
+                        </tr>
+                        <tr>
+                            <td class="anat">Anat</td>
+                            <td class="frozen">Frozen</td>
+                            <td class="anat">0.2</td>
+                            <td class="anat">9.8</td>
+                            <td class="frozen">10</td>
+                            <td class="frozen">20</td>
+                        </tr>
+                        <tr>
+                            <td class="roni">Roni</td>
+                            <td class="shrek">Shrek</td>
+                            <td class="roni">0.1</td>
+                            <td class="roni">1.3</td>
+                            <td class="shrek">20.1</td>
+                            <td class="shrek">30.4</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="1500" data-y="56" data-z="10">
+            <h3 class="baddy">Performing The Munging</h3>
+            <ul>
+                <li>How to actually perform the pivots + merge?</li>
+                <li class="substep">Is <span class="baddy">this</span> really data?
+                    <div class="smaller">
+                        <table class="data">
+                            <tbody>
+                                <tr>
+                                    <th class="baddy">User</th>
+                                    <th class="baddy">Movie</th>
+                                    <th>Rating</th>
+                                </tr>
+                                <tr>
+                                    <td class="roni">Roni</td>
+                                    <td class="frozen">Frozen</td>
+                                    <td class="rating">5</td>
+                                </tr>
+                                <tr>
+                                    <td class="roni">Roni</td>
+                                    <td class="mulan">Mulan</td>
+                                    <td class="rating">4</td>
+                                </tr>
+                                <tr>
+                                    <td class="yarden">Yarden</td>
+                                    <td class="mulan">Mulan</td>
+                                    <td class="rating">1</td>
+                                </tr>
+                                <tr>
+                                    <td class="anat">Anat</td>
+                                    <td class="mulan">Mulan</td>
+                                    <td class="rating">1</td>
+                                </tr>
+                                <tr>
+                                    <td class="anat">Anat</td>
+                                    <td class="shrek">Shrek</td>
+                                    <td class="rating">2</td>
+                                </tr>
+                                <tr>
+                                    <td class="yarden">Yarden</td>
+                                    <td class="shrek">Shrek</td>
+                                    <td class="rating">3</td>
+                                </tr>
+                                <tr>
+                                    <td class="yarden">Yarden</td>
+                                    <td class="frozen">Frozen</td>
+                                    <td class="rating">5</td>
+                                </tr>
+                                <tr>
+                                    <td class="anat">Anat</td>
+                                    <td class="frozen">Frozen</td>
+                                    <td class="rating">5</td>
+                                </tr>
+                                <tr>
+                                    <td class="roni">Roni</td>
+                                    <td class="shrek">Shrek</td>
+                                    <td class="rating">5</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="1600" data-y="30" data-z="10">
+            <h3 class="baddy">Example 3: Combination Verbosity</h3>
+            <div class="smaller">
+                <div class="smaller">
+                    <pre class="brush: bash; gutter: true; toolbar: false">          
+                                pipeline = Pipeline([
+                                        # Extract the subject & body
+                                        (&#39;subjectbody&#39;, SubjectBodyExtractor()),
+
+                                        # Use FeatureUnion to combine the features from subject and body
+                                        (&#39;union&#39;, FeatureUnion(
+                                                transformer_list=[
+
+                                                        # Pipeline for pulling features from the post&#39;s subject line
+                                                        (&#39;subject&#39;, Pipeline([
+                                                                (&#39;selector&#39;, ItemSelector(key=&#39;subject&#39;)),
+                                                                (&#39;tfidf&#39;, TfidfVectorizer(min_df=50)),
+                                                        ])),
+
+                                                        # Pipeline for standard bag-of-words model for body
+                                                        (&#39;body_bow&#39;, Pipeline([
+                                                                (&#39;selector&#39;, ItemSelector(key=&#39;body&#39;)),
+                                                                (&#39;tfidf&#39;, TfidfVectorizer()),
+                                                                (&#39;best&#39;, TruncatedSVD(n_components=50)),
+                                                        ])),
+
+                                                        # Pipeline for pulling ad hoc features from post&#39;s body
+                                                        (&#39;body_stats&#39;, Pipeline([
+                                                                (&#39;selector&#39;, ItemSelector(key=&#39;body&#39;)),
+                                                                (&#39;stats&#39;, TextStats()),  # returns a list of dicts
+                                                                (&#39;vect&#39;, DictVectorizer()),  # list of dicts -&gt; feature matrix
+                                                        ])),
+
+                                                ],
+
+                                                # weight components in FeatureUnion
+                                                transformer_weights={
+                                                        &#39;subject&#39;: 0.8,
+                                                        &#39;body_bow&#39;: 0.5,
+                                                        &#39;body_stats&#39;: 1.0,
+                                                },
+                                        )),
+
+                                        # Use a SVC classifier on the combined features
+                                        (&#39;svc&#39;, SVC(kernel=&#39;linear&#39;)),
+                                ])
+                                </pre>
+                </div>
+            </div>
+        </div>
+        <div class="step slide" data-scale="1" data-x="2800" data-y="0" id="outline-intro-3">
+            <h2>Outline</h2>
+            <ul class="outline">
+                <li class="current">Motivation
+                    <ul>
+                        <li class="other">Examples</li>
+                        <li class="current">Main Points</li>
+                    </ul>
+                </li>
+                <li class="other">Interface</li>
+                <li class="other">Implementation</li>
+                <li class="other">Conclusions</li>
+            </ul>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="2800" data-y="30" data-z="10">
+            <h2>1. Use Metadata</h2>
+            <div>
+                <div class="c6">
+                    <p>Numpy</p>
+                    <div class="smaller">
+                        <table class="data">
+                            <tbody>
+                                <tr>
+                                    <td>5.1</td>
+                                    <td>3.5</td>
+                                    <td>1.4</td>
+                                    <td>0.2</td>
+                                </tr>
+                                <tr>
+                                    <td>4.9</td>
+                                    <td>3.0</td>
+                                    <td>1.4</td>
+                                    <td>0.2</td>
+                                </tr>
+                                <tr>
+                                    <td>4.7</td>
+                                    <td>3.2</td>
+                                    <td>1.3</td>
+                                    <td>0.2</td>
+                                </tr>
+                                <tr>
+                                    <td>4.6</td>
+                                    <td>3.1</td>
+                                    <td>1.5</td>
+                                    <td>0.2</td>
+                                </tr>
+                                <tr>
+                                    <td>5.0</td>
+                                    <td>3.6</td>
+                                    <td>1.4</td>
+                                    <td>0.2</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="c5">
+                    <p class="c7">Pandas</p>
+                    <div class="smaller">
+                        <table class="data">
+                            <tbody>
+                                <tr>
+                                    <td></td>
+                                    <th>sepal length (cm)</th>
+                                    <th>sepal width (cm)</th>
+                                    <th>petal length (cm)</th>
+                                    <th>petal width (cm)</th>
+                                </tr>
+                                <tr>
+                                    <th>0</th>
+                                    <td>5.1</td>
+                                    <td>3.5</td>
+                                    <td>1.4</td>
+                                    <td>0.2</td>
+                                </tr>
+                                <tr>
+                                    <th>1</th>
+                                    <td>4.9</td>
+                                    <td>3.0</td>
+                                    <td>1.4</td>
+                                    <td>0.2</td>
+                                </tr>
+                                <tr>
+                                    <th>2</th>
+                                    <td>4.7</td>
+                                    <td>3.2</td>
+                                    <td>1.3</td>
+                                    <td>0.2</td>
+                                </tr>
+                                <tr>
+                                    <th>3</th>
+                                    <td>4.6</td>
+                                    <td>3.1</td>
+                                    <td>1.5</td>
+                                    <td>0.2</td>
+                                </tr>
+                                <tr>
+                                    <th>4</th>
+                                    <td>5.0</td>
+                                    <td>3.6</td>
+                                    <td>1.4</td>
+                                    <td>0.2</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="2800" data-y="37" data-z="10">
+            <h2>2. Utilize Shell-Like Operators</h2>
+            <p>We intuitively know what this means</p>
+            <pre class="brush: bash; gutter: false; toolbar: false">          
+            $ ls | wc
+            </pre>
+        </div>
+        <div class="step slide" data-scale="1" data-x="4200" data-y="0" id="outline-intro-4">
+            <h2>Outline</h2>
+            <div style="float: left">
+                <ul class="outline">
+                    <li class="other">Motivation</li>
+                    <li class="current">
+                        <div class="c8">
+                            Interface
+                        </div>
+                    </li>
+                    <li class="other">
+                        <div class="c8">
+                            Implementation
+                        </div>
+                    </li>
+                    <li class="other">Conclusions</li>
+                </ul>
+            </div>
+            <div style="height: 400px; float: left">
+                <div class="abs-box base">
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="outlineClsGroup_img_1" src="generated/ibex_class_diagram_np.png" style="opacity: 1">
+                        </div>
+                    </div>
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="outlineClsGroup_img_2" src="generated/ibex_class_diagram_pandas.png" style="opacity: 0">
+                        </div>
+                    </div>
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="outlineClsGroup_img_3" src="images/logo.jpeg" style="opacity: 0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="substep smaller"></div>
+            <div class="substep smaller"></div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="4200" data-y="30" data-z="10">
+            <h2>Layers</h2>
+        </div>
+        <div class="step slide sol-layer" data-rotate-x="30" data-scale="0.01" data-x="4200" data-y="30" data-z="0">
+        <h2>Mixin + Adapter</h2><img height="300px" src="generated/ibex_layer_0.png" width="400px"></div>
+        <div class="step slide" data-scale="0.01" data-x="4200" data-y="39" data-z="10">
+            <h3>Wrapping</h3>
+            <div class="smaller">
+            <pre class="brush: python; gutter: true; toolbar: false; highlight: [3]">          
+            from ibex import frame
+            
+            PdLinearRegression = frame(sklearn.linear_model.LinearRegression)
+            </pre><img height="300px" src="generated/sklearn_linear_model_linear_regression_after.png" width="400px"></div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="4200" data-y="47" data-z="10">
+            <h3>Indexing</h3>
+            <div class="smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">
+            import pandas as pd
+            X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]})
+            y = pd.Series([10, 20 , 30])
+           </pre>
+                <div class="c11">
+                    <table class="data">
+                        <caption>
+                            X
+                        </caption>
+                        <tbody>
+                            <tr>
+                                <td></td>
+                                <th>a</th>
+                                <th>b</th>
+                            </tr>
+                            <tr>
+                                <th>0</th>
+                                <td>0</td>
+                                <td>1</td>
+                            </tr>
+                            <tr>
+                                <th>1</th>
+                                <td>2</td>
+                                <td>4</td>
+                            </tr>
+                            <tr>
+                                <th>2</th>
+                                <td>3</td>
+                                <td>6</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="c11">
+                    <table class="data">
+                        <caption>
+                            y
+                        </caption>
+                        <tbody>
+                            <tr>
+                                <th>0</th>
+                                <td>10</td>
+                            </tr>
+                            <tr>
+                                <th>1</th>
+                                <td>20</td>
+                            </tr>
+                            <tr>
+                                <th>2</th>
+                                <td>30</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="c12">
+                    <pre class="brush: python; gutter: false; toolbar: false">      
+            &gt;&gt;&gt; PdLinearRegression().fit(X, y).predict(X)
+            </pre>
+                    <table class="data">
+                        <tbody>
+                            <tr>
+                                <th>0</th>
+                                <td>10</td>
+                            </tr>
+                            <tr>
+                                <th>1</th>
+                                <td>20</td>
+                            </tr>
+                            <tr>
+                                <th>2</th>
+                                <td>30</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="step slide smaller" data-scale="0.01" data-x="4200" data-y="55" data-z="10">
+            <div class="smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">
+                X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]})
+                y = pd.Series([10, 20 , 30])
+            </pre>
+            </div>
+            <div class="smaller c11">
+                <table class="data">
+                    <caption>
+                        X
+                    </caption>
+                    <tbody>
+                        <tr>
+                            <td></td>
+                            <th>a</th>
+                            <th>b</th>
+                        </tr>
+                        <tr>
+                            <th>0</th>
+                            <td>0</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <th>1</th>
+                            <td>2</td>
+                            <td>4</td>
+                        </tr>
+                        <tr>
+                            <th>2</th>
+                            <td>3</td>
+                            <td>6</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="smaller c11">
+                <table class="data">
+                    <caption>
+                        y
+                    </caption>
+                    <tbody>
+                        <tr>
+                            <th>0</th>
+                            <td>10</td>
+                        </tr>
+                        <tr>
+                            <th>1</th>
+                            <td>20</td>
+                        </tr>
+                        <tr>
+                            <th>2</th>
+                            <td>30</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="smaller">
+                <table class="data" width="40%">
+                    <caption>
+                        X[[&#39;b&#39;, &#39;a&#39;]]
+                    </caption>
+                    <tbody>
+                        <tr>
+                            <td></td>
+                            <th>b</th>
+                            <th>a</th>
+                        </tr>
+                        <tr>
+                            <th>0</th>
+                            <td>1</td>
+                            <td>0</td>
+                        </tr>
+                        <tr>
+                            <th>1</th>
+                            <td>4</td>
+                            <td>2</td>
+                        </tr>
+                        <tr>
+                            <th>2</th>
+                            <td>6</td>
+                            <td>3</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">      
+            &gt;&gt;&gt; PdLinearRegression().fit(X, y).predict(X[[&#39;b&#39;, &#39;a&#39;]])
+           </pre>
+                    <table class="data">
+                        <tbody>
+                            <tr>
+                                <th>0</th>
+                                <td>10</td>
+                            </tr>
+                            <tr>
+                                <th>1</th>
+                                <td>20</td>
+                            </tr>
+                            <tr>
+                                <th>2</th>
+                                <td>30</td>
+                            </tr>
+                        </tbody>
+                    </table>
+            </div>
+        </div>
+        <div class="step slide smaller" data-scale="0.01" data-x="4200" data-y="63" data-z="10">
+            <div class="smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">
+            X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]})
+            y = pd.Series([10, 20 , 30])
+            X1 = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]}, index=[&#39;i&#39;, &#39;j&#39;, &#39;k&#39;]) </pre>
+                <div class="c11">
+                    <table class="data">
+                        <caption>
+                            X
+                        </caption>
+                        <tbody>
+                            <tr>
+                                <td></td>
+                                <th>a</th>
+                                <th>b</th>
+                            </tr>
+                            <tr>
+                                <th>0</th>
+                                <td>0</td>
+                                <td>1</td>
+                            </tr>
+                            <tr>
+                                <th>1</th>
+                                <td>2</td>
+                                <td>4</td>
+                            </tr>
+                            <tr>
+                                <th>2</th>
+                                <td>3</td>
+                                <td>6</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="c11">
+                    <table class="data">
+                        <caption>
+                            y
+                        </caption>
+                        <tbody>
+                            <tr>
+                                <th>0</th>
+                                <td>10</td>
+                            </tr>
+                            <tr>
+                                <th>1</th>
+                                <td>20</td>
+                            </tr>
+                            <tr>
+                                <th>2</th>
+                                <td>30</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="c11">
+                    <table class="data" width="40%">
+                        <caption>
+                            X1
+                        </caption>
+                        <tbody>
+                            <tr>
+                                <td></td>
+                                <th>a</th>
+                                <th>b</th>
+                            </tr>
+                            <tr>
+                                <th>i</th>
+                                <td>0</td>
+                                <td>1</td>
+                            </tr>
+                            <tr>
+                                <th>j</th>
+                                <td>2</td>
+                                <td>4</td>
+                            </tr>
+                            <tr>
+                                <th>k</th>
+                                <td>3</td>
+                                <td>6</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="smaller c12">
+                <pre class="brush: python; gutter: false; toolbar: false">      
+            >>> PdLinearRegression().fit(X, y).predict(X[[&#39;b&#39;, &#39;a&#39;]])
+           </pre>
+                <div class="c11">
+                    <table class="data"></table>
+                    <table class="data">
+                        <caption>
+                            y
+                        </caption>
+                        <tbody>
+                            <tr>
+                                <th>i</th>
+                                <td>10</td>
+                            </tr>
+                            <tr>
+                                <th>j</th>
+                                <td>20</td>
+                            </tr>
+                            <tr>
+                                <th>k</th>
+                                <td>30</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="4200" data-y="71" data-z="10">
+            <div class="smaller">
+            <pre class="brush: python; gutter: false; toolbar: false">
+            X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]}, index=[&#39;i&#39;, &#39;j&#39;, &#39;k&#39;])
+            y = pd.Series([10, 20 , 30], index=[21, 22, 23])
+          </pre>
+            <div class="c11">
+                <table class="data">
+                    <caption>
+                        X
+                    </caption>
+                    <tbody>
+                        <tr>
+                            <td></td>
+                            <th>a</th>
+                            <th>b</th>
+                        </tr>
+                        <tr>
+                            <th>i</th>
+                            <td>0</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <th>j</th>
+                            <td>2</td>
+                            <td>4</td>
+                        </tr>
+                        <tr>
+                            <th>k</th>
+                            <td>3</td>
+                            <td>6</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="c11">
+                <table class="data">
+                    <caption>
+                        y
+                    </caption>
+                    <tbody>
+                        <tr>
+                            <th>21</th>
+                            <td>10</td>
+                        </tr>
+                        <tr>
+                            <th>22</th>
+                            <td>20</td>
+                        </tr>
+                        <tr>
+                            <th>23</th>
+                            <td>30</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="c12">
+                <pre class="brush: python; gutter: false; toolbar: false">      
+            &gt;&gt;&gt; PdLinearRegression().fit(X, y).predict(X)
+            ---------------------------------------------------------------------------
+            ValueError                Traceback (most recent call last)
+            ----&gt; 1 LinearRegression().fit(X, y)
+            ...
+            --&gt; 113         **kwargs)
+            ...
+            ValueError: Indexes do not match
+            </pre>
+            </div>
+            </div>
+        </div>
+      <div class="step slide" data-scale="0.01" data-x="4200" data-y="71" data-z="10">
+        <div class="smaller" style="background: url('images/baddy_bg.png'); background-repeat: no-repeat; background-position: 50% 20%;
+">
+          <pre class="brush: python; gutter: false; toolbar: false">
+            X = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]}, index=['i', 'j', 'k'])
+            y = pd.Series([10, 20 , 30], index=[21, 22, 23])
+          </pre>
+          <div style="width:30%; float: left">
+            <table class="data">
+              <caption>
+                X
+              </caption>
+              <tbody>
+                <tr>
+                  <td>
+                  </td>
+                  <th>
+                    a
+                  </th>
+                  <th>
+                    b
+                  </th>
+                </tr>
+                <tr>
+                  <th>
+                    i
+                  </th>
+                  <td>
+                    0
+                  </td>
+                  <td>
+                    1
+                  </td>
+                </tr>
+                <tr>
+                  <th>
+                    j
+                  </th>
+                  <td>
+                    2
+                  </td>
+                  <td>
+                    4
+                  </td>
+                </tr>
+                <tr>
+                  <th>
+                    k
+                  </th>
+                  <td>
+                    3
+                  </td>
+                  <td>
+                    6
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="width:30%; float: left">
+            <table class="data">
+              <caption>
+                y
+              </caption>
+              <tbody>
+                <tr>
+                  <th>
+                    21
+                  </th>
+                  <td>
+                    10
+                  </td>
+                </tr>
+                <tr>
+                  <th>
+                    22
+                  </th>
+                  <td>
+                    20
+                  </td>
+                </tr>
+                <tr>
+                  <th>
+                    23
+                  </th>
+                  <td>
+                    30
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="width: 100%; margin-top: 240px">
+            <pre class="brush: python; gutter: false; toolbar: false">      
+            &gt;&gt;&gt; PdLinearRegression().fit(X, y).predict(X)
+            ---------------------------------------------------------------------------
+            ValueError                Traceback (most recent call last)
+            ----&gt; 1 LinearRegression().fit(X, y)
+            ...
+            --&gt; 113         **kwargs)
+            ...
+            ValueError: Indexes do not match
+            </pre>
+          </div>
+        </div>
+      </div>
+      <div class="step slide" data-scale="0.01" data-x="4200" data-y="80" data-z="10">
+        <div class="smaller" style="background: url('images/baddy_bg.png'); background-repeat: no-repeat; background-position: 50% 20%;
+">
+          <pre class="brush: python; gutter: false; toolbar: false">
+            X = pd.DataFrame({'a': [0, 2, 3], 'b': [1, 4, 6]})
+            y = pd.Series([10, 20 , 30])
+            X1 = pd.DataFrame({'m': [0, 2, 3], 'n': [1, 4, 6]})
+           </pre>
+          <div style="width:30%; float: left">
+            <table class="data">
+              <caption>
+                X
+              </caption>
+              <tbody>
+                <tr>
+                  <td>
+                  </td>
+                  <th>
+                    a
+                  </th>
+                  <th>
+                    b
+                  </th>
+                </tr>
+                <tr>
+                  <th>
+                    0
+                  </th>
+                  <td>
+                    0
+                  </td>
+                  <td>
+                    1
+                  </td>
+                </tr>
+                <tr>
+                  <th>
+                    1
+                  </th>
+                  <td>
+                    2
+                  </td>
+                  <td>
+                    4
+                  </td>
+                </tr>
+                <tr>
+                  <th>
+                    2
+                  </th>
+                  <td>
+                    3
+                  </td>
+                  <td>
+                    6
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="width:30%; float: left">
+            <table class="data">
+              <caption>
+                y
+              </caption>
+              <tbody>
+                <tr>
+                  <th>
+                    0
+                  </th>
+                  <td>
+                    10
+                  </td>
+                </tr>
+                <tr>
+                  <th>
+                    1
+                  </th>
+                  <td>
+                    20
+                  </td>
+                </tr>
+                <tr>
+                  <th>
+                    2
+                  </th>
+                  <td>
+                    30
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="width:30%; float: left">
+            <table class="data">
+              <caption>
+                X1
+              </caption>
+              <tbody>
+                <tr>
+                  <td>
+                  </td>
+                  <th>
+                    m
+                  </th>
+                  <th>
+                    n
+                  </th>
+                </tr>
+                <tr>
+                  <th>
+                    0
+                  </th>
+                  <td>
+                    0
+                  </td>
+                  <td>
+                    1
+                  </td>
+                </tr>
+                <tr>
+                  <th>
+                    1
+                  </th>
+                  <td>
+                    2
+                  </td>
+                  <td>
+                    4
+                  </td>
+                </tr>
+                <tr>
+                  <th>
+                    2
+                  </th>
+                  <td>
+                    3
+                  </td>
+                  <td>
+                    6
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="width: 100%; margin-top: 240px">
+            <pre class="brush: python; gutter: false; toolbar: false">      
+            &gt;&gt;&gt; PdLinearRegression().fit(X, y).predict(X1)
+            ---------------------------------------------------------------------------
+            KeyError                  Traceback (most recent call last)
+            ----&gt; 1 LinearRegression().fit(X, y).predict(X1)
+            ...
+            -&gt; 1231           raise KeyError('%s not in index' % objarr[mask])
+            ...
+            KeyError: "Index(['a', 'b'], dtype='object') not in index"
+            </pre>
+          </div>
+        </div>
+      </div>
+      <div class="step slide" data-scale="0.01" data-x="4200" data-y="39" data-z="10">
+      </div>
+        <div class="step slide" data-scale="0.01" data-x="4214" data-y="47" data-z="10">
+            <h3>Combining Estimators</h3>
+            <ul>
+                <li class="substep smaller">
+                    <span class="c15">Optional</span> alternative to <code>make_pipeline</code> :
+                    <pre class="brush: python; gutter: true; toolbar: false highlight: [4]">          
+            sklearn.pipeline.make_pipeline(
+                frame(PCA)(n_components=2), 
+                frame(RandomForestRegressor)())
+            frame(PCA)(n_components=2) | frame(RandomForestRegressor)()
+            </pre>
+                </li>
+                <li class="substep smaller">
+                    <span class="c15">Optional</span> alternative to <code>make_union</code> :
+                    <pre class="brush: python; gutter: true; toolbar: false highlight: [4]">          
+            sklearn.pipeline.make_union(
+                frame(SelectKBest)(k=2),
+                frame(PCA)(n_components=2))
+            frame(SelectKBest)(k=2) + frame(PCA)(n_components=2)
+            </pre>
+                </li>
+            </ul>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="4214" data-y="55" data-z="10">
+            <img src="generated/col_aggregating_further_transformations.png">
+            <div class="substep smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">        
+            SelectKBest(k=1) + PCA(n_components=2) | RandomForestRegressor()
+           </pre>
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="4214" data-y="70" data-z="10">
+            <h2>Indexing + Combining Estimators</h2>
+            <div class="smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">      
+          &gt;&gt;&gt; iris
+          </pre>
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>sepal length (cm)</th>
+                            <th>sepal width (cm)</th>
+                            <th>petal length (cm)</th>
+                            <th>petal width (cm)</th>
+                            <th>class</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th>0</th>
+                            <td>5.1</td>
+                            <td>3.5</td>
+                            <td>1.4</td>
+                            <td>0.2</td>
+                            <td>0.0</td>
+                        </tr>
+                        <tr>
+                            <th>1</th>
+                            <td>4.9</td>
+                            <td>3.0</td>
+                            <td>1.4</td>
+                            <td>0.2</td>
+                            <td>0.0</td>
+                        </tr>
+                        <tr>
+                            <th>2</th>
+                            <td>4.7</td>
+                            <td>3.2</td>
+                            <td>1.3</td>
+                            <td>0.2</td>
+                            <td>0.0</td>
+                        </tr>
+                        <tr>
+                            <th>3</th>
+                            <td>4.6</td>
+                            <td>3.1</td>
+                            <td>1.5</td>
+                            <td>0.2</td>
+                            <td>0.0</td>
+                        </tr>
+                        <tr>
+                            <th>4</th>
+                            <td>5.0</td>
+                            <td>3.6</td>
+                            <td>1.4</td>
+                            <td>0.2</td>
+                            <td>0.0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="substep smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">      
+            trn = PdPCA(n_components=2) + PdSelectKBest(k=1)
+            trn.fit(iris[features], iris[&#39;class&#39;]).transform(iris[features])
+           </pre>
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th colspan="2" halign="left">pca</th>
+                            <th>selectkbest</th>
+                        </tr>
+                        <tr>
+                            <th></th>
+                            <th>comp_0</th>
+                            <th>comp_1</th>
+                            <th>petal length (cm)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th>0</th>
+                            <td>-2.684207</td>
+                            <td>0.326607</td>
+                            <td>1.4</td>
+                        </tr>
+                        <tr>
+                            <th>1</th>
+                            <td>-2.715391</td>
+                            <td>-0.169557</td>
+                            <td>1.4</td>
+                        </tr>
+                        <tr>
+                            <th>2</th>
+                            <td>-2.889820</td>
+                            <td>-0.137346</td>
+                            <td>1.3</td>
+                        </tr>
+                        <tr>
+                            <th>3</th>
+                            <td>-2.746437</td>
+                            <td>-0.311124</td>
+                            <td>1.5</td>
+                        </tr>
+                        <tr>
+                            <th>4</th>
+                            <td>-2.728593</td>
+                            <td>0.333925</td>
+                            <td>1.4</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="4214" data-y="80" data-z="10">
+            <h2>Pandas-Based Estimators From Scratch</h2>
+            <div class="smaller">
+                <table class="data c17">
+                    <tbody>
+                        <tr>
+                            <th>User</th>
+                            <th>Movie</th>
+                            <th>Rating</th>
+                        </tr>
+                        <tr>
+                            <td class="roni">Roni</td>
+                            <td class="frozen">Frozen</td>
+                            <td class="rating">5</td>
+                        </tr>
+                        <tr>
+                            <td class="roni">Roni</td>
+                            <td class="mulan">Mulan</td>
+                            <td class="rating">4</td>
+                        </tr>
+                        <tr>
+                            <td class="yarden">Yarden</td>
+                            <td class="mulan">Mulan</td>
+                            <td class="rating">1</td>
+                        </tr>
+                        <tr>
+                            <td class="anat">Anat</td>
+                            <td class="mulan">Mulan</td>
+                            <td class="rating">1</td>
+                        </tr>
+                        <tr>
+                            <td class="anat">Anat</td>
+                            <td class="shrek">Shrek</td>
+                            <td class="rating">2</td>
+                        </tr>
+                        <tr>
+                            <td class="yarden">Yarden</td>
+                            <td class="shrek">Shrek</td>
+                            <td class="rating">3</td>
+                        </tr>
+                        <tr>
+                            <td class="yarden">Yarden</td>
+                            <td class="frozen">Frozen</td>
+                            <td class="rating">5</td>
+                        </tr>
+                        <tr>
+                            <td class="anat">Anat</td>
+                            <td class="frozen">Frozen</td>
+                            <td class="rating">5</td>
+                        </tr>
+                        <tr>
+                            <td class="roni">Roni</td>
+                            <td class="shrek">Shrek</td>
+                            <td class="rating">5</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class="data c18">
+                    <tbody>
+                        <tr>
+                            <td></td>
+                            <th class="frozen">Frozen</th>
+                            <th class="shrek">Shrek</th>
+                            <th class="mulan">Mulan</th>
+                        </tr>
+                        <tr>
+                            <th class="roni">Roni</th>
+                            <td>5</td>
+                            <td>5</td>
+                            <td>4</td>
+                        </tr>
+                        <tr>
+                            <th class="yarden">Yarden</th>
+                            <td>5</td>
+                            <td>3</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <th class="anat">Anat</th>
+                            <td>5</td>
+                            <td>2</td>
+                            <td>1</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class="data c19">
+                    <tbody>
+                        <tr>
+                            <th>User</th>
+                            <th>Movie</th>
+                            <th>user_0</th>
+                            <th>user_1</th>
+                            <th>movie_0</th>
+                            <th>movie_1</th>
+                        </tr>
+                        <tr>
+                            <td class="roni">Roni</td>
+                            <td class="frozen">Frozen</td>
+                            <td class="roni">0.1</td>
+                            <td class="roni">1.3</td>
+                            <td class="frozen">10</td>
+                            <td class="frozen">20</td>
+                        </tr>
+                        <tr>
+                            <td class="roni">Roni</td>
+                            <td class="mulan">Mulan</td>
+                            <td class="roni">0.1</td>
+                            <td class="roni">1.3</td>
+                            <td class="mulan">12</td>
+                            <td class="mulan">13</td>
+                        </tr>
+                        <tr>
+                            <td class="yarden">Yarden</td>
+                            <td class="mulan">Mulan</td>
+                            <td class="yarden">1.1</td>
+                            <td class="yarden">1.4</td>
+                            <td class="mulan">12</td>
+                            <td class="mulan">13</td>
+                        </tr>
+                        <tr>
+                            <td class="anat">Anat</td>
+                            <td class="mulan">Mulan</td>
+                            <td class="anat">0.2</td>
+                            <td class="anat">9.8</td>
+                            <td class="mulan">12</td>
+                            <td class="mulan">13</td>
+                        </tr>
+                        <tr>
+                            <td class="anat">Anat b</td>
+                            <td class="shrek">Shrek</td>
+                            <td class="anat">0.2</td>
+                            <td class="anat">9.8</td>
+                            <td class="shrek">20.1</td>
+                            <td class="shrek">30.4</td>
+                        </tr>
+                        <tr>
+                            <td class="yarden">Yarden</td>
+                            <td class="shrek">Shrek</td>
+                            <td class="yarden">1.1</td>
+                            <td class="yarden">1.4</td>
+                            <td class="shrek">20.1</td>
+                            <td class="shrek">30.4</td>
+                        </tr>
+                        <tr>
+                            <td class="yarden">Yarden</td>
+                            <td class="frozen">Frozen</td>
+                            <td class="yarden">1.1</td>
+                            <td class="yarden">1.4</td>
+                            <td class="frozen">10</td>
+                            <td class="frozen">20</td>
+                        </tr>
+                        <tr>
+                            <td class="anat">Anat</td>
+                            <td class="frozen">Frozen</td>
+                            <td class="anat">0.2</td>
+                            <td class="anat">9.8</td>
+                            <td class="frozen">10</td>
+                            <td class="frozen">20</td>
+                        </tr>
+                        <tr>
+                            <td class="roni">Roni</td>
+                            <td class="shrek">Shrek</td>
+                            <td class="roni">0.1</td>
+                            <td class="roni">1.3</td>
+                            <td class="shrek">20.1</td>
+                            <td class="shrek">30.4</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="step slide smaller" data-scale="0.01" data-x="4214" data-y="87" data-z="10">
+            <div class="smaller">
+                <pre class="brush: python; gutter: true; toolbar: false; highlight: [3, 6, 7, 8, 9, 10]">        
+                    class UserMovieTransformer(
+                            base.BaseEstimator, base.EstimatorMixin,
+                            ibex.FrameMixin):
+
+                        def fit(self, X, y): # X is a DataFrame
+                            pd.pivot(
+                                values=X.target,
+                                index=X.user_id,
+                                columns=X.item_id)
+
+                        ...
+                                                                                                                                    </pre>
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="4200" data-y="30" data-z="10"></div>
+        <div class="step slide sol-layer" data-rotate-x="30" data-scale="0.01" data-x="4207" data-y="27" data-z="0">
+        <h2>Auto-Wrapping</h2><img height="300px" src="generated/ibex_layer_1_sklearn_linear_model.png" width="400px">
+        <img height="300px" src="generated/ibex_layer_1_xgboost.png" width="400px"> <img height="300px" src=
+        "generated/ibex_layer_1_tensorflow.png" width="400px"></div>
+        <div class="step slide" data-scale="0.01" data-x="4230" data-y="30" data-z="10">
+            <h3 class="baddy">Tedious</h3>
+            <div class="abs-box smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">            
+            PdSelectKBest = frame(SelectKBest)
+            PdLinearRegression = frame(LinearRegression)
+            PdRandomForestRegression = frame(RandomForestRegression)
+            PdPCA = frame(PCA)
+            PdStandardScaler = frame(StandardScaler)
+            ...
+            </pre>
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="4223" data-y="36" data-z="10"><img src="images/got_frame.jpeg" class=
+        "c10"></div>
+        <div class="step slide" data-scale="0.01" data-x="4230" data-y="42" data-z="10">
+            <h3>Auto-Wrapping</h3>
+            <div class="abs-box smaller">
+                <pre class="brush: python; gutter: true; toolbar: false; highlight: [1, 3]">            
+            ibex.sklearn.linear_model.LinearRegression is frame(sklearn.linear_model.LinearRegression)
+            ...
+            ibex.xgboost.XGBRegressor = frame(xgboost.XGBRegressor)
+            ...
+            </pre>
+            </div>
+        </div>
+        <div class="step slide" data-scale="1" data-x="5600" data-y="0" id="outline-intro-5">
+            <h2>Outline</h2>
+            <div>
+                <div style="float: left">
+                    <ul class="outline">
+                        <li class="other">Motivation</li>
+                        <li class="other">
+                            <div class="c8">
+                                Interface
+                            </div>
+                        </li>
+                        <li class="current">
+                            <div class="c8">
+                                Implementation
+                            </div>
+                        </li>
+                        <li class="other">Conclusions</li>
+                    </ul>
+                </div>
+                <div style="float: left">
+                    <div>
+                    <img src="images/logo.jpeg" class="c10">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="5600" data-y="28" data-z="10">
+            <h2>Straightforward Approach: Compose</h2>
+            <div class="smaller">
+                <pre class="brush: python; gutter: true; toolbar: false">            
+            class Wrapper(BaseEstimator, RegressorMixin, FrameMixing):
+                def __init__(self, *args, **kwargs):
+                    self.wrapped = LinearRegression(*args, **kwargs)
+
+            ...
+                </pre>
+            </div>
+        </div>
+        <div id="wrapper_wrapped_generated" class="step slide" data-scale="0.01" data-x="5600" data-y="30" data-z="10">
+                <div class="abs-box base">
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="wrapper_wrapped_1" src="generated/wrapper_wrapped_1.png" style="opacity: 0">
+                        </div>
+                    </div>
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="wrapper_wrapped_2" src="generated/wrapper_wrapped_2.png" style="opacity: 0">
+                        </div>
+                    </div>
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="wrapper_wrapped_3" src="generated/wrapper_wrapped_3.png" style="opacity: 0">
+                        </div>
+                    </div>
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="wrapper_wrapped_4" src="generated/wrapper_wrapped_4.png" style="opacity: 0">
+                        </div>
+                    </div>
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="wrapper_wrapped_5" src="generated/wrapper_wrapped_5.png" style="opacity: 0">
+                        </div>
+                    </div>
+                    <div class="abs-box">
+                        <div class="smaller">
+                        <img id="wrapper_wrapped_6" src="generated/wrapper_wrapped_6.png" style="opacity: 0">
+                        </div>
+                    </div>
+                </div>
+            <div class="substep smaller"></div>
+            <div class="substep smaller"></div>
+            <div class="substep smaller"></div>
+            <div class="substep smaller"></div>
+            <div class="substep smaller"></div>
+            <div class="substep smaller"></div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="5600" data-y="40" data-z="10">
+            <h3 class="baddy">1. <code>sklearn</code> Too Large/Dynamic For Manual Wrapping</h3>
+            <div height="600px" width="2200px">
+                <svg height="800" id="sklearn-classes" width="1000"></svg>
+            </div>
+        </div>
+        <div id="import_seq_0" class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
+        <h3>1. Dynamic Loading</h3>
+            <div class="abs-box base" style="height: 700px">
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="import_seq_1_img" src="generated/import_seq_1.png" style="opacity: 1">
+                    </div>
+                </div>
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="import_seq_2_img" src="generated/import_seq_2.png" style="opacity: 0">
+                    </div>
+                </div>
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="import_seq_3_img" src="generated/import_seq_3.png" style="opacity: 0">
+                    </div>
+                </div>
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="import_seq_4_img" src="generated/import_seq_4.png" style="opacity: 0">
+                    </div>
+                </div>
+            </div>
+            <div class="substep"></div>
+            <div class="substep"></div>
+            <div class="substep"></div>
+        </div>
+        <div class="step slide" data-x="5613.8" data-y="39.2" data-z="10" data-scale="0.0003", data-rotate-x="-50">
+            <h3><code>sys.meta_path</code></h3>
+            <div class="smaller">
+                <pre class='brush: python; gutter: true; toolbar: false'>
+                class ModuleLoader(object):
+                    def find_module(self, full_name, _=None):
+                    ...
+
+                sys.meta_path.append(ModuleLoader())
+                </pre>
+            </div>
+        </div>
+        <div id="import_seq_1" class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
+            <h3>1. Dynamic Loading</h3>
+            <div class="abs-box base" style="height: 700px">
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="import_seq_5_img" src="generated/import_seq_5.png" style="opacity: 0">
+                    </div>
+                </div>
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="import_seq_6_img" src="generated/import_seq_6.png" style="opacity: 0">
+                    </div>
+                </div>
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="import_seq_7_img" src="generated/import_seq_7.png" style="opacity: 0">
+                    </div>
+                </div>
+            </div>
+            <div class="substep"></div>
+            <div class="substep"></div>
+        </div>
+        <div class="step slide" data-x="5614.4" data-y="39.88" data-z="10" data-scale="0.0003", data-rotate-x="-50">
+            <h3><code>dir</code></h3>
+            <div class="smaller">
+                <pre class='brush: python; gutter: false; toolbar: false'>
+                &gt;&gt;&gt; dir(linear_model)
+                [&#39;__all__&#39;,
+                    &#39;ARDRegression&#39;, 
+                    &#39;BayesianRidge&#39;, 
+                    &#39;ElasticNet&#39;, 
+                    &#39;ElasticNetCV&#39;,
+                    &#39;Hinge&#39;,
+                    ...]
+                </pre>
+            </div>
+        </div>
+        <div id="import_seq_2" class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
+            <h3>1. Dynamic Loading</h3>
+            <div class="abs-box base" style="height: 700px">
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="import_seq_8_img" src="generated/import_seq_8.png" style="opacity: 0">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="step slide" data-x="5615.4" data-y="40.5" data-z="10" data-scale="0.0003", data-rotate-x="-50">
+            <h3><code>inspect</code></h3>
+            <div class="smaller">
+                <pre class='brush: python; gutter: false; toolbar: false'>
+                import inspect
+
+                if inspect.isclass(est) and issubclass(est, base.BaseEstimator):
+                    ...
+                </pre>
+            </div>
+        </div>
+        <div id="import_seq_3" class="step slide" data-x="5614" data-y="40" data-z="10" data-scale="0.01">
+            <h3>1. Dynamic Loading</h3>
+            <div class="abs-box base" style="height: 700px">
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="import_seq_9_img" src="generated/import_seq_9.png" style="opacity: 0">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="5600" data-y="60" data-z="10">
+            <h3 class="baddy">2. Scikit-Learn Estimator Idiosyncrasies</h3>
+            <div class="smaller substep">
+                Stringent <code>__init__</code> Requirements:
+                <pre class='brush: python; gutter: false; toolbar: false'>
+                class FooTransformer(BaseEstimator, TransformerMixin):
+                    def __init__(self, *args, **kwargs):
+                        ...
+                </pre>
+            </div>
+            <div class="smaller substep">
+                State-Dependent Properties:
+                <pre class='brush: python; gutter: true; toolbar: false'>
+                linear_model.LinearRegression().fit(X, y).coef_
+                linear_model.LinearRegression().coef_
+                </pre>
+            </div>
+        </div>
+        <div class="step slide" data-x="5614" data-y="60" data-z="10" data-scale="0.01">
+            <h3>2. Local Classes</h3>
+            <div class="smaller">
+                <pre class='brush: python; gutter: false; toolbar: false'>
+                def frame(est):
+                    class _Adaptor(est, FrameMixin):
+                        ...
+                </pre>
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="5600" data-y="80" data-z="10">
+            <h3 class="baddy">3. Local Classes Idiosyncrasies</h3>
+            <div class="smaller substep">
+                Serialization
+                <pre class='brush: python; gutter: false; toolbar: false'>
+                model_selection.cross_val_score(prd, ..., n_jobs=-1)
+                </pre>
+            </div>
+            <div class="smaller substep">
+                Attributes (<code>__name__</code>, <code>__doc__</code>, etc.)
+            </div>
+        </div>
+        <div class="step slide" data-x="5614" data-y="80" data-z="10" data-scale="0.01">
+        <h3>3. Various Hacks</h3><img src="images/so-logo.png" class="c10"></div>
+        <div id="outline-conclusions" class="step slide" data-x="7007" data-y="0" data-scale="1">
+            <h3>Outline</h3>
+            <ul class="outline">
+                <li class="other">Motivation</li>
+                <li class="other">Interface</li>
+                <li class="other">Implementation</li>
+                <li class="current">Conclusions</li>
+            </ul>
+        </div>
+        <div class="step slide" data-x="7007" data-y="0" data-z="0" data-scale="0.01">
+            <h3>Utilize Pandas Metadata</h3>
+            <p>Metadata &#8594; complex pipelines</p>
+            <div class="smaller">
+                <ul>
+                    <li>Interpretability</li>
+                    <li>Safety</li>
+                    <li>Data-Munging</li>
+                    <li>Index-Aware Operations (Stacking, Nested Stratified &amp; Labeled CV)</li>
+                    <li>...</li>
+                    <li>Combinations Of The Above</li>
+                </ul>
+            </div>
+        </div>
+        <div class="step slide" data-x="7007" data-y="7" data-z="0" data-scale="0.01">
+        <h3>But Leverage Numpy-Interfacing Libraries</h3><img src="generated/ibex_class_diagram_pandas.png"></div>
+        <div class="step slide" data-x="7007" data-y="14" data-z="0" data-scale="0.01">
+            <h3>(Semi-)Automatic Wrapping</h3>
+            <ul>
+                <li class="substep"><code>sys.meta_path</code></li>
+                <li class="substep"><code>dir</code></li>
+                <li class="substep"><code>inspect</code></li>
+                <li class="substep">Local Classes</li>
+            </ul>
+        </div>
+        <div class="step slide" data-x="7007" data-y="21" data-z="0" data-scale="0.01">
+            <h1>Thank You</h1>
+			<table style="width:100%; border:none">
+			<tr>
+				<td>
+					<img src="images/github.png">
+				</td>
+				<td>
+					<a href="https://atavory.github.io/ibex/">https://atavory.github.io/ibex/</a>
+				</td>
+				<td>
+			</tr>
+			<tr>
+				<td align="center">
+					<img src="images/pypi.svg">
+				</td>
+				<td>
+					<a href="https://pypi.python.org/pypi/ibex">https://pypi.python.org/pypi/ibex</a>
+				</td>
+			</tr>
+			</table>
+    </div>
+    <script src="../js/shCore.js" type="text/javascript"></script> 
+    <script src="../js/shBrushPython.js" type="text/javascript"></script> 
+    <script src="../js/shBrushBash.js" type="text/javascript"></script> 
+    <script type="text/javascript">
+
+
+
+      SyntaxHighlighter.all();
+    </script> 
+    <script src="../js/impress.js" type="text/javascript"></script> 
+    <script type="text/javascript">
+
+
+
+      impress().init();
+    </script> 
+    <script>
+
+
+
+      var svg = d3.select("#sklearn-classes"), width = 300, height = width, g = svg.append("g").attr("transform", "translate(" + (width / 2 + 280) + "," + (height / 2 + 230) + ")");
+      var stratify = d3.stratify().parentId(function(d) {
+        return d.id.substring(0, d.id.lastIndexOf("."));
+      });
+      var tree = d3.tree().size([2 * Math.PI, width]).separation(function(a, b) {
+        return (a.parent == b.parent ? 1 : 2) / a.depth;
+      });
+      var data = [{
+        'id': 'sklearn',
+        'value': ''
+      },{
+        'id': 'sklearn.calibration',
+        'value': ''
+      },{
+        'id': 'sklearn.calibration.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.calibration.CalibratedClassifierCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.calibration.IsotonicRegression',
+        'value': '1'
+      },{
+        'id': 'sklearn.calibration.LabelBinarizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.calibration.LabelEncoder',
+        'value': '1'
+      },{
+        'id': 'sklearn.calibration.LinearSVC',
+        'value': '1'
+      },{
+        'id': 'sklearn.calibration._SigmoidCalibration',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster',
+        'value': ''
+      },{
+        'id': 'sklearn.cluster.AffinityPropagation',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.AgglomerativeClustering',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.Birch',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.DBSCAN',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.FeatureAgglomeration',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.KMeans',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.MeanShift',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.MiniBatchKMeans',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.SpectralBiclustering',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.SpectralClustering',
+        'value': '1'
+      },{
+        'id': 'sklearn.cluster.SpectralCoclustering',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance',
+        'value': ''
+      },{
+        'id': 'sklearn.covariance.EllipticEnvelope',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance.EmpiricalCovariance',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance.GraphLasso',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance.GraphLassoCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance.LedoitWolf',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance.MinCovDet',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance.OAS',
+        'value': '1'
+      },{
+        'id': 'sklearn.covariance.ShrunkCovariance',
+        'value': '1'
+      },{
+        'id': 'sklearn.cross_decomposition',
+        'value': ''
+      },{
+        'id': 'sklearn.cross_decomposition.CCA',
+        'value': '1'
+      },{
+        'id': 'sklearn.cross_decomposition.PLSCanonical',
+        'value': '1'
+      },{
+        'id': 'sklearn.cross_decomposition.PLSRegression',
+        'value': '1'
+      },{
+        'id': 'sklearn.cross_decomposition.PLSSVD',
+        'value': '1'
+      },{
+        'id': 'sklearn.cross_validation',
+        'value': ''
+      },{
+        'id': 'sklearn.datasets',
+        'value': ''
+      },{
+        'id': 'sklearn.decomposition',
+        'value': ''
+      },{
+        'id': 'sklearn.decomposition.DictionaryLearning',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.FactorAnalysis',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.FastICA',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.IncrementalPCA',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.KernelPCA',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.LatentDirichletAllocation',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.MiniBatchDictionaryLearning',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.MiniBatchSparsePCA',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.NMF',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.PCA',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.RandomizedPCA',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.SparseCoder',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.SparsePCA',
+        'value': '1'
+      },{
+        'id': 'sklearn.decomposition.TruncatedSVD',
+        'value': '1'
+      },{
+        'id': 'sklearn.dummy',
+        'value': ''
+      },{
+        'id': 'sklearn.dummy.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.dummy.DummyClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.dummy.DummyRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble',
+        'value': ''
+      },{
+        'id': 'sklearn.ensemble.AdaBoostClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.AdaBoostRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.BaggingClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.BaggingRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.BaseEnsemble',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.ExtraTreesClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.ExtraTreesRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.GradientBoostingClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.GradientBoostingRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.IsolationForest',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.RandomForestClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.RandomForestRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.RandomTreesEmbedding',
+        'value': '1'
+      },{
+        'id': 'sklearn.ensemble.VotingClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.exceptions',
+        'value': ''
+      },{
+        'id': 'sklearn.externals',
+        'value': ''
+      },{
+        'id': 'sklearn.feature_extraction',
+        'value': ''
+      },{
+        'id': 'sklearn.feature_extraction.DictVectorizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_extraction.FeatureHasher',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection',
+        'value': ''
+      },{
+        'id': 'sklearn.feature_selection.GenericUnivariateSelect',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.RFE',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.RFECV',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.SelectFdr',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.SelectFpr',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.SelectFromModel',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.SelectFwe',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.SelectKBest',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.SelectPercentile',
+        'value': '1'
+      },{
+        'id': 'sklearn.feature_selection.VarianceThreshold',
+        'value': '1'
+      },{
+        'id': 'sklearn.gaussian_process',
+        'value': ''
+      },{
+        'id': 'sklearn.gaussian_process.GaussianProcess',
+        'value': '1'
+      },{
+        'id': 'sklearn.gaussian_process.GaussianProcessClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.gaussian_process.GaussianProcessRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.grid_search',
+        'value': ''
+      },{
+        'id': 'sklearn.grid_search.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.grid_search.BaseSearchCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.grid_search.GridSearchCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.grid_search.RandomizedSearchCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.isotonic',
+        'value': ''
+      },{
+        'id': 'sklearn.isotonic.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.isotonic.IsotonicRegression',
+        'value': '1'
+      },{
+        'id': 'sklearn.kernel_approximation',
+        'value': ''
+      },{
+        'id': 'sklearn.kernel_approximation.AdditiveChi2Sampler',
+        'value': '1'
+      },{
+        'id': 'sklearn.kernel_approximation.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.kernel_approximation.Nystroem',
+        'value': '1'
+      },{
+        'id': 'sklearn.kernel_approximation.RBFSampler',
+        'value': '1'
+      },{
+        'id': 'sklearn.kernel_approximation.SkewedChi2Sampler',
+        'value': '1'
+      },{
+        'id': 'sklearn.kernel_ridge',
+        'value': ''
+      },{
+        'id': 'sklearn.kernel_ridge.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.kernel_ridge.KernelRidge',
+        'value': '1'
+      },{
+        'id': 'sklearn.learning_curve',
+        'value': ''
+      },{
+        'id': 'sklearn.linear_model',
+        'value': ''
+      },{
+        'id': 'sklearn.linear_model.ARDRegression',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.BayesianRidge',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.ElasticNet',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.ElasticNetCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.HuberRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.Lars',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LarsCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.Lasso',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LassoCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LassoLars',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LassoLarsCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LassoLarsIC',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LinearRegression',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LogisticRegression',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.LogisticRegressionCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.MultiTaskElasticNet',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.MultiTaskElasticNetCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.MultiTaskLasso',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.MultiTaskLassoCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.OrthogonalMatchingPursuit',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.OrthogonalMatchingPursuitCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.PassiveAggressiveClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.PassiveAggressiveRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.Perceptron',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.RANSACRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.RandomizedLasso',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.RandomizedLogisticRegression',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.Ridge',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.RidgeCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.RidgeClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.RidgeClassifierCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.SGDClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.SGDRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.linear_model.TheilSenRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.manifold',
+        'value': ''
+      },{
+        'id': 'sklearn.manifold.Isomap',
+        'value': '1'
+      },{
+        'id': 'sklearn.manifold.LocallyLinearEmbedding',
+        'value': '1'
+      },{
+        'id': 'sklearn.manifold.MDS',
+        'value': '1'
+      },{
+        'id': 'sklearn.manifold.SpectralEmbedding',
+        'value': '1'
+      },{
+        'id': 'sklearn.manifold.TSNE',
+        'value': '1'
+      },{
+        'id': 'sklearn.metrics',
+        'value': ''
+      },{
+        'id': 'sklearn.mixture',
+        'value': ''
+      },{
+        'id': 'sklearn.mixture.BayesianGaussianMixture',
+        'value': '1'
+      },{
+        'id': 'sklearn.mixture.DPGMM',
+        'value': '1'
+      },{
+        'id': 'sklearn.mixture.GMM',
+        'value': '1'
+      },{
+        'id': 'sklearn.mixture.GaussianMixture',
+        'value': '1'
+      },{
+        'id': 'sklearn.mixture.VBGMM',
+        'value': '1'
+      },{
+        'id': 'sklearn.model_selection',
+        'value': ''
+      },{
+        'id': 'sklearn.model_selection.GridSearchCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.model_selection.RandomizedSearchCV',
+        'value': '1'
+      },{
+        'id': 'sklearn.multiclass',
+        'value': ''
+      },{
+        'id': 'sklearn.multiclass.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.multiclass.LabelBinarizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.multiclass.OneVsOneClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.multiclass.OneVsRestClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.multiclass.OutputCodeClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.multiclass._ConstantPredictor',
+        'value': '1'
+      },{
+        'id': 'sklearn.multioutput',
+        'value': ''
+      },{
+        'id': 'sklearn.multioutput.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.multioutput.ClassifierChain',
+        'value': '1'
+      },{
+        'id': 'sklearn.multioutput.MultiOutputClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.multioutput.MultiOutputEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.multioutput.MultiOutputRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.naive_bayes',
+        'value': ''
+      },{
+        'id': 'sklearn.naive_bayes.BaseDiscreteNB',
+        'value': '1'
+      },{
+        'id': 'sklearn.naive_bayes.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.naive_bayes.BaseNB',
+        'value': '1'
+      },{
+        'id': 'sklearn.naive_bayes.BernoulliNB',
+        'value': '1'
+      },{
+        'id': 'sklearn.naive_bayes.GaussianNB',
+        'value': '1'
+      },{
+        'id': 'sklearn.naive_bayes.LabelBinarizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.naive_bayes.MultinomialNB',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors',
+        'value': ''
+      },{
+        'id': 'sklearn.neighbors.KNeighborsClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.KNeighborsRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.KernelDensity',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.LSHForest',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.LocalOutlierFactor',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.NearestCentroid',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.NearestNeighbors',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.RadiusNeighborsClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.neighbors.RadiusNeighborsRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.neural_network',
+        'value': ''
+      },{
+        'id': 'sklearn.neural_network.BernoulliRBM',
+        'value': '1'
+      },{
+        'id': 'sklearn.neural_network.MLPClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.neural_network.MLPRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.pipeline',
+        'value': ''
+      },{
+        'id': 'sklearn.pipeline.FeatureUnion',
+        'value': '1'
+      },{
+        'id': 'sklearn.pipeline.Pipeline',
+        'value': '1'
+      },{
+        'id': 'sklearn.pipeline._BaseComposition',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing',
+        'value': ''
+      },{
+        'id': 'sklearn.preprocessing.Binarizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.FunctionTransformer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.Imputer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.KernelCenterer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.LabelBinarizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.LabelEncoder',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.MaxAbsScaler',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.MinMaxScaler',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.MultiLabelBinarizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.Normalizer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.OneHotEncoder',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.PolynomialFeatures',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.QuantileTransformer',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.RobustScaler',
+        'value': '1'
+      },{
+        'id': 'sklearn.preprocessing.StandardScaler',
+        'value': '1'
+      },{
+        'id': 'sklearn.random_projection',
+        'value': ''
+      },{
+        'id': 'sklearn.random_projection.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.random_projection.BaseRandomProjection',
+        'value': '1'
+      },{
+        'id': 'sklearn.random_projection.GaussianRandomProjection',
+        'value': '1'
+      },{
+        'id': 'sklearn.random_projection.SparseRandomProjection',
+        'value': '1'
+      },{
+        'id': 'sklearn.semi_supervised',
+        'value': ''
+      },{
+        'id': 'sklearn.semi_supervised.LabelPropagation',
+        'value': '1'
+      },{
+        'id': 'sklearn.semi_supervised.LabelSpreading',
+        'value': '1'
+      },{
+        'id': 'sklearn.svm',
+        'value': ''
+      },{
+        'id': 'sklearn.svm.LinearSVC',
+        'value': '1'
+      },{
+        'id': 'sklearn.svm.LinearSVR',
+        'value': '1'
+      },{
+        'id': 'sklearn.svm.NuSVC',
+        'value': '1'
+      },{
+        'id': 'sklearn.svm.NuSVR',
+        'value': '1'
+      },{
+        'id': 'sklearn.svm.OneClassSVM',
+        'value': '1'
+      },{
+        'id': 'sklearn.svm.SVC',
+        'value': '1'
+      },{
+        'id': 'sklearn.svm.SVR',
+        'value': '1'
+      },{
+        'id': 'sklearn.tree',
+        'value': ''
+      },{
+        'id': 'sklearn.tree.DecisionTreeClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.tree.DecisionTreeRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.tree.ExtraTreeClassifier',
+        'value': '1'
+      },{
+        'id': 'sklearn.tree.ExtraTreeRegressor',
+        'value': '1'
+      },{
+        'id': 'sklearn.discriminant_analysis',
+        'value': ''
+      },{
+        'id': 'sklearn.discriminant_analysis.BaseEstimator',
+        'value': '1'
+      },{
+        'id': 'sklearn.discriminant_analysis.LinearDiscriminantAnalysis',
+        'value': '1'
+      },{
+        'id': 'sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis',
+        'value': '1'
+      },{
+        'id': 'sklearn.discriminant_analysis.StandardScaler',
+        'value': '1'
+      },{
+        'id': 'sklearn.clone',
+        'value': ''
+      }];
+      var root = tree(stratify(data));
+      var link = g.selectAll(".link").data(root.links()).enter().append("path").attr("class", "link").attr("d", d3.linkRadial().angle(function(d) {
+        return d.x;
+      }).radius(function(d) {
+        return d.y;
+      }));
+      var node = g.selectAll(".node").data(root.descendants()).enter().append("g").attr("class", function(d) {
+        return "node" + (d.children ? " node--internal" : " node--leaf");
+      }).attr("transform", function(d) {
+        return "translate(" + radialPoint(d.x, d.y) + ")";
+      });
+      node.append("circle").attr("r", 2.5);
+      node.append("text").attr("dy", "0.31em").attr("x", function(d) {
+        return d.x < Math.PI === !d.children ? 6 : -6;
+      }).attr("text-anchor", function(d) {
+        return d.x < Math.PI === !d.children ? "start" : "end";
+      }).attr("transform", function(d) {
+        return "rotate(" + (d.x < Math.PI ? d.x - Math.PI / 2 : d.x + Math.PI / 2) * 180 / Math.PI + ")";
+      }).text(function(d) {
+        return d.id.substring(d.id.lastIndexOf(".") + 1);
+      });
+      function radialPoint(x, y) {
+        return [(y = +y) * Math.cos(x -= Math.PI / 2),y * Math.sin(x)];
+      }
+    </script>
+    <script>
+        var switchImage = function (id, src) {
+            d3.select(id)
+                .transition()
+                .delay(220)
+                .attr("src", src);
+        }
+
+        var example1Group = StepGroup([
+            "example_1_substeps_img_1",
+            "example_1_substeps_img_2",
+            "example_1_substeps_img_3",
+            "example_1_substeps_img_4",
+        ]);
+        example1Group
+            .addSubstep("example_1_substeps", 1, 1)
+            .addSubstep("example_1_substeps", 3, 2)
+            .addSubstep("example_1_substeps", 5, 3)
+            .addSubstep("example_1_substeps", 7, 0)
+
+        var wrapperWrappedGroup = StepGroup([
+            "wrapper_wrapped_1",
+            "wrapper_wrapped_2",
+            "wrapper_wrapped_3",
+            "wrapper_wrapped_4",
+            "wrapper_wrapped_5",
+            "wrapper_wrapped_6",
+        ]);
+        wrapperWrappedGroup
+            .addSubstep("wrapper_wrapped_generated", 3, 0)
+            .addSubstep("wrapper_wrapped_generated", 5, 1)
+            .addSubstep("wrapper_wrapped_generated", 7, 2)
+            .addSubstep("wrapper_wrapped_generated", 9, 3)
+            .addSubstep("wrapper_wrapped_generated", 11, 4)
+            .addSubstep("wrapper_wrapped_generated", 13, 5)
+
+        var outlineClsGroup = StepGroup([
+            "outlineClsGroup_img_1",
+            "outlineClsGroup_img_2",
+            "outlineClsGroup_img_3"]);
+        outlineClsGroup
+            .addSubstep("outline-intro-4", 7, 1)
+            .addSubstep("outline-intro-4", 9, 2);
+
+        var importSeq0Group = StepGroup([
+            "import_seq_1_img",
+            "import_seq_2_img",
+            "import_seq_3_img",
+            "import_seq_4_img",
+        ]);
+        importSeq0Group
+            .addStep("import_seq_0", 0)
+            .addSubstep("import_seq_0", 5, 1)
+            .addSubstep("import_seq_0", 7, 2)
+            .addSubstep("import_seq_0", 9, 3);
+
+        var importSeq1Group = StepGroup([
+            "import_seq_5_img",
+            "import_seq_6_img",
+            "import_seq_7_img",
+        ]);
+        importSeq1Group
+            .addStep("import_seq_1", 0)
+            .addSubstep("import_seq_1", 5, 1)
+            .addSubstep("import_seq_1", 7, 2)
+            .addSubstep("import_seq_1", 9, 3);
+
+        var importSeq2Group = StepGroup([
+            "import_seq_8_img",
+        ]);
+        importSeq2Group
+            .addStep("import_seq_2", 0);
+
+        var importSeq3Group = StepGroup([
+            "import_seq_9_img",
+        ]);
+        importSeq3Group
+            .addStep("import_seq_3", 0);
+
+      $(document).ready(function() {
+            document.addEventListener('impress:stepenter', function(event) {
+
+            var parentId = event.target.id;
+
+          console.log(parentId, event.forward);
+
+         importSeq0Group.notifyStepEnter(parentId);
+         importSeq1Group.notifyStepEnter(parentId);
+         importSeq2Group.notifyStepEnter(parentId);
+         importSeq3Group.notifyStepEnter(parentId);
+
+          if (event.target.id.search('outline') != -1) {
+                $(".other").fadeTo("slow", 0.33);
+          }
+          if (event.target.id.search("example_1_substeps") != -1) {
+          }
+        }, false);
+        document.addEventListener('impress:stepleave', function(event) {
+          $(".other").fadeTo("slow", 1);
+        }, false);
+      });
+
+      $(document).ready(function() {
+        document.addEventListener('impress:substepactive', function(event) {
+            var parentId = event.target.parentNode.id,
+                ind =Array.prototype.indexOf.call(event.target.parentNode.childNodes, event.target);
+
+            console.log(parentId, ind);
+
+            example1Group
+                .notifySubstepActive(parentId, ind);
+            outlineClsGroup
+                .notifySubstepActive(parentId, ind);
+            wrapperWrappedGroup
+                .notifySubstepActive(parentId, ind);
+            importSeq0Group
+                .notifySubstepActive(parentId, ind);
+            importSeq1Group
+                .notifySubstepActive(parentId, ind);
+            importSeq2Group
+                .notifySubstepActive(parentId, ind);
+            importSeq3Group
+                .notifySubstepActive(parentId, ind);
+        })
+      });
+</script>
+</body>
+<from __future__ import print_function
+from analytics.bamboo import Bamboo
+from string import Template
+
+
+appids = {
+    '175256709340227': 'ONAVO_ACOUNT_ID',
+    '1658924884387696': 'ONAVO_APROTECT_ID'}
+
+
+date = '2017-06-07'
+
+
+query = Template("""
+select
+    *
+from
+    test_fct_onv_android_daily_app_updates
+where
+    ds='$date'
+$limit
+""").substitute(
+    date=date,
+    limit='')
+
+
+df = Bamboo().query_presto(
+    'onavo',
+    query)
+df.appid = df.appid.map(appids)
+
+
+print(df.head())
+print(df.appid.groupby(df.appid).count())/html>

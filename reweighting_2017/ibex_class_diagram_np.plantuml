@@ -1,0 +1,43 @@
+@startuml
+
+    skinparam monochrome true
+    skinparam shadowing false
+
+    skinparam package {
+        FontColor #777777
+        BorderColor lightgrey
+    }
+
+    skinparam rectangle {
+        FontColor<<pandas>> lightgrey
+        FontColor<<numpy>> black
+        BorderColor<<pandas>> lightgrey
+        BorderColor<<numpy>> black
+    }
+    
+    package "Plotting" as Plotting { 
+        rectangle seaborn<<pandas>>
+        rectangle bokeh<<pandas>>
+        rectangle matplotlib<<numpy>>
+    }
+
+    package "Machine Learning" {
+        rectangle sklearn<<numpy>>
+        rectangle ibex<<pandas>> 
+    }
+
+    package "Data Structures" {
+        rectangle numpy<<numpy>>
+        rectangle pandas<<pandas>>
+    }
+
+    [sklearn] -> [numpy] : interfaced by
+    [matplotlib] -> [numpy] : interfaced by
+    pandas ..[#lightgrey]> [numpy] : <color lightgrey>implemented over</color>
+    seaborn -[#lightgrey]> pandas : <color lightgrey>interfaced by</color>
+    [bokeh] -[#lightgrey]> pandas : <color lightgrey>interfaced by</color>
+    [seaborn] ..[#lightgrey]-> [matplotlib] : <color lightgrey>implemented over</color>
+    ibex -[#lightgrey]> pandas : <color lightgrey>interfaced by</color> 
+    ibex ..[#lightgrey]-> [sklearn] : <color lightgrey>implemented over</color>
+
+@enduml

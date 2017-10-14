@@ -1,0 +1,87 @@
+﻿<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+<link href="../css/flow_chart.css" rel="stylesheet">
+</head>
+<body>
+    <div id="moshe" style="width:960; height:500px; border: 1px solid"></div>
+<script src="../js/d3.v4.js"></script>
+<script src="../js/cola.js"></script>
+<script src="../js/flow_chart.js"></script>
+    <script>
+
+var div = div = d3.select('#moshe');
+var rect = div.node().getBoundingClientRect();
+console.log(rect);
+var svg = div.append("svg")
+    .attr("width", rect.width)
+    .attr("height", rect.height);
+
+var graph = {
+        "nodes":[
+                  {"name":"X0","width":60,"height":40},
+                  {"name":"X1","width":60,"height":40},
+                  {"name":"","width":1,"height":1},
+                  {"name":"SelectKBest","width":160,"height":40},
+                  {"name":"PCA","width":60,"height":40},
+                  {"name":"","width":1,"height":1},
+                  {"name":"RandomForestRegressor","width":260,"height":40},
+                ],
+        "links":[
+                  {"source":0,"target":2},
+                  {"source":1,"target":2},
+                  {"source":2,"target":3},
+                  {"source":2,"target":4},
+                  {"source":3,"target":5},
+                  {"source":4,"target":5},
+                  {"source":5,"target":6}
+                ],
+        "groups":[
+                  {"name": "Input", "leaves":[0, 1]},
+                  {"name": "Transformers", "leaves":[3,4]}
+                ],
+    "constraints":[
+
+              {"type":"alignment",
+
+                       "axis":"x",
+
+                       "offsets":[
+
+                                 {"node":"1", "offset":"0"},
+
+                                 {"node":"2", "offset":"0"},
+
+                                 {"node":"3", "offset":"0"}
+
+                               ]},
+
+              {"type":"alignment",
+
+                       "axis":"y",
+
+                       "offsets":[
+
+                                 {"node":"0", "offset":"0"},
+
+                                 {"node":"1", "offset":"0"},
+
+                                 {"node":"4", "offset":"0"}
+
+                               ]}
+
+            ]
+};
+
+svg.graph = graph;
+
+var chart = flowChart()
+    .width(rect.width)
+    .height(rect.height);
+chart(svg);
+
+</script>
+</body>
+</html>

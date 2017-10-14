@@ -1,0 +1,13 @@
+@startuml
+
+skinparam monochrome true
+skinparam shadowing false
+
+
+package ibex.sklearn.linear_model {
+    class LogisticRegression {
+
+    }
+}
+
+@enduml

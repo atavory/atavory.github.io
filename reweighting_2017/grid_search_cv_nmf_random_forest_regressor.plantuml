@@ -1,0 +1,21 @@
+@startuml
+
+skinparam monochrome true
+skinparam shadowing false
+
+left to right direction
+
+skinparam rectangle {
+    BorderColor grey
+}
+
+rectangle X
+rectangle GridSearchCV {
+    rectangle NMF
+    rectangle RandomForestRegressor
+}
+
+X --> NMF
+NMF --> RandomForestRegressor
+
+@enduml
