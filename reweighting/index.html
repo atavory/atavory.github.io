@@ -247,7 +247,7 @@
 	</ul>
 	<p>
 	If `y` is bounded, then `f` can be made concave, and so, by Jensen's inequality,
-	`-\ln(P_u(y^n)) \geq -\ln(\hat{p}_u(y^n)) = \frac{1}{2c} l_n(y, \hat{y}_i).
+	`-\ln(P_u(y^n)) \geq -\ln(\hat{p}_u(y^n)) = \frac{1}{2c} l_n(y, \hat{y}_i)`.
 	</p>
 	</div>
     <div class = "slide">
@@ -263,10 +263,10 @@
 	<div class = "slide">
 		<h1>Problem</h1>
 		<ul>
-			<li>$m$ experts</li>
+			<li>`m` experts</li>
 			<li>The time segment has a $k$-partition.
 			<ul>
-				<li>There are $k + 1$ segments with unknown start/end times</li>
+				<li>There are `k + 1` segments with unknown start/end times</li>
 				<li>Each segment has a "best" expert</li>
 				<li>$k$ is unknown</li>
 			</ul>
@@ -275,18 +275,18 @@
 	<div class = "slide">
 	<h1>Master Algorithm</h1>
 	<ul>
-		<li><b>Init</b> `w_1^s[1] = \cdots = w_m^s[1] = 1 / m</li>
+		<li><b>Init</b> `w_1^s[1] = \cdots = w_m^s[1] = 1 / m`</li>
 		<li><b>Predict</b> Use `\hat{y}_u[t] = \sum_{i = 1}^m v_i[t] \hat{y}_i[t] `, where `v_i[t] = {w_i^s[t]} / {\sum_{j = 1}^m w_j^s[t]}`</li>
-		<li><b>Update</b> `w_i^a[t] = w_i^s[t] e^{-1/2 l(y[t], \hat{y})}</li>
-		<li><b>Redistribute</b> Use some rule  s.t. `\sum_{j = 1}^a w_j^s[t + 1] = \sum_{j = 1}^m w_i^a[t]</li>
+		<li><b>Update</b> `w_i^a[t] = w_i^s[t] e^{-1/2 l(y[t], \hat{y})}`</li>
+		<li><b>Redistribute</b> Use some rule  s.t. `\sum_{j = 1}^a w_j^s[t + 1] = \sum_{j = 1}^m w_i^a[t]`</li>
 	</ul>
 	</div>
 	<h1>Specific Algorithms</h1>
 	<p>Consider two specific redistribution rules:</p>
 	<ul>
-		<li><b>Init</b> `w_1^s[1] = \cdots = w_m^s[1] = 1 / m</li>
+		<li><b>Init</b> `w_1^s[1] = \cdots = w_m^s[1] = 1 / m`</li>
 		<li><b>Predict</b> Use `\sum_{i = 1}^m v_i[t] \hat{y}_i[t] `, where `v_i[t] = {w_i^s[t]} / {\sum_{j = 1}^m w_j^s[t]}`</li>
-		<li><b>Update</b> `w_i^a[t] = w_i^s[t] e^{-1/2 l(y[t], \hat{y})}</li>
+		<li><b>Update</b> `w_i^a[t] = w_i^s[t] e^{-1/2 l(y[t], \hat{y})}`</li>
 		<li><b>Redistribute</b> 
 		<ul>
 			<li><b>Static Expert</b> `w_i^s[t + 1] = w_i^a[t]`</li>
