@@ -173,12 +173,15 @@ var StepGroup = function(elems) {
         </div>
         <div class="step slide" data-scale="0.01" data-x="1400" data-y="40" data-z="10">
             <h2>At Our Disposal</h2>
-            Experts \(\hat{y}^1, \ldots, \hat{y}^m\)
+            Experts \(\hat{y}^1, \ldots, \hat{y}^m\), 
+            Online Weights 
             <div class="smaller">
             <div class="smaller substep">
             <img src="images/monkeys.jpg" style="width: 65%">
             </div>
-            <div class="substep">Each "expert" is an algorithm</div>
+            <div class="substep">
+            <img src="images/online_reweighting.png" style="width: 65%">
+            </div> 
             </div>
         </div>
         <div class="step slide" data-scale="0.01" data-x="1400" data-y="50" data-z="10">
@@ -241,10 +244,9 @@ var StepGroup = function(elems) {
                 <tr>
                     <th>Update</th>
                     <td>$$
-                        w_{i + 1}^j = w_i^j e ^ {- \eta L\left( \hat{y}_i^j, y_i \right) }
+                        w_{i + 1}^j = w_i^j e ^ {- L\left( \hat{y}_i^j, y_i \right) }
                         ,
                         $$
-                        for some \(\eta > 0\).
                     </td>
                 </tr>
                 </table>
