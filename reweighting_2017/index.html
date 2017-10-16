@@ -234,11 +234,7 @@ var StepGroup = function(elems) {
                 <tr>
                     <th>Predict</th>
                     <td>$$
-                        \hat{y}^{\mathcal{U}}_i = \sum_j v_i^j \hat{y}^j_i,
-                        $$ where
-                        $$
-                        v_i^j = \frac{w_i^j}{\sum_i w_i^j }
-                        .
+                        \hat{y}^{\mathcal{U}}_i = \sum_j \frac{w_i^j}{\sum_i w_i^j } \hat{y}^j_i,
                         $$
                     </td>
                 </tr>
@@ -248,7 +244,7 @@ var StepGroup = function(elems) {
                         w_{i + 1}^j = w_i^j e ^ {- \eta L\left( \hat{y}_i^j, y_i \right) }
                         ,
                         $$
-                        for some \(c > 0\).
+                        for some \(\eta > 0\).
                     </td>
                 </tr>
                 </table>
@@ -269,7 +265,7 @@ var StepGroup = function(elems) {
             <b>Definition</b> An expert's probability is <i>defined</i> as
             $$
             P^j\left( y_1, \ldots, y_n \right) = 
-            e ^ {-\frac{1}{2c} \sum_{i = 1}^n L\left(\hat{y}^k_i, y_i\right)}
+            b e ^ {-\sum_{i = 1}^n L\left(\hat{y}^k_i, y_i\right)}
             ,
             $$
             (\(b\) is a normalizing constant).
@@ -284,7 +280,7 @@ var StepGroup = function(elems) {
                 <b>Definition</b>
             <ol>
                 <li>
-                    "weighted universal probability" 
+                    "Weighted Universal Probability" 
                     $$
                     \underline{P}^{\mathcal{U}} \left( y_1, \ldots, y_n \right)
                     =
@@ -293,16 +289,16 @@ var StepGroup = function(elems) {
                     =
                     \frac{1}{m}
                     \sum_j
-                    e ^ {-\frac{1}{2c} \sum_{i = 1}^n L\left(\hat{y}^j_i, y_i\right)}
+                    e ^ {- \sum_{i = 1}^n L\left(\hat{y}^j_i, y_i\right)}
                     .
                     $$
                 </li>
                 <li>
-                    "performance universal probability" 
+                    "Performance Universal Probability" 
                     $$
                     \overline{P}^{\mathcal{U}} \left( y_1, \ldots, y_n \right)
                     =
-                    e ^ {-\frac{1}{2c} \sum_{i = 1}^n L\left(\hat{y}^{\mathcal{U}}_i, y_i\right)}
+                    e ^ {- \sum_{i = 1}^n L\left(\hat{y}^{\mathcal{U}}_i, y_i\right)}
                     .
                     $$
                 </li>
@@ -319,7 +315,7 @@ var StepGroup = function(elems) {
     \\
             -\ln\left( \overline{P}^{\mathcal{U}} \left( y_1, \ldots, y_n \right)
 \right)
-= \frac{1}{2c} \sum_{i = 1}^n L\left(\hat{y}^{\mathcal{U}}_i, y_i\right)
+= \sum_{i = 1}^n L\left(\hat{y}^{\mathcal{U}}_i, y_i\right)
             .
             $$
         </div>
