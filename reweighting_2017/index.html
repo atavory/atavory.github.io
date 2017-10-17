@@ -142,7 +142,7 @@ var StepGroup = function(elems) {
             </center>
 
             <ol>
-                <li> <i>Tracking the Best Expert</i>, Mark Herbster, Manfred K. Warmuth</i></li>
+                <li> <i>Tracking the Best Expert, Mark Herbster, Manfred K. Warmuth</i></li>
                 <li> Other works by Vovk, Cover, Rissanen</li>
             </ol>
         </div>
@@ -370,8 +370,8 @@ var StepGroup = function(elems) {
         <div class="step slide" data-scale="0.01" data-x="4200" data-y="30" data-z="10">
             <h2>Changing Best Experts</h2>
             <ul>
-                <li> \(k + 1\) segments; \(k\) unknown, transition points unknown</li>
-                <li>Each segment has a best expert</li>
+                <li> \(k + 1\) segments; transition points unknown (perhaps \(k\) unknown) </li>
+                <li>Best (unknown) expert per segment</li>
             </ul>
             <div class="substep">
             <img src="images/alternating_experts.png" style="width: 65%">
@@ -491,7 +491,7 @@ var StepGroup = function(elems) {
                 $$
                 \sum_{i = 1}^n L(\hat{y}_i^{\mathcal{U}}, y_i) 
                 \leq 
-                - \ln \left( \sum_J \underline{w}_{n + 1}^j \right)
+                - \ln \left( \sum_j \underline{w}_{n + 1}^j \right)
                 \leq 
                 - \ln \left( \underline{w}_{n + 1}^j \right)
     (4)
@@ -621,7 +621,7 @@ var StepGroup = function(elems) {
                     </ul>
                 </li>
                 <li class="substep">
-                    It shouldn't be used in all cases..
+                    It shouldn't be used in all cases.
                     <ul>
                         <li class="substep">
                             E.g., decision trees. 
