@@ -988,7 +988,7 @@ var StepGroup = function(elems) {
                 </table>
             </div>
             <div class="smaller">
-                <table class="data" width="40%">
+                <table class="data" width="12%">
                     <caption>
                         X[[&#39;b&#39;, &#39;a&#39;]]
                     </caption>
@@ -1038,191 +1038,8 @@ var StepGroup = function(elems) {
                     </table>
             </div>
         </div>
-        <div class="step slide smaller" data-scale="0.01" data-x="4200" data-y="63" data-z="10">
-            <div class="smaller">
-                <pre class="brush: python; gutter: false; toolbar: false">
-            X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]})
-            y = pd.Series([10, 20 , 30])
-            X1 = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]}, index=[&#39;i&#39;, &#39;j&#39;, &#39;k&#39;]) </pre>
-                <div class="c11">
-                    <table class="data">
-                        <caption>
-                            X
-                        </caption>
-                        <tbody>
-                            <tr>
-                                <td></td>
-                                <th>a</th>
-                                <th>b</th>
-                            </tr>
-                            <tr>
-                                <th>0</th>
-                                <td>0</td>
-                                <td>1</td>
-                            </tr>
-                            <tr>
-                                <th>1</th>
-                                <td>2</td>
-                                <td>4</td>
-                            </tr>
-                            <tr>
-                                <th>2</th>
-                                <td>3</td>
-                                <td>6</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="c11">
-                    <table class="data">
-                        <caption>
-                            y
-                        </caption>
-                        <tbody>
-                            <tr>
-                                <th>0</th>
-                                <td>10</td>
-                            </tr>
-                            <tr>
-                                <th>1</th>
-                                <td>20</td>
-                            </tr>
-                            <tr>
-                                <th>2</th>
-                                <td>30</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="c11">
-                    <table class="data" width="40%">
-                        <caption>
-                            X1
-                        </caption>
-                        <tbody>
-                            <tr>
-                                <td></td>
-                                <th>a</th>
-                                <th>b</th>
-                            </tr>
-                            <tr>
-                                <th>i</th>
-                                <td>0</td>
-                                <td>1</td>
-                            </tr>
-                            <tr>
-                                <th>j</th>
-                                <td>2</td>
-                                <td>4</td>
-                            </tr>
-                            <tr>
-                                <th>k</th>
-                                <td>3</td>
-                                <td>6</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="smaller c12">
-                <pre class="brush: python; gutter: false; toolbar: false">      
-            >>> PdLinearRegression().fit(X, y).predict(X[[&#39;b&#39;, &#39;a&#39;]])
-           </pre>
-                <div class="c11">
-                    <table class="data"></table>
-                    <table class="data">
-                        <caption>
-                            y
-                        </caption>
-                        <tbody>
-                            <tr>
-                                <th>i</th>
-                                <td>10</td>
-                            </tr>
-                            <tr>
-                                <th>j</th>
-                                <td>20</td>
-                            </tr>
-                            <tr>
-                                <th>k</th>
-                                <td>30</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        <div class="step slide" data-scale="0.01" data-x="4200" data-y="71" data-z="10">
-            <div class="smaller">
-            <pre class="brush: python; gutter: false; toolbar: false">
-            X = pd.DataFrame({&#39;a&#39;: [0, 2, 3], &#39;b&#39;: [1, 4, 6]}, index=[&#39;i&#39;, &#39;j&#39;, &#39;k&#39;])
-            y = pd.Series([10, 20 , 30], index=[21, 22, 23])
-          </pre>
-            <div class="c11">
-                <table class="data">
-                    <caption>
-                        X
-                    </caption>
-                    <tbody>
-                        <tr>
-                            <td></td>
-                            <th>a</th>
-                            <th>b</th>
-                        </tr>
-                        <tr>
-                            <th>i</th>
-                            <td>0</td>
-                            <td>1</td>
-                        </tr>
-                        <tr>
-                            <th>j</th>
-                            <td>2</td>
-                            <td>4</td>
-                        </tr>
-                        <tr>
-                            <th>k</th>
-                            <td>3</td>
-                            <td>6</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="c11">
-                <table class="data">
-                    <caption>
-                        y
-                    </caption>
-                    <tbody>
-                        <tr>
-                            <th>21</th>
-                            <td>10</td>
-                        </tr>
-                        <tr>
-                            <th>22</th>
-                            <td>20</td>
-                        </tr>
-                        <tr>
-                            <th>23</th>
-                            <td>30</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="c12">
-                <pre class="brush: python; gutter: false; toolbar: false">      
-            &gt;&gt;&gt; PdLinearRegression().fit(X, y).predict(X)
-            ---------------------------------------------------------------------------
-            ValueError                Traceback (most recent call last)
-            ----&gt; 1 LinearRegression().fit(X, y)
-            ...
-            --&gt; 113         **kwargs)
-            ...
-            ValueError: Indexes do not match
-            </pre>
-            </div>
-            </div>
-        </div>
-      <div class="step slide" data-scale="0.01" data-x="4200" data-y="71" data-z="10">
+        
+      <div class="step slide" data-scale="0.01" data-x="4200" data-y="63" data-z="10">
         <div class="smaller" style="background: url('images/baddy_bg.png'); background-repeat: no-repeat; background-position: 50% 20%;
 ">
           <pre class="brush: python; gutter: false; toolbar: false">
@@ -1328,7 +1145,7 @@ var StepGroup = function(elems) {
           </div>
         </div>
       </div>
-      <div class="step slide" data-scale="0.01" data-x="4200" data-y="80" data-z="10">
+      <div class="step slide" data-scale="0.01" data-x="4200" data-y="71" data-z="10">
         <div class="smaller" style="background: url('images/baddy_bg.png'); background-repeat: no-repeat; background-position: 50% 20%;
 ">
           <pre class="brush: python; gutter: false; toolbar: false">
