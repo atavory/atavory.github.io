@@ -139,7 +139,7 @@ var StepGroup = function(elems) {
             <center>
             <h1>Ibex</h1>
             <h2>Making Scikit-Learn Run On Top Of Pandas</h2>
-            <h3><div>Ami Tavory</div><div>Shahar Azulay, Tali Raveh-Sadka</div></h3>
+            <h3>Ami Tavory, Shahar Azulay, Tali Raveh-Sadka</h3>
             </center>
         </div>
         <div class="step slide" data-scale="1" data-x="1400" data-y="0" id="outline-intro">
@@ -158,6 +158,7 @@ var StepGroup = function(elems) {
         </div>
         <div class="step slide" data-scale="0.01" data-x="1400" data-y="30" data-z="10">
         <h2>Example 1: Concatenate &amp; Manipulate Columns</h2>
+            <a href="http://scikit-learn.org/stable/auto_examples/plot_feature_stacker.html" class="smaller">http://scikit-learn.org/stable/auto_examples/plot_feature_stacker.html</a>
             <div class="bs-box base">
                 <div class="abs-box">
                     <div class="smaller">
@@ -181,7 +182,7 @@ var StepGroup = function(elems) {
                 </div>
             </div>
         </div>
-        <div id="example_1_substeps" class="step slide abs-box base smaller" data-scale="0.01" data-x="1400" data-y="33" data-z="10">
+        <div id="example_1_substeps" class="step slide abs-box base smaller" data-scale="0.01" data-x="1400" data-y="34" data-z="10">
             <div class="abs-box substep smaller">
                 <pre class="brush: python; gutter: true; toolbar: false highlight: [1]">            
             X = np.c_[X0, X1]
@@ -231,7 +232,7 @@ var StepGroup = function(elems) {
                 </pre>
             </div>
         </div>
-        <div class="step slide abs-box base" data-scale="0.01" data-x="1400" data-y="36" data-z="10">
+        <div class="step slide abs-box base" data-scale="0.01" data-x="1400" data-y="37" data-z="10">
             <div class="abs-box substep smaller">
                 <pre class="brush: python; gutter: false; toolbar: false">            
             &gt;&gt;&gt; X0
@@ -828,23 +829,11 @@ var StepGroup = function(elems) {
                 <div class="abs-box base">
                     <div class="abs-box">
                         <div class="smaller">
-                        <img id="outlineClsGroup_img_1" src="generated/ibex_class_diagram_np.png" style="opacity: 1">
-                        </div>
-                    </div>
-                    <div class="abs-box">
-                        <div class="smaller">
-                        <img id="outlineClsGroup_img_2" src="generated/ibex_class_diagram_pandas.png" style="opacity: 0">
-                        </div>
-                    </div>
-                    <div class="abs-box">
-                        <div class="smaller">
-                        <img id="outlineClsGroup_img_3" src="images/logo.jpeg" style="opacity: 0">
+                        <img src="images/logo.jpeg">
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="substep smaller"></div>
-            <div class="substep smaller"></div>
         </div>
         <div class="step slide" data-scale="0.01" data-x="4200" data-y="30" data-z="10">
             <h2>Layers</h2>
@@ -2964,14 +2953,6 @@ var StepGroup = function(elems) {
             .addSubstep("wrapper_wrapped_generated", 11, 4)
             .addSubstep("wrapper_wrapped_generated", 13, 5)
 
-        var outlineClsGroup = StepGroup([
-            "outlineClsGroup_img_1",
-            "outlineClsGroup_img_2",
-            "outlineClsGroup_img_3"]);
-        outlineClsGroup
-            .addSubstep("outline-intro-4", 7, 1)
-            .addSubstep("outline-intro-4", 9, 2);
-
         var importSeq0Group = StepGroup([
             "import_seq_1_img",
             "import_seq_2_img",
@@ -3038,8 +3019,6 @@ var StepGroup = function(elems) {
             console.log(parentId, ind);
 
             example1Group
-                .notifySubstepActive(parentId, ind);
-            outlineClsGroup
                 .notifySubstepActive(parentId, ind);
             wrapperWrappedGroup
                 .notifySubstepActive(parentId, ind);
