@@ -156,7 +156,7 @@ var StepGroup = function(elems) {
                 <li class="other">Conclusions</li>
             </ul>
         </div>
-        <div class="step slide" data-scale="0.01" data-x="1400" data-y="30" data-z="10">
+        <div class="step slide" data-scale="0.01" data-x="1400" data-y="30" data-z="10"> 
         <h2>Example 1: Concatenate &amp; Manipulate Columns</h2>
             <a href="http://scikit-learn.org/stable/auto_examples/plot_feature_stacker.html" class="smaller">http://scikit-learn.org/stable/auto_examples/plot_feature_stacker.html</a>
             <div class="bs-box base">
@@ -281,7 +281,7 @@ var StepGroup = function(elems) {
             "generated/deployment_col_aggregating_further_transformations.png"></div>
         </div>
         <div class="step slide" data-scale="0.01" data-x="1500" data-y="30" data-z="10">
-            <h2>Example 2: Latent Factor Features</h2>
+            <h2>Example 2: Inter-Pipeline Munging</h2>
             <div class="smaller">
             <table class="data c2">
                 <tbody>
@@ -642,53 +642,18 @@ var StepGroup = function(elems) {
             </ul>
         </div>
         <div class="step slide" data-scale="0.01" data-x="1600" data-y="30" data-z="10">
-            <h3 class="baddy">Example 3: Combination Verbosity</h3>
+            <h2 class="baddy">Example 3: Combination Verbosity</h3>
             <div class="smaller">
-                <div class="smaller">
-                    <pre class="brush: bash; gutter: true; toolbar: false">          
-                                pipeline = Pipeline([
-                                        # Extract the subject & body
-                                        (&#39;subjectbody&#39;, SubjectBodyExtractor()),
+            <img src="generated/col_aggregating_further_transformations.png" style="opacity: 1">
+                <pre class="brush: python; gutter: true; toolbar: false highlight: [8]">            
+            features = make_union(SelectKBest(k=1), PCA(n_components=2))
+            forest = RandomForestRegressor()
+            prd = make_pipeline(
+                features,
+                forest)
 
-                                        # Use FeatureUnion to combine the features from subject and body
-                                        (&#39;union&#39;, FeatureUnion(
-                                                transformer_list=[
-
-                                                        # Pipeline for pulling features from the post&#39;s subject line
-                                                        (&#39;subject&#39;, Pipeline([
-                                                                (&#39;selector&#39;, ItemSelector(key=&#39;subject&#39;)),
-                                                                (&#39;tfidf&#39;, TfidfVectorizer(min_df=50)),
-                                                        ])),
-
-                                                        # Pipeline for standard bag-of-words model for body
-                                                        (&#39;body_bow&#39;, Pipeline([
-                                                                (&#39;selector&#39;, ItemSelector(key=&#39;body&#39;)),
-                                                                (&#39;tfidf&#39;, TfidfVectorizer()),
-                                                                (&#39;best&#39;, TruncatedSVD(n_components=50)),
-                                                        ])),
-
-                                                        # Pipeline for pulling ad hoc features from post&#39;s body
-                                                        (&#39;body_stats&#39;, Pipeline([
-                                                                (&#39;selector&#39;, ItemSelector(key=&#39;body&#39;)),
-                                                                (&#39;stats&#39;, TextStats()),  # returns a list of dicts
-                                                                (&#39;vect&#39;, DictVectorizer()),  # list of dicts -&gt; feature matrix
-                                                        ])),
-
-                                                ],
-
-                                                # weight components in FeatureUnion
-                                                transformer_weights={
-                                                        &#39;subject&#39;: 0.8,
-                                                        &#39;body_bow&#39;: 0.5,
-                                                        &#39;body_stats&#39;: 1.0,
-                                                },
-                                        )),
-
-                                        # Use a SVC classifier on the combined features
-                                        (&#39;svc&#39;, SVC(kernel=&#39;linear&#39;)),
-                                ])
-                                </pre>
-                </div>
+            prd.fit(X, y)
+                </pre>
             </div>
         </div>
         <div class="step slide" data-scale="1" data-x="2800" data-y="0" id="outline-intro-3">
@@ -1916,19 +1881,15 @@ var StepGroup = function(elems) {
                 <li class="current">Conclusions</li>
             </ul>
         </div>
-        <div class="step slide" data-x="7007" data-y="0" data-z="0" data-scale="0.01">
+        <div class="step slide" data-x="7007" data-y="-1" data-z="0" data-scale="0.01">
             <h3>Utilize Pandas Metadata</h3>
-            <p>Metadata &#8594; complex pipelines</p>
-            <div class="smaller">
-                <ul>
-                    <li>Interpretability</li>
-                    <li>Safety</li>
-                    <li>Data-Munging</li>
-                    <li>Index-Aware Operations (Stacking, Nested Stratified &amp; Labeled CV)</li>
-                    <li>...</li>
-                    <li>Combinations Of The Above</li>
-                </ul>
-            </div>
+            <ul>
+                <li>Interpretability</li>
+                <li>Safety</li>
+                <li>Data-Munging</li>
+                <li>Index-Aware Operations (Stacking, Nested Stratified &amp; Labeled CV)</li>
+                <li>Combinations Of The Above</li>
+            </ul>
         </div>
         <div class="step slide" data-x="7007" data-y="7" data-z="0" data-scale="0.01">
         <h3>But Leverage Numpy-Interfacing Libraries</h3><img src="generated/ibex_class_diagram_pandas.png"></div>
@@ -1941,7 +1902,7 @@ var StepGroup = function(elems) {
                 <li class="substep">Local Classes</li>
             </ul>
         </div>
-        <div class="step slide" data-x="7007" data-y="21" data-z="0" data-scale="0.01">
+        <div class="step slide" data-x="7007" data-y="22" data-z="0" data-scale="0.01">
             <h1>Thank You</h1>
             <div align=center>
                 <div>
