@@ -1,0 +1,20 @@
+@startuml
+
+skinparam monochrome true
+skinparam shadowing false
+
+left to right direction
+
+skinparam artifact {
+    BorderColor lightgrey
+}
+
+rectangle SelectKBest
+rectangle PCA
+interface " " as c1
+rectangle RandomForestRegressor
+SelectKBest --> c1
+PCA --> c1
+c1 --> RandomForestRegressor
+
+@enduml
