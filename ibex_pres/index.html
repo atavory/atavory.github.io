@@ -1298,7 +1298,7 @@ var StepGroup = function(elems) {
             <img src="generated/col_aggregating_further_transformations.png">
             <div class="substep smaller">
                 <pre class="brush: python; gutter: false; toolbar: false">        
-            SelectKBest(k=1) + PCA(n_components=2) | RandomForestRegressor()
+            PdSelectKBest(k=1) + PdPCA(n_components=2) | PdRandomForestRegressor()
            </pre>
             </div>
         </div>
@@ -1626,10 +1626,11 @@ var StepGroup = function(elems) {
         <div class="step slide" data-scale="0.01" data-x="4223" data-y="36" data-z="10"><img src="images/got_frame.jpeg" class=
         "c10"></div>
         <div class="step slide" data-scale="0.01" data-x="4230" data-y="42" data-z="10">
-            <h3>Auto-Wrapping</h3>
+            <h3>Pre-Wrapping</h3>
             <div class="abs-box smaller">
-                <pre class="brush: python; gutter: true; toolbar: false; highlight: [1, 3]">            
-            ibex.sklearn.linear_model.LinearRegression is frame(sklearn.linear_model.LinearRegression)
+                <pre class="brush: python; gutter: true; toolbar: false; highlight: [1, 2, 4]">            
+            ibex.sklearn.linear_model.LinearRegression = \
+                frame(sklearn.linear_model.LinearRegression)
             ...
             ibex.xgboost.XGBRegressor = frame(xgboost.XGBRegressor)
             ...
@@ -1666,7 +1667,7 @@ var StepGroup = function(elems) {
             <h2>Straightforward Approach: Compose</h2>
             <div class="smaller">
                 <pre class="brush: python; gutter: true; toolbar: false">            
-            class Wrapper(BaseEstimator, RegressorMixin, FrameMixing):
+            class Wrapper(BaseEstimator, RegressorMixin, FrameMixin):
                 def __init__(self, *args, **kwargs):
                     self.wrapped = LinearRegression(*args, **kwargs)
 

@@ -33,16 +33,16 @@ import_seq_lines = [
 
 wrapper_wrapped_pre = [
     'actor user',
-    'participant Wrapped',
+    'participant Wrapper',
     'participant wrapped',
 ]
 wrapper_wrapped_lines = [
-    ('user', 'Wrapped', 'predict(X)'),
-    ('Wrapped', 'Wrapped', 'validate; strip'),
-    ('Wrapped', 'Wrapped', 'predict(Xt)'),
-    ('wrapped', 'Wrapped', 'yt'),
-    ('Wrapped', 'Wrapped', 'add metadata'),
-    ('Wrapped', 'user', 'y'),
+    ('user', 'Wrapper', 'predict(X)'),
+    ('Wrapper', 'Wrapper', 'validate; strip'),
+    ('Wrapper', 'wrapped', 'predict(Xt)'),
+    ('wrapped', 'Wrapper', 'yt'),
+    ('Wrapper', 'Wrapper', 'add metadata'),
+    ('Wrapper', 'user', 'y'),
 ]
 
 

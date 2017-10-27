@@ -5,17 +5,17 @@ skinparam shadowing false
 
 actor user
 
-participant Wrapped
+participant Wrapper
 
 participant wrapped
 
 autonumber 1 "<font color=black>"
-user -[#black]> Wrapped : **predict(X)**
+user -[#black]> Wrapper : **predict(X)**
 autonumber 2 "<font color=grey>"
-Wrapped -[#grey]> Wrapped : validate; strip
-Wrapped -[#grey]> Wrapped : predict(Xt)
-wrapped -[#grey]> Wrapped : yt
-Wrapped -[#grey]> Wrapped : add metadata
-Wrapped -[#grey]> user : y
+Wrapper -[#grey]> Wrapper : validate; strip
+Wrapper -[#grey]> Wrapper : predict(Xt)
+wrapped -[#grey]> Wrapper : yt
+Wrapper -[#grey]> Wrapper : add metadata
+Wrapper -[#grey]> user : y
 
 @enduml
