@@ -1,0 +1,398 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.linear_model.huber &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.linear_model.huber</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Authors: Manoj Kumar mks542@nyu.edu</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">optimize</span><span class="p">,</span> <span class="n">sparse</span>
+
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">RegressorMixin</span>
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">LinearModel</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_X_y</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_consistent_length</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">axis0_safe_slice</span>
+<span class="kn">from</span> <span class="nn">..utils.extmath</span> <span class="k">import</span> <span class="n">safe_sparse_dot</span>
+
+
+<span class="k">def</span> <span class="nf">_huber_loss_and_gradient</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the Huber loss and the gradient.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    w : ndarray, shape (n_features + 1,) or (n_features + 2,)</span>
+<span class="sd">        Feature vector.</span>
+<span class="sd">        w[:n_features] gives the coefficients</span>
+<span class="sd">        w[-1] gives the scale factor and if the intercept is fit w[-2]</span>
+<span class="sd">        gives the intercept factor.</span>
+
+<span class="sd">    X : ndarray, shape (n_samples, n_features)</span>
+<span class="sd">        Input data.</span>
+
+<span class="sd">    y : ndarray, shape (n_samples,)</span>
+<span class="sd">        Target vector.</span>
+
+<span class="sd">    epsilon : float</span>
+<span class="sd">        Robustness of the Huber estimator.</span>
+
+<span class="sd">    alpha : float</span>
+<span class="sd">        Regularization parameter.</span>
+
+<span class="sd">    sample_weight : ndarray, shape (n_samples,), optional</span>
+<span class="sd">        Weight assigned to each sample.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    loss : float</span>
+<span class="sd">        Huber loss.</span>
+
+<span class="sd">    gradient : ndarray, shape (len(w))</span>
+<span class="sd">        Returns the derivative of the Huber loss with respect to each</span>
+<span class="sd">        coefficient, intercept and the scale as a vector.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">X_is_sparse</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">fit_intercept</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">==</span> <span class="n">w</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">fit_intercept</span><span class="p">:</span>
+        <span class="n">intercept</span> <span class="o">=</span> <span class="n">w</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="n">w</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">w</span><span class="p">[:</span><span class="n">n_features</span><span class="p">]</span>
+    <span class="n">n_samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">)</span>
+
+    <span class="c1"># Calculate the values where |y - X&#39;w -c / sigma| &gt; epsilon</span>
+    <span class="c1"># The values above this threshold are outliers.</span>
+    <span class="n">linear_loss</span> <span class="o">=</span> <span class="n">y</span> <span class="o">-</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">fit_intercept</span><span class="p">:</span>
+        <span class="n">linear_loss</span> <span class="o">-=</span> <span class="n">intercept</span>
+    <span class="n">abs_linear_loss</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">linear_loss</span><span class="p">)</span>
+    <span class="n">outliers_mask</span> <span class="o">=</span> <span class="n">abs_linear_loss</span> <span class="o">&gt;</span> <span class="n">epsilon</span> <span class="o">*</span> <span class="n">sigma</span>
+
+    <span class="c1"># Calculate the linear loss due to the outliers.</span>
+    <span class="c1"># This is equal to (2 * M * |y - X&#39;w -c / sigma| - M**2) * sigma</span>
+    <span class="n">outliers</span> <span class="o">=</span> <span class="n">abs_linear_loss</span><span class="p">[</span><span class="n">outliers_mask</span><span class="p">]</span>
+    <span class="n">num_outliers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">outliers_mask</span><span class="p">)</span>
+    <span class="n">n_non_outliers</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">num_outliers</span>
+
+    <span class="c1"># n_sq_outliers includes the weight give to the outliers while</span>
+    <span class="c1"># num_outliers is just the number of outliers.</span>
+    <span class="n">outliers_sw</span> <span class="o">=</span> <span class="n">sample_weight</span><span class="p">[</span><span class="n">outliers_mask</span><span class="p">]</span>
+    <span class="n">n_sw_outliers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">outliers_sw</span><span class="p">)</span>
+    <span class="n">outlier_loss</span> <span class="o">=</span> <span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">epsilon</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">outliers_sw</span> <span class="o">*</span> <span class="n">outliers</span><span class="p">)</span> <span class="o">-</span>
+                    <span class="n">sigma</span> <span class="o">*</span> <span class="n">n_sw_outliers</span> <span class="o">*</span> <span class="n">epsilon</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># Calculate the quadratic loss due to the non-outliers.-</span>
+    <span class="c1"># This is equal to |(y - X&#39;w - c)**2 / sigma**2| * sigma</span>
+    <span class="n">non_outliers</span> <span class="o">=</span> <span class="n">linear_loss</span><span class="p">[</span><span class="o">~</span><span class="n">outliers_mask</span><span class="p">]</span>
+    <span class="n">weighted_non_outliers</span> <span class="o">=</span> <span class="n">sample_weight</span><span class="p">[</span><span class="o">~</span><span class="n">outliers_mask</span><span class="p">]</span> <span class="o">*</span> <span class="n">non_outliers</span>
+    <span class="n">weighted_loss</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">weighted_non_outliers</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">non_outliers</span><span class="p">)</span>
+    <span class="n">squared_loss</span> <span class="o">=</span> <span class="n">weighted_loss</span> <span class="o">/</span> <span class="n">sigma</span>
+
+    <span class="k">if</span> <span class="n">fit_intercept</span><span class="p">:</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_features</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_features</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Gradient due to the squared loss.</span>
+    <span class="n">X_non_outliers</span> <span class="o">=</span> <span class="o">-</span><span class="n">axis0_safe_slice</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="o">~</span><span class="n">outliers_mask</span><span class="p">,</span> <span class="n">n_non_outliers</span><span class="p">)</span>
+    <span class="n">grad</span><span class="p">[:</span><span class="n">n_features</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="mf">2.</span> <span class="o">/</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">weighted_non_outliers</span><span class="p">,</span> <span class="n">X_non_outliers</span><span class="p">))</span>
+
+    <span class="c1"># Gradient due to the linear loss.</span>
+    <span class="n">signed_outliers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">outliers</span><span class="p">)</span>
+    <span class="n">signed_outliers_mask</span> <span class="o">=</span> <span class="n">linear_loss</span><span class="p">[</span><span class="n">outliers_mask</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span>
+    <span class="n">signed_outliers</span><span class="p">[</span><span class="n">signed_outliers_mask</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+    <span class="n">X_outliers</span> <span class="o">=</span> <span class="n">axis0_safe_slice</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">outliers_mask</span><span class="p">,</span> <span class="n">num_outliers</span><span class="p">)</span>
+    <span class="n">sw_outliers</span> <span class="o">=</span> <span class="n">sample_weight</span><span class="p">[</span><span class="n">outliers_mask</span><span class="p">]</span> <span class="o">*</span> <span class="n">signed_outliers</span>
+    <span class="n">grad</span><span class="p">[:</span><span class="n">n_features</span><span class="p">]</span> <span class="o">-=</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">epsilon</span> <span class="o">*</span> <span class="p">(</span>
+        <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">sw_outliers</span><span class="p">,</span> <span class="n">X_outliers</span><span class="p">))</span>
+
+    <span class="c1"># Gradient due to the penalty.</span>
+    <span class="n">grad</span><span class="p">[:</span><span class="n">n_features</span><span class="p">]</span> <span class="o">+=</span> <span class="n">alpha</span> <span class="o">*</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">w</span>
+
+    <span class="c1"># Gradient due to sigma.</span>
+    <span class="n">grad</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">n_samples</span>
+    <span class="n">grad</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="n">n_sw_outliers</span> <span class="o">*</span> <span class="n">epsilon</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">grad</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="n">squared_loss</span> <span class="o">/</span> <span class="n">sigma</span>
+
+    <span class="c1"># Gradient due to the intercept.</span>
+    <span class="k">if</span> <span class="n">fit_intercept</span><span class="p">:</span>
+        <span class="n">grad</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weighted_non_outliers</span><span class="p">)</span> <span class="o">/</span> <span class="n">sigma</span>
+        <span class="n">grad</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">-=</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">epsilon</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">sw_outliers</span><span class="p">)</span>
+
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">n_samples</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">+</span> <span class="n">squared_loss</span> <span class="o">+</span> <span class="n">outlier_loss</span>
+    <span class="n">loss</span> <span class="o">+=</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">loss</span><span class="p">,</span> <span class="n">grad</span>
+
+
+<span class="k">class</span> <span class="nc">HuberRegressor</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">,</span> <span class="n">BaseEstimator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Linear regression model that is robust to outliers.</span>
+
+<span class="sd">    The Huber Regressor optimizes the squared loss for the samples where</span>
+<span class="sd">    ``|(y - X&#39;w) / sigma| &lt; epsilon`` and the absolute loss for the samples</span>
+<span class="sd">    where ``|(y - X&#39;w) / sigma| &gt; epsilon``, where w and sigma are parameters</span>
+<span class="sd">    to be optimized. The parameter sigma makes sure that if y is scaled up</span>
+<span class="sd">    or down by a certain factor, one does not need to rescale epsilon to</span>
+<span class="sd">    achieve the same robustness. Note that this does not take into account</span>
+<span class="sd">    the fact that the different features of X may be of different scales.</span>
+
+<span class="sd">    This makes sure that the loss function is not heavily influenced by the</span>
+<span class="sd">    outliers while not completely ignoring their effect.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;huber_regression&gt;`</span>
+
+<span class="sd">    .. versionadded:: 0.18</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    epsilon : float, greater than 1.0, default 1.35</span>
+<span class="sd">        The parameter epsilon controls the number of samples that should be</span>
+<span class="sd">        classified as outliers. The smaller the epsilon, the more robust it is</span>
+<span class="sd">        to outliers.</span>
+
+<span class="sd">    max_iter : int, default 100</span>
+<span class="sd">        Maximum number of iterations that scipy.optimize.fmin_l_bfgs_b</span>
+<span class="sd">        should run for.</span>
+
+<span class="sd">    alpha : float, default 0.0001</span>
+<span class="sd">        Regularization parameter.</span>
+
+<span class="sd">    warm_start : bool, default False</span>
+<span class="sd">        This is useful if the stored attributes of a previously used model</span>
+<span class="sd">        has to be reused. If set to False, then the coefficients will</span>
+<span class="sd">        be rewritten for every call to fit.</span>
+
+<span class="sd">    fit_intercept : bool, default True</span>
+<span class="sd">        Whether or not to fit the intercept. This can be set to False</span>
+<span class="sd">        if the data is already centered around the origin.</span>
+
+<span class="sd">    tol : float, default 1e-5</span>
+<span class="sd">        The iteration will stop when</span>
+<span class="sd">        ``max{|proj g_i | i = 1, ..., n}`` &lt;= ``tol``</span>
+<span class="sd">        where pg_i is the i-th component of the projected gradient.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coef_ : array, shape (n_features,)</span>
+<span class="sd">        Features got by optimizing the Huber loss.</span>
+
+<span class="sd">    intercept_ : float</span>
+<span class="sd">        Bias.</span>
+
+<span class="sd">    scale_ : float</span>
+<span class="sd">        The value by which ``|y - X&#39;w - c|`` is scaled down.</span>
+
+<span class="sd">    n_iter_ : int</span>
+<span class="sd">        Number of iterations that fmin_l_bfgs_b has run for.</span>
+<span class="sd">        Not available if SciPy version is 0.9 and below.</span>
+
+<span class="sd">    outliers_ : array, shape (n_samples,)</span>
+<span class="sd">        A boolean mask which is set to True where the samples are identified</span>
+<span class="sd">        as outliers.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Peter J. Huber, Elvezio M. Ronchetti, Robust Statistics</span>
+<span class="sd">           Concomitant scale estimates, pg 172</span>
+<span class="sd">    .. [2] Art B. Owen (2006), A robust hybrid of lasso and ridge regression.</span>
+<span class="sd">           http://statweb.stanford.edu/~owen/reports/hhu.pdf</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1.35</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">,</span>
+                 <span class="n">warm_start</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-05</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="n">epsilon</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warm_start</span> <span class="o">=</span> <span class="n">warm_start</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span> <span class="o">=</span> <span class="n">fit_intercept</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+
+<div class="viewcode-block" id="HuberRegressor.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_huberregressor.html#ibex.sklearn.linear_model.HuberRegressor.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model according to the given training data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training vector, where n_samples in the number of samples and</span>
+<span class="sd">            n_features is the number of features.</span>
+
+<span class="sd">        y : array-like, shape (n_samples,)</span>
+<span class="sd">            Target vector relative to X.</span>
+
+<span class="sd">        sample_weight : array-like, shape (n_samples,)</span>
+<span class="sd">            Weight given to each sample.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : object</span>
+<span class="sd">            Returns self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;csr&#39;</span><span class="p">],</span> <span class="n">y_numeric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sample_weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sample_weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">)</span>
+            <span class="n">check_consistent_length</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sample_weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;epsilon should be greater than or equal to 1.0, got </span><span class="si">%f</span><span class="s2">&quot;</span>
+                <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">warm_start</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;coef_&#39;</span><span class="p">):</span>
+            <span class="n">parameters</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coef_</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">:</span>
+                <span class="n">parameters</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">parameters</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="c1"># Make sure to initialize the scale parameter to a strictly</span>
+            <span class="c1"># positive value:</span>
+            <span class="n">parameters</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c1"># Sigma or the scale factor should be non-negative.</span>
+        <span class="c1"># Setting it to be zero might cause undefined bounds hence we set it</span>
+        <span class="c1"># to a value close to zero.</span>
+        <span class="n">bounds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">([</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">],</span> <span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">bounds</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span> <span class="o">*</span> <span class="mi">10</span>
+
+        <span class="c1"># Type Error caused in old versions of SciPy because of no</span>
+        <span class="c1"># maxiter argument ( &lt;= 0.9).</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">parameters</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">dict_</span> <span class="o">=</span> <span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">(</span>
+                <span class="n">_huber_loss_and_gradient</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span>
+                <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">),</span>
+                <span class="n">maxiter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">pgtol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">,</span>
+                <span class="n">iprint</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">parameters</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">dict_</span> <span class="o">=</span> <span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">(</span>
+                <span class="n">_huber_loss_and_gradient</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span>
+                <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">),</span>
+                <span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dict_</span><span class="p">[</span><span class="s1">&#39;warnflag&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;HuberRegressor convergence failed:&quot;</span>
+                             <span class="s2">&quot; l-BFGS-b solver terminated with </span><span class="si">%s</span><span class="s2">&quot;</span>
+                             <span class="o">%</span> <span class="n">dict_</span><span class="p">[</span><span class="s1">&#39;task&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">=</span> <span class="n">dict_</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nit&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[:</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+
+        <span class="n">residual</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span>
+            <span class="n">y</span> <span class="o">-</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outliers_</span> <span class="o">=</span> <span class="n">residual</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

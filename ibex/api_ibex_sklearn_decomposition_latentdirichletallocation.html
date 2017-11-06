@@ -1,0 +1,424 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>LatentDirichletAllocation &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="latentdirichletallocation">
+<h1><code class="docutils literal"><span class="pre">LatentDirichletAllocation</span></code><a class="headerlink" href="#latentdirichletallocation" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="ibex.sklearn.decomposition.LatentDirichletAllocation">
+<em class="property">class </em><code class="descclassname">ibex.sklearn.decomposition.</code><code class="descname">LatentDirichletAllocation</code><span class="sig-paren">(</span><em>n_components=10</em>, <em>doc_topic_prior=None</em>, <em>topic_word_prior=None</em>, <em>learning_method=None</em>, <em>learning_decay=0.7</em>, <em>learning_offset=10.0</em>, <em>max_iter=10</em>, <em>batch_size=128</em>, <em>evaluate_every=-1</em>, <em>total_samples=1000000.0</em>, <em>perp_tol=0.1</em>, <em>mean_change_tol=0.001</em>, <em>max_doc_update_iter=100</em>, <em>n_jobs=1</em>, <em>verbose=0</em>, <em>random_state=None</em>, <em>n_topics=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.decomposition.LatentDirichletAllocation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.decomposition.online_lda.LatentDirichletAllocation</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Latent Dirichlet Allocation with online variational Bayes algorithm</p>
+<blockquote>
+<div><div class="versionadded">
+<p><span class="versionmodified">New in version 0.17.</span></p>
+</div>
+<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/decomposition.html#latentdirichletallocation" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
+<dl class="docutils">
+<dt>n_components <span class="classifier-delimiter">:</span> <span class="classifier">int, optional (default=10)</span></dt>
+<dd>Number of topics.</dd>
+<dt>doc_topic_prior <span class="classifier-delimiter">:</span> <span class="classifier">float, optional (default=None)</span></dt>
+<dd>Prior of document topic distribution <cite>theta</cite>. If the value is None,
+defaults to <cite>1 / n_components</cite>.
+In the literature, this is called <cite>alpha</cite>.</dd>
+<dt>topic_word_prior <span class="classifier-delimiter">:</span> <span class="classifier">float, optional (default=None)</span></dt>
+<dd>Prior of topic word distribution <cite>beta</cite>. If the value is None, defaults
+to <cite>1 / n_components</cite>.
+In the literature, this is called <cite>eta</cite>.</dd>
+<dt>learning_method <span class="classifier-delimiter">:</span> <span class="classifier">‘batch’ | ‘online’, default=’online’</span></dt>
+<dd><p class="first">Method used to update <cite>_component</cite>. Only used in <cite>fit</cite> method.
+In general, if the data size is large, the online update will be much
+faster than the batch update.
+The default learning method is going to be changed to ‘batch’ in the
+0.20 release.
+Valid options:</p>
+<div class="last highlight-default"><div class="highlight"><pre><span></span>&#39;batch&#39;: Batch variational Bayes method. Use all training data in
+    each EM update.
+    Old `components_` will be overwritten in each iteration.
+&#39;online&#39;: Online variational Bayes method. In each EM update, use
+    mini-batch of training data to update the ``components_``
+    variable incrementally. The learning rate is controlled by the
+    ``learning_decay`` and the ``learning_offset`` parameters.
+</pre></div>
+</div>
+</dd>
+<dt>learning_decay <span class="classifier-delimiter">:</span> <span class="classifier">float, optional (default=0.7)</span></dt>
+<dd>It is a parameter that control learning rate in the online learning
+method. The value should be set between (0.5, 1.0] to guarantee
+asymptotic convergence. When the value is 0.0 and batch_size is
+<code class="docutils literal"><span class="pre">n_samples</span></code>, the update method is same as batch learning. In the
+literature, this is called kappa.</dd>
+<dt>learning_offset <span class="classifier-delimiter">:</span> <span class="classifier">float, optional (default=10.)</span></dt>
+<dd>A (positive) parameter that downweights early iterations in online
+learning.  It should be greater than 1.0. In the literature, this is
+called tau_0.</dd>
+<dt>max_iter <span class="classifier-delimiter">:</span> <span class="classifier">integer, optional (default=10)</span></dt>
+<dd>The maximum number of iterations.</dd>
+<dt>batch_size <span class="classifier-delimiter">:</span> <span class="classifier">int, optional (default=128)</span></dt>
+<dd>Number of documents to use in each EM iteration. Only used in online
+learning.</dd>
+<dt>evaluate_every <span class="classifier-delimiter">:</span> <span class="classifier">int optional (default=0)</span></dt>
+<dd>How often to evaluate perplexity. Only used in <cite>fit</cite> method.
+set it to 0 or negative number to not evalute perplexity in
+training at all. Evaluating perplexity can help you check convergence
+in training process, but it will also increase total training time.
+Evaluating perplexity in every iteration might increase training time
+up to two-fold.</dd>
+<dt>total_samples <span class="classifier-delimiter">:</span> <span class="classifier">int, optional (default=1e6)</span></dt>
+<dd>Total number of documents. Only used in the <cite>partial_fit</cite> method.</dd>
+<dt>perp_tol <span class="classifier-delimiter">:</span> <span class="classifier">float, optional (default=1e-1)</span></dt>
+<dd>Perplexity tolerance in batch learning. Only used when
+<code class="docutils literal"><span class="pre">evaluate_every</span></code> is greater than 0.</dd>
+<dt>mean_change_tol <span class="classifier-delimiter">:</span> <span class="classifier">float, optional (default=1e-3)</span></dt>
+<dd>Stopping tolerance for updating document topic distribution in E-step.</dd>
+<dt>max_doc_update_iter <span class="classifier-delimiter">:</span> <span class="classifier">int (default=100)</span></dt>
+<dd>Max number of iterations for updating document topic distribution in
+the E-step.</dd>
+<dt>n_jobs <span class="classifier-delimiter">:</span> <span class="classifier">int, optional (default=1)</span></dt>
+<dd>The number of jobs to use in the E-step. If -1, all CPUs are used. For
+<code class="docutils literal"><span class="pre">n_jobs</span></code> below -1, (n_cpus + 1 + n_jobs) are used.</dd>
+<dt>verbose <span class="classifier-delimiter">:</span> <span class="classifier">int, optional (default=0)</span></dt>
+<dd>Verbosity level.</dd>
+<dt>random_state <span class="classifier-delimiter">:</span> <span class="classifier">int, RandomState instance or None, optional (default=None)</span></dt>
+<dd>If int, random_state is the seed used by the random number generator;
+If RandomState instance, random_state is the random number generator;
+If None, the random number generator is the RandomState instance used
+by <cite>np.random</cite>.</dd>
+<dt>n_topics <span class="classifier-delimiter">:</span> <span class="classifier">int, optional (default=None)</span></dt>
+<dd>This parameter has been renamed to n_components and will
+be removed in version 0.21.
+.. deprecated:: 0.19</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">components_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, [n_components, n_features]</span></dt>
+<dd>Variational parameters for topic word distribution. Since the complete
+conditional for topic word distribution is a Dirichlet,
+<code class="docutils literal"><span class="pre">components_[i,</span> <span class="pre">j]</span></code> can be viewed as pseudocount that represents the
+number of times word <cite>j</cite> was assigned to topic <cite>i</cite>.
+It can also be viewed as distribution over the words for each topic
+after normalization:
+<code class="docutils literal"><span class="pre">model.components_</span> <span class="pre">/</span> <span class="pre">model.components_.sum(axis=1)[:,</span> <span class="pre">np.newaxis]</span></code>.</dd>
+<dt><a href="#id3"><span class="problematic" id="id4">n_batch_iter_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd>Number of iterations of the EM step.</dd>
+<dt><a href="#id5"><span class="problematic" id="id6">n_iter_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd>Number of passes over the dataset.</dd>
+</dl>
+<dl class="docutils">
+<dt>[1] “Online Learning for Latent Dirichlet Allocation”, Matthew D. Hoffman,</dt>
+<dd>David M. Blei, Francis Bach, 2010</dd>
+<dt>[2] “Stochastic Variational Inference”, Matthew D. Hoffman, David M. Blei,</dt>
+<dd>Chong Wang, John Paisley, 2013</dd>
+<dt>[3] Matthew D. Hoffman’s onlineldavb code. Link:</dt>
+<dd><a class="reference external" href="http://matthewdhoffman.com//code/onlineldavb.tar">http://matthewdhoffman.com//code/onlineldavb.tar</a></dd>
+</dl>
+</div></blockquote>
+<dl class="method">
+<dt id="ibex.sklearn.decomposition.LatentDirichletAllocation.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/decomposition/online_lda.html#LatentDirichletAllocation.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.decomposition.LatentDirichletAllocation.fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Learn model for the data X with variational Bayes method.</p>
+<blockquote>
+<div><p>When <cite>learning_method</cite> is ‘online’, use mini-batch update.
+Otherwise, use batch update.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like or sparse matrix, shape=(n_samples, n_features)</span></dt>
+<dd>Document word matrix.</dd>
+</dl>
+<p>self</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.decomposition.LatentDirichletAllocation.fit_transform">
+<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em>, <em>**fit_params</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.decomposition.LatentDirichletAllocation.fit_transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit to data, then transform it.</p>
+<blockquote>
+<div><p>Fits transformer to X and y with optional parameters fit_params
+and returns a transformed version of X.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_features]</span></dt>
+<dd>Training set.</dd>
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples]</span></dt>
+<dd>Target values.</dd>
+</dl>
+<dl class="docutils">
+<dt>X_new <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_features_new]</span></dt>
+<dd>Transformed array.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.decomposition.LatentDirichletAllocation.partial_fit">
+<code class="descname">partial_fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/decomposition/online_lda.html#LatentDirichletAllocation.partial_fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.decomposition.LatentDirichletAllocation.partial_fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Online VB with Mini-Batch update.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like or sparse matrix, shape=(n_samples, n_features)</span></dt>
+<dd>Document word matrix.</dd>
+</dl>
+<p>self</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.decomposition.LatentDirichletAllocation.perplexity">
+<code class="descname">perplexity</code><span class="sig-paren">(</span><em>X</em>, <em>doc_topic_distr='deprecated'</em>, <em>sub_sampling=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/decomposition/online_lda.html#LatentDirichletAllocation.perplexity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.decomposition.LatentDirichletAllocation.perplexity" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Calculate approximate perplexity for data X.</p>
+<blockquote>
+<div><p>Perplexity is defined as exp(-1. * log-likelihood per word)</p>
+<div class="versionchanged">
+<p><span class="versionmodified">Changed in version 0.19: </span><em>doc_topic_distr</em> argument has been deprecated and is ignored
+because user no longer has access to unnormalized distribution</p>
+</div>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like or sparse matrix, [n_samples, n_features]</span></dt>
+<dd>Document word matrix.</dd>
+<dt>doc_topic_distr <span class="classifier-delimiter">:</span> <span class="classifier">None or array, shape=(n_samples, n_components)</span></dt>
+<dd><p class="first">Document topic distribution.
+This argument is deprecated and is currently being ignored.</p>
+<div class="last deprecated">
+<p><span class="versionmodified">Deprecated since version 0.19.</span></p>
+</div>
+</dd>
+<dt>sub_sampling <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>Do sub-sampling or not.</dd>
+</dl>
+<dl class="docutils">
+<dt>score <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>Perplexity score.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.decomposition.LatentDirichletAllocation.score">
+<code class="descname">score</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/decomposition/online_lda.html#LatentDirichletAllocation.score"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.decomposition.LatentDirichletAllocation.score" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Calculate approximate log-likelihood as score.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like or sparse matrix, shape=(n_samples, n_features)</span></dt>
+<dd>Document word matrix.</dd>
+</dl>
+<dl class="docutils">
+<dt>score <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>Use approximate bound as score.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.decomposition.LatentDirichletAllocation.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/decomposition/online_lda.html#LatentDirichletAllocation.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.decomposition.LatentDirichletAllocation.transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Transform data X according to the fitted model.</p>
+<blockquote>
+<div><blockquote>
+<div><div class="versionchanged">
+<p><span class="versionmodified">Changed in version 0.18: </span><em>doc_topic_distr</em> is now normalized</p>
+</div>
+</div></blockquote>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like or sparse matrix, shape=(n_samples, n_features)</span></dt>
+<dd>Document word matrix.</dd>
+</dl>
+<dl class="docutils">
+<dt>doc_topic_distr <span class="classifier-delimiter">:</span> <span class="classifier">shape=(n_samples, n_components)</span></dt>
+<dd>Document topic distribution for X.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex_sklearn_decomposition_latentdirichletallocation.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex_sklearn_decomposition_latentdirichletallocation.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

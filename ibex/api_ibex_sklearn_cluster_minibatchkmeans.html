@@ -1,0 +1,412 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>MiniBatchKMeans &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="minibatchkmeans">
+<h1><code class="docutils literal"><span class="pre">MiniBatchKMeans</span></code><a class="headerlink" href="#minibatchkmeans" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="ibex.sklearn.cluster.MiniBatchKMeans">
+<em class="property">class </em><code class="descclassname">ibex.sklearn.cluster.</code><code class="descname">MiniBatchKMeans</code><span class="sig-paren">(</span><em>n_clusters=8</em>, <em>init='k-means++'</em>, <em>max_iter=100</em>, <em>batch_size=100</em>, <em>verbose=0</em>, <em>compute_labels=True</em>, <em>random_state=None</em>, <em>tol=0.0</em>, <em>max_no_improvement=10</em>, <em>init_size=None</em>, <em>n_init=3</em>, <em>reassignment_ratio=0.01</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.cluster.MiniBatchKMeans" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.cluster.k_means_.MiniBatchKMeans</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Mini-Batch K-Means clustering</p>
+<blockquote>
+<div><p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/clustering.html#mini-batch-kmeans" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
+<dl class="docutils">
+<dt>n_clusters <span class="classifier-delimiter">:</span> <span class="classifier">int, optional, default: 8</span></dt>
+<dd>The number of clusters to form as well as the number of
+centroids to generate.</dd>
+<dt>init <span class="classifier-delimiter">:</span> <span class="classifier">{‘k-means++’, ‘random’ or an ndarray}, default: ‘k-means++’</span></dt>
+<dd><p class="first">Method for initialization, defaults to ‘k-means++’:</p>
+<p>‘k-means++’ : selects initial cluster centers for k-mean
+clustering in a smart way to speed up convergence. See section
+Notes in k_init for more details.</p>
+<p>‘random’: choose k observations (rows) at random from data for
+the initial centroids.</p>
+<p class="last">If an ndarray is passed, it should be of shape (n_clusters, n_features)
+and gives the initial centers.</p>
+</dd>
+<dt>max_iter <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd>Maximum number of iterations over the complete dataset before
+stopping independently of any early stopping criterion heuristics.</dd>
+<dt>batch_size <span class="classifier-delimiter">:</span> <span class="classifier">int, optional, default: 100</span></dt>
+<dd>Size of the mini batches.</dd>
+<dt>verbose <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional</span></dt>
+<dd>Verbosity mode.</dd>
+<dt>compute_labels <span class="classifier-delimiter">:</span> <span class="classifier">boolean, default=True</span></dt>
+<dd>Compute label assignment and inertia for the complete dataset
+once the minibatch optimization has converged in fit.</dd>
+<dt>random_state <span class="classifier-delimiter">:</span> <span class="classifier">int, RandomState instance or None, optional, default: None</span></dt>
+<dd>If int, random_state is the seed used by the random number generator;
+If RandomState instance, random_state is the random number generator;
+If None, the random number generator is the RandomState instance used
+by <cite>np.random</cite>.</dd>
+<dt>tol <span class="classifier-delimiter">:</span> <span class="classifier">float, default: 0.0</span></dt>
+<dd><p class="first">Control early stopping based on the relative center changes as
+measured by a smoothed, variance-normalized of the mean center
+squared position changes. This early stopping heuristics is
+closer to the one used for the batch variant of the algorithms
+but induces a slight computational and memory overhead over the
+inertia heuristic.</p>
+<p class="last">To disable convergence detection based on normalized center
+change, set tol to 0.0 (default).</p>
+</dd>
+<dt>max_no_improvement <span class="classifier-delimiter">:</span> <span class="classifier">int, default: 10</span></dt>
+<dd><p class="first">Control early stopping based on the consecutive number of mini
+batches that does not yield an improvement on the smoothed inertia.</p>
+<p class="last">To disable convergence detection based on inertia, set
+max_no_improvement to None.</p>
+</dd>
+<dt>init_size <span class="classifier-delimiter">:</span> <span class="classifier">int, optional, default: 3 * batch_size</span></dt>
+<dd>Number of samples to randomly sample for speeding up the
+initialization (sometimes at the expense of accuracy): the
+only algorithm is initialized by running a batch KMeans on a
+random subset of the data. This needs to be larger than n_clusters.</dd>
+<dt>n_init <span class="classifier-delimiter">:</span> <span class="classifier">int, default=3</span></dt>
+<dd>Number of random initializations that are tried.
+In contrast to KMeans, the algorithm is only run once, using the
+best of the <code class="docutils literal"><span class="pre">n_init</span></code> initializations as measured by inertia.</dd>
+<dt>reassignment_ratio <span class="classifier-delimiter">:</span> <span class="classifier">float, default: 0.01</span></dt>
+<dd>Control the fraction of the maximum number of counts for a
+center to be reassigned. A higher value means that low count
+centers are more easily reassigned, which means that the
+model will take longer to converge, but should converge in a
+better clustering.</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">cluster_centers_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, [n_clusters, n_features]</span></dt>
+<dd>Coordinates of cluster centers</dd>
+<dt><a href="#id3"><span class="problematic" id="id4">labels_</span></a> :</dt>
+<dd>Labels of each point (if compute_labels is set to True).</dd>
+<dt><a href="#id5"><span class="problematic" id="id6">inertia_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>The value of the inertia criterion associated with the chosen
+partition (if compute_labels is set to True). The inertia is
+defined as the sum of square distances of samples to their nearest
+neighbor.</dd>
+</dl>
+<dl class="docutils">
+<dt>KMeans</dt>
+<dd>The classic implementation of the clustering method based on the
+Lloyd’s algorithm. It consumes the whole set of input data at each
+iteration.</dd>
+</dl>
+<p>See <a class="reference external" href="http://www.eecs.tufts.edu/~dsculley/papers/fastkmeans.pdf">http://www.eecs.tufts.edu/~dsculley/papers/fastkmeans.pdf</a></p>
+</div></blockquote>
+<dl class="method">
+<dt id="ibex.sklearn.cluster.MiniBatchKMeans.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/cluster/k_means_.html#MiniBatchKMeans.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.cluster.MiniBatchKMeans.fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Compute the centroids on X by chunking it into mini-batches.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like or sparse matrix, shape=(n_samples, n_features)</span></dt>
+<dd>Training instances to cluster.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.cluster.MiniBatchKMeans.fit_predict">
+<code class="descname">fit_predict</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.cluster.MiniBatchKMeans.fit_predict" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Compute cluster centers and predict cluster index for each sample.</p>
+<blockquote>
+<div><p>Convenience method; equivalent to calling fit(X) followed by
+predict(X).</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape = [n_samples, n_features]</span></dt>
+<dd>New data to transform.</dd>
+</dl>
+<dl class="docutils">
+<dt>labels <span class="classifier-delimiter">:</span> <span class="classifier">array, shape [n_samples,]</span></dt>
+<dd>Index of the cluster each sample belongs to.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.cluster.MiniBatchKMeans.fit_transform">
+<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.cluster.MiniBatchKMeans.fit_transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Compute clustering and transform X to cluster-distance space.</p>
+<blockquote>
+<div><p>Equivalent to fit(X).transform(X), but more efficiently implemented.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape = [n_samples, n_features]</span></dt>
+<dd>New data to transform.</dd>
+</dl>
+<dl class="docutils">
+<dt>X_new <span class="classifier-delimiter">:</span> <span class="classifier">array, shape [n_samples, k]</span></dt>
+<dd>X transformed in the new space.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.cluster.MiniBatchKMeans.partial_fit">
+<code class="descname">partial_fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/cluster/k_means_.html#MiniBatchKMeans.partial_fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.cluster.MiniBatchKMeans.partial_fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Update k means estimate on a single mini-batch X.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = [n_samples, n_features]</span></dt>
+<dd>Coordinates of the data points to cluster.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.cluster.MiniBatchKMeans.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/cluster/k_means_.html#MiniBatchKMeans.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.cluster.MiniBatchKMeans.predict" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Predict the closest cluster each sample in X belongs to.</p>
+<blockquote>
+<div><p>In the vector quantization literature, <cite>cluster_centers_</cite> is called
+the code book and each value returned by <cite>predict</cite> is the index of
+the closest code in the code book.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape = [n_samples, n_features]</span></dt>
+<dd>New data to predict.</dd>
+</dl>
+<dl class="docutils">
+<dt>labels <span class="classifier-delimiter">:</span> <span class="classifier">array, shape [n_samples,]</span></dt>
+<dd>Index of the cluster each sample belongs to.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.cluster.MiniBatchKMeans.score">
+<code class="descname">score</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.cluster.MiniBatchKMeans.score" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Opposite of the value of X on the K-means objective.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape = [n_samples, n_features]</span></dt>
+<dd>New data.</dd>
+</dl>
+<dl class="docutils">
+<dt>score <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>Opposite of the value of X on the K-means objective.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.cluster.MiniBatchKMeans.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.cluster.MiniBatchKMeans.transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Transform X to a cluster-distance space.</p>
+<blockquote>
+<div><p>In the new space, each dimension is the distance to the cluster
+centers.  Note that even if X is sparse, the array returned by
+<cite>transform</cite> will typically be dense.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape = [n_samples, n_features]</span></dt>
+<dd>New data to transform.</dd>
+</dl>
+<dl class="docutils">
+<dt>X_new <span class="classifier-delimiter">:</span> <span class="classifier">array, shape [n_samples, k]</span></dt>
+<dd>X transformed in the new space.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex_sklearn_cluster_minibatchkmeans.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex_sklearn_cluster_minibatchkmeans.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

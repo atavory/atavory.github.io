@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Transforming &#8212; ibex 0.1.1 documentation</title>
+    <title>Transforming &#8212; ibex latest documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1.1',
+        VERSION:     'latest',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -46,7 +46,7 @@
 <span id="function-transformer"></span><h1>Transforming<a class="headerlink" href="#transforming" title="Permalink to this headline">¶</a></h1>
 <p>This chapter describes the <a class="reference internal" href="api_ibex_trans.html#ibex.trans" title="ibex.trans"><code class="xref py py-func docutils literal"><span class="pre">ibex.trans()</span></code></a> function, which allows</p>
 <ol class="arabic simple">
-<li>applying functions or estimators to <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> objects</li>
+<li>applying functions or estimators to <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> objects</li>
 <li>selecting a subset of columns for applications</li>
 <li>naming the output columns of the results</li>
 </ol>
@@ -75,7 +75,7 @@
 <p class="last"><a class="reference internal" href="#function-transformer-specifying-output-columns"><span class="std std-ref">Specifying Output Columns</span></a> and <a class="reference internal" href="#function-transformer-multiple-transformations"><span class="std std-ref">Multiple Transformations</span></a> show uses for this.</p>
 </div>
 <p>The <code class="docutils literal"><span class="pre">func</span></code> argument can alternatively be a function, which will be applied to the
-<a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.values.html#pandas.DataFrame.values" title="(in pandas v0.20.3)"><code class="xref py py-attr docutils literal"><span class="pre">pandas.DataFrame.values</span></code></a> of the input:</p>
+<a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.values.html#pandas.DataFrame.values" title="(in pandas v0.21.0)"><code class="xref py py-attr docutils literal"><span class="pre">pandas.DataFrame.values</span></code></a> of the input:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">trans</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">)</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
 <span class="go">          a         b</span>

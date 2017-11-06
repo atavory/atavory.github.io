@@ -1,0 +1,501 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.linear_model.theil_sen &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.linear_model.theil_sen</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">A Theil-Sen Estimator for Multiple Linear Regression Model</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Author: Florian Wilhelm &lt;florian.wilhelm@gmail.com&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">absolute_import</span>
+
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="k">import</span> <span class="n">combinations</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">linalg</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="k">import</span> <span class="n">binom</span>
+<span class="kn">from</span> <span class="nn">scipy.linalg.lapack</span> <span class="k">import</span> <span class="n">get_lapack_funcs</span>
+
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">LinearModel</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">RegressorMixin</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_random_state</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_X_y</span><span class="p">,</span> <span class="n">_get_n_jobs</span>
+<span class="kn">from</span> <span class="nn">..externals.joblib</span> <span class="k">import</span> <span class="n">Parallel</span><span class="p">,</span> <span class="n">delayed</span>
+<span class="kn">from</span> <span class="nn">..externals.six.moves</span> <span class="k">import</span> <span class="n">xrange</span> <span class="k">as</span> <span class="nb">range</span>
+<span class="kn">from</span> <span class="nn">..exceptions</span> <span class="k">import</span> <span class="n">ConvergenceWarning</span>
+
+<span class="n">_EPSILON</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">double</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+
+
+<span class="k">def</span> <span class="nf">_modified_weiszfeld_step</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">x_old</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Modified Weiszfeld step.</span>
+
+<span class="sd">    This function defines one iteration step in order to approximate the</span>
+<span class="sd">    spatial median (L1 median). It is a form of an iteratively re-weighted</span>
+<span class="sd">    least squares method.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array, shape = [n_samples, n_features]</span>
+<span class="sd">        Training vector, where n_samples is the number of samples and</span>
+<span class="sd">        n_features is the number of features.</span>
+
+<span class="sd">    x_old : array, shape = [n_features]</span>
+<span class="sd">        Current start vector.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    x_new : array, shape = [n_features]</span>
+<span class="sd">        New iteration step.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    - On Computation of Spatial Median for Robust Data Mining, 2005</span>
+<span class="sd">      T. Kärkkäinen and S. Äyrämö</span>
+<span class="sd">      http://users.jyu.fi/~samiayr/pdf/ayramo_eurogen05.pdf</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">diff</span> <span class="o">=</span> <span class="n">X</span> <span class="o">-</span> <span class="n">x_old</span>
+    <span class="n">diff_norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">diff</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">diff_norm</span> <span class="o">&gt;=</span> <span class="n">_EPSILON</span>
+    <span class="c1"># x_old equals one of our samples</span>
+    <span class="n">is_x_old_in_X</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="n">diff</span> <span class="o">=</span> <span class="n">diff</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+    <span class="n">diff_norm</span> <span class="o">=</span> <span class="n">diff_norm</span><span class="p">[</span><span class="n">mask</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+    <span class="n">quotient_norm</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">diff</span> <span class="o">/</span> <span class="n">diff_norm</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">quotient_norm</span> <span class="o">&gt;</span> <span class="n">_EPSILON</span><span class="p">:</span>  <span class="c1"># to avoid division by zero</span>
+        <span class="n">new_direction</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/</span> <span class="n">diff_norm</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                         <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">diff_norm</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">new_direction</span> <span class="o">=</span> <span class="mf">1.</span>
+        <span class="n">quotient_norm</span> <span class="o">=</span> <span class="mf">1.</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span> <span class="o">-</span> <span class="n">is_x_old_in_X</span> <span class="o">/</span> <span class="n">quotient_norm</span><span class="p">)</span> <span class="o">*</span> <span class="n">new_direction</span>
+            <span class="o">+</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="n">is_x_old_in_X</span> <span class="o">/</span> <span class="n">quotient_norm</span><span class="p">)</span> <span class="o">*</span> <span class="n">x_old</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_spatial_median</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1.e-3</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Spatial median (L1 median).</span>
+
+<span class="sd">    The spatial median is member of a class of so-called M-estimators which</span>
+<span class="sd">    are defined by an optimization problem. Given a number of p points in an</span>
+<span class="sd">    n-dimensional space, the point x minimizing the sum of all distances to the</span>
+<span class="sd">    p other points is called spatial median.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array, shape = [n_samples, n_features]</span>
+<span class="sd">        Training vector, where n_samples is the number of samples and</span>
+<span class="sd">        n_features is the number of features.</span>
+
+<span class="sd">    max_iter : int, optional</span>
+<span class="sd">        Maximum number of iterations.  Default is 300.</span>
+
+<span class="sd">    tol : float, optional</span>
+<span class="sd">        Stop the algorithm if spatial_median has converged. Default is 1.e-3.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    spatial_median : array, shape = [n_features]</span>
+<span class="sd">        Spatial median.</span>
+
+<span class="sd">    n_iter : int</span>
+<span class="sd">        Number of iterations needed.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    - On Computation of Spatial Median for Robust Data Mining, 2005</span>
+<span class="sd">      T. Kärkkäinen and S. Äyrämö</span>
+<span class="sd">      http://users.jyu.fi/~samiayr/pdf/ayramo_eurogen05.pdf</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+
+    <span class="n">tol</span> <span class="o">**=</span> <span class="mi">2</span>  <span class="c1"># We are computing the tol on the squared norm</span>
+    <span class="n">spatial_median_old</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">n_iter</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_iter</span><span class="p">):</span>
+        <span class="n">spatial_median</span> <span class="o">=</span> <span class="n">_modified_weiszfeld_step</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">spatial_median_old</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">spatial_median_old</span> <span class="o">-</span> <span class="n">spatial_median</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">tol</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">spatial_median_old</span> <span class="o">=</span> <span class="n">spatial_median</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Maximum number of iterations </span><span class="si">{max_iter}</span><span class="s2"> reached in &quot;</span>
+                      <span class="s2">&quot;spatial median for TheilSen regressor.&quot;</span>
+                      <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">),</span> <span class="n">ConvergenceWarning</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">n_iter</span><span class="p">,</span> <span class="n">spatial_median</span>
+
+
+<span class="k">def</span> <span class="nf">_breakdown_point</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_subsamples</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Approximation of the breakdown point.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_samples : int</span>
+<span class="sd">        Number of samples.</span>
+
+<span class="sd">    n_subsamples : int</span>
+<span class="sd">        Number of subsamples to consider.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    breakdown_point : float</span>
+<span class="sd">        Approximation of breakdown point.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">n_subsamples</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_samples</span> <span class="o">-</span> <span class="n">n_subsamples</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span>
+                <span class="n">n_subsamples</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_samples</span>
+
+
+<span class="k">def</span> <span class="nf">_lstsq</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Least Squares Estimator for TheilSenRegressor class.</span>
+
+<span class="sd">    This function calculates the least squares method on a subset of rows of X</span>
+<span class="sd">    and y defined by the indices array. Optionally, an intercept column is</span>
+<span class="sd">    added if intercept is set to true.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array, shape = [n_samples, n_features]</span>
+<span class="sd">        Design matrix, where n_samples is the number of samples and</span>
+<span class="sd">        n_features is the number of features.</span>
+
+<span class="sd">    y : array, shape = [n_samples]</span>
+<span class="sd">        Target vector, where n_samples is the number of samples.</span>
+
+<span class="sd">    indices : array, shape = [n_subpopulation, n_subsamples]</span>
+<span class="sd">        Indices of all subsamples with respect to the chosen subpopulation.</span>
+
+<span class="sd">    fit_intercept : bool</span>
+<span class="sd">        Fit intercept or not.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    weights : array, shape = [n_subpopulation, n_features + intercept]</span>
+<span class="sd">        Solution matrix of n_subpopulation solved least square problems.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fit_intercept</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">fit_intercept</span><span class="p">)</span>
+    <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">fit_intercept</span>
+    <span class="n">n_subsamples</span> <span class="o">=</span> <span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">n_features</span><span class="p">))</span>
+    <span class="n">X_subpopulation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n_subsamples</span><span class="p">,</span> <span class="n">n_features</span><span class="p">))</span>
+    <span class="c1"># gelss need to pad y_subpopulation to be of the max dim of X_subpopulation</span>
+    <span class="n">y_subpopulation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">max</span><span class="p">(</span><span class="n">n_subsamples</span><span class="p">,</span> <span class="n">n_features</span><span class="p">)))</span>
+    <span class="n">lstsq</span><span class="p">,</span> <span class="o">=</span> <span class="n">get_lapack_funcs</span><span class="p">((</span><span class="s1">&#39;gelss&#39;</span><span class="p">,),</span> <span class="p">(</span><span class="n">X_subpopulation</span><span class="p">,</span> <span class="n">y_subpopulation</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">subset</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">indices</span><span class="p">):</span>
+        <span class="n">X_subpopulation</span><span class="p">[:,</span> <span class="n">fit_intercept</span><span class="p">:]</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">subset</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">y_subpopulation</span><span class="p">[:</span><span class="n">n_subsamples</span><span class="p">]</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">subset</span><span class="p">]</span>
+        <span class="n">weights</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">lstsq</span><span class="p">(</span><span class="n">X_subpopulation</span><span class="p">,</span>
+                               <span class="n">y_subpopulation</span><span class="p">)[</span><span class="mi">1</span><span class="p">][:</span><span class="n">n_features</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">weights</span>
+
+
+<span class="k">class</span> <span class="nc">TheilSenRegressor</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Theil-Sen Estimator: robust multivariate regression model.</span>
+
+<span class="sd">    The algorithm calculates least square solutions on subsets with size</span>
+<span class="sd">    n_subsamples of the samples in X. Any value of n_subsamples between the</span>
+<span class="sd">    number of features and samples leads to an estimator with a compromise</span>
+<span class="sd">    between robustness and efficiency. Since the number of least square</span>
+<span class="sd">    solutions is &quot;n_samples choose n_subsamples&quot;, it can be extremely large</span>
+<span class="sd">    and can therefore be limited with max_subpopulation. If this limit is</span>
+<span class="sd">    reached, the subsets are chosen randomly. In a final step, the spatial</span>
+<span class="sd">    median (or L1 median) is calculated of all least square solutions.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;theil_sen_regression&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    fit_intercept : boolean, optional, default True</span>
+<span class="sd">        Whether to calculate the intercept for this model. If set</span>
+<span class="sd">        to false, no intercept will be used in calculations.</span>
+
+<span class="sd">    copy_X : boolean, optional, default True</span>
+<span class="sd">        If True, X will be copied; else, it may be overwritten.</span>
+
+<span class="sd">    max_subpopulation : int, optional, default 1e4</span>
+<span class="sd">        Instead of computing with a set of cardinality &#39;n choose k&#39;, where n is</span>
+<span class="sd">        the number of samples and k is the number of subsamples (at least</span>
+<span class="sd">        number of features), consider only a stochastic subpopulation of a</span>
+<span class="sd">        given maximal size if &#39;n choose k&#39; is larger than max_subpopulation.</span>
+<span class="sd">        For other than small problem sizes this parameter will determine</span>
+<span class="sd">        memory usage and runtime if n_subsamples is not changed.</span>
+
+<span class="sd">    n_subsamples : int, optional, default None</span>
+<span class="sd">        Number of samples to calculate the parameters. This is at least the</span>
+<span class="sd">        number of features (plus 1 if fit_intercept=True) and the number of</span>
+<span class="sd">        samples as a maximum. A lower number leads to a higher breakdown</span>
+<span class="sd">        point and a low efficiency while a high number leads to a low</span>
+<span class="sd">        breakdown point and a high efficiency. If None, take the</span>
+<span class="sd">        minimum number of subsamples leading to maximal robustness.</span>
+<span class="sd">        If n_subsamples is set to n_samples, Theil-Sen is identical to least</span>
+<span class="sd">        squares.</span>
+
+<span class="sd">    max_iter : int, optional, default 300</span>
+<span class="sd">        Maximum number of iterations for the calculation of spatial median.</span>
+
+<span class="sd">    tol : float, optional, default 1.e-3</span>
+<span class="sd">        Tolerance when calculating spatial median.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional, default None</span>
+<span class="sd">        A random number generator instance to define the state of the random</span>
+<span class="sd">        permutations generator.  If int, random_state is the seed used by the</span>
+<span class="sd">        random number generator; If RandomState instance, random_state is the</span>
+<span class="sd">        random number generator; If None, the random number generator is the</span>
+<span class="sd">        RandomState instance used by `np.random`.</span>
+
+<span class="sd">    n_jobs : integer, optional, default 1</span>
+<span class="sd">        Number of CPUs to use during the cross validation. If ``-1``, use</span>
+<span class="sd">        all the CPUs.</span>
+
+<span class="sd">    verbose : boolean, optional, default False</span>
+<span class="sd">        Verbose mode when fitting the model.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coef_ : array, shape = (n_features)</span>
+<span class="sd">        Coefficients of the regression model (median of distribution).</span>
+
+<span class="sd">    intercept_ : float</span>
+<span class="sd">        Estimated intercept of regression model.</span>
+
+<span class="sd">    breakdown_ : float</span>
+<span class="sd">        Approximated breakdown point.</span>
+
+<span class="sd">    n_iter_ : int</span>
+<span class="sd">        Number of iterations needed for the spatial median.</span>
+
+<span class="sd">    n_subpopulation_ : int</span>
+<span class="sd">        Number of combinations taken into account from &#39;n choose k&#39;, where n is</span>
+<span class="sd">        the number of samples and k is the number of subsamples.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    - Theil-Sen Estimators in a Multiple Linear Regression Model, 2009</span>
+<span class="sd">      Xin Dang, Hanxiang Peng, Xueqin Wang and Heping Zhang</span>
+<span class="sd">      http://home.olemiss.edu/~xdang/papers/MTSE.pdf</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">copy_X</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">max_subpopulation</span><span class="o">=</span><span class="mf">1e4</span><span class="p">,</span> <span class="n">n_subsamples</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
+                 <span class="n">tol</span><span class="o">=</span><span class="mf">1.e-3</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span> <span class="o">=</span> <span class="n">fit_intercept</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">copy_X</span> <span class="o">=</span> <span class="n">copy_X</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_subpopulation</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">max_subpopulation</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_subsamples</span> <span class="o">=</span> <span class="n">n_subsamples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+
+    <span class="k">def</span> <span class="nf">_check_subparams</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span><span class="p">):</span>
+        <span class="n">n_subsamples</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_subsamples</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">:</span>
+            <span class="n">n_dim</span> <span class="o">=</span> <span class="n">n_features</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">n_dim</span> <span class="o">=</span> <span class="n">n_features</span>
+
+        <span class="k">if</span> <span class="n">n_subsamples</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">n_subsamples</span> <span class="o">&gt;</span> <span class="n">n_samples</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid parameter since n_subsamples &gt; &quot;</span>
+                                 <span class="s2">&quot;n_samples (</span><span class="si">{0}</span><span class="s2"> &gt; </span><span class="si">{1}</span><span class="s2">).&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_subsamples</span><span class="p">,</span>
+                                                                 <span class="n">n_samples</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">n_samples</span> <span class="o">&gt;=</span> <span class="n">n_features</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">n_dim</span> <span class="o">&gt;</span> <span class="n">n_subsamples</span><span class="p">:</span>
+                    <span class="n">plus_1</span> <span class="o">=</span> <span class="s2">&quot;+1&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid parameter since n_features</span><span class="si">{0}</span><span class="s2"> &quot;</span>
+                                     <span class="s2">&quot;&gt; n_subsamples (</span><span class="si">{1}</span><span class="s2"> &gt; </span><span class="si">{2}</span><span class="s2">).&quot;</span>
+                                     <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">plus_1</span><span class="p">,</span> <span class="n">n_dim</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># if n_samples &lt; n_features</span>
+                <span class="k">if</span> <span class="n">n_subsamples</span> <span class="o">!=</span> <span class="n">n_samples</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid parameter since n_subsamples != &quot;</span>
+                                     <span class="s2">&quot;n_samples (</span><span class="si">{0}</span><span class="s2"> != </span><span class="si">{1}</span><span class="s2">) while n_samples &quot;</span>
+                                     <span class="s2">&quot;&lt; n_features.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_subsamples</span><span class="p">,</span>
+                                                            <span class="n">n_samples</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">n_subsamples</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">n_dim</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_subpopulation</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Subpopulation must be strictly positive &quot;</span>
+                             <span class="s2">&quot;(</span><span class="si">{0}</span><span class="s2"> &lt;= 0).&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_subpopulation</span><span class="p">))</span>
+
+        <span class="n">all_combinations</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">binom</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_subsamples</span><span class="p">)))</span>
+        <span class="n">n_subpopulation</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_subpopulation</span><span class="p">,</span> <span class="n">all_combinations</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">n_subsamples</span><span class="p">,</span> <span class="n">n_subpopulation</span>
+
+<div class="viewcode-block" id="TheilSenRegressor.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_theilsenregressor.html#ibex.sklearn.linear_model.TheilSenRegressor.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit linear model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : numpy array of shape [n_samples, n_features]</span>
+<span class="sd">            Training data</span>
+<span class="sd">        y : numpy array of shape [n_samples]</span>
+<span class="sd">            Target values</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : returns an instance of self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">random_state</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">y_numeric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">n_subsamples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_subpopulation_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_subparams</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span>
+                                                                    <span class="n">n_features</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">breakdown_</span> <span class="o">=</span> <span class="n">_breakdown_point</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_subsamples</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Breakdown point: </span><span class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">breakdown_</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Number of samples: </span><span class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_samples</span><span class="p">))</span>
+            <span class="n">tol_outliers</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">breakdown_</span> <span class="o">*</span> <span class="n">n_samples</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Tolerable outliers: </span><span class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">tol_outliers</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Number of subpopulations: </span><span class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">n_subpopulation_</span><span class="p">))</span>
+
+        <span class="c1"># Determine indices of subpopulation</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">binom</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_subsamples</span><span class="p">))</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_subpopulation</span><span class="p">:</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">combinations</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_samples</span><span class="p">),</span> <span class="n">n_subsamples</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="p">[</span><span class="n">random_state</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_subsamples</span><span class="p">,</span>
+                                           <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                       <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_subpopulation_</span><span class="p">)]</span>
+
+        <span class="n">n_jobs</span> <span class="o">=</span> <span class="n">_get_n_jobs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">)</span>
+        <span class="n">index_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array_split</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">)</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span>
+                           <span class="n">verbose</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">)(</span>
+            <span class="n">delayed</span><span class="p">(</span><span class="n">_lstsq</span><span class="p">)(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">index_list</span><span class="p">[</span><span class="n">job</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">job</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_jobs</span><span class="p">))</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span><span class="p">,</span> <span class="n">coefs</span> <span class="o">=</span> <span class="n">_spatial_median</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span>
+                                              <span class="n">max_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span>
+                                              <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">=</span> <span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">=</span> <span class="mf">0.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">coefs</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

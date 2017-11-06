@@ -1,0 +1,356 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>IsotonicRegression &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="isotonicregression">
+<h1><code class="docutils literal"><span class="pre">IsotonicRegression</span></code><a class="headerlink" href="#isotonicregression" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="ibex.sklearn.isotonic.IsotonicRegression">
+<em class="property">class </em><code class="descclassname">ibex.sklearn.isotonic.</code><code class="descname">IsotonicRegression</code><span class="sig-paren">(</span><em>y_min=None</em>, <em>y_max=None</em>, <em>increasing=True</em>, <em>out_of_bounds='nan'</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.isotonic.IsotonicRegression" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.isotonic.IsotonicRegression.html#sklearn.isotonic.IsotonicRegression" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.isotonic.IsotonicRegression</span></code></a>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Isotonic regression model.</p>
+<blockquote>
+<div><p>The isotonic regression optimization problem is defined by:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">min</span> <span class="nb">sum</span> <span class="n">w_i</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">y_</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
+
+<span class="n">subject</span> <span class="n">to</span> <span class="n">y_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">y_</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="n">whenever</span> <span class="n">X</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">X</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+<span class="ow">and</span> <span class="nb">min</span><span class="p">(</span><span class="n">y_</span><span class="p">)</span> <span class="o">=</span> <span class="n">y_min</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">y_</span><span class="p">)</span> <span class="o">=</span> <span class="n">y_max</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>where:</dt>
+<dd><ul class="first last simple">
+<li><code class="docutils literal"><span class="pre">y[i]</span></code> are inputs (real numbers)</li>
+<li><code class="docutils literal"><span class="pre">y_[i]</span></code> are fitted</li>
+<li><code class="docutils literal"><span class="pre">X</span></code> specifies the order.
+If <code class="docutils literal"><span class="pre">X</span></code> is non-decreasing then <code class="docutils literal"><span class="pre">y_</span></code> is non-decreasing.</li>
+<li><code class="docutils literal"><span class="pre">w[i]</span></code> are optional strictly positive weights (default to 1.0)</li>
+</ul>
+</dd>
+</dl>
+<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/isotonic.html#isotonic" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
+<dl class="docutils">
+<dt>y_min <span class="classifier-delimiter">:</span> <span class="classifier">optional, default: None</span></dt>
+<dd>If not None, set the lowest value of the fit to y_min.</dd>
+<dt>y_max <span class="classifier-delimiter">:</span> <span class="classifier">optional, default: None</span></dt>
+<dd>If not None, set the highest value of the fit to y_max.</dd>
+<dt>increasing <span class="classifier-delimiter">:</span> <span class="classifier">boolean or string, optional, default: True</span></dt>
+<dd><p class="first">If boolean, whether or not to fit the isotonic regression with y
+increasing or decreasing.</p>
+<p class="last">The string value “auto” determines whether y should
+increase or decrease based on the Spearman correlation estimate’s
+sign.</p>
+</dd>
+<dt>out_of_bounds <span class="classifier-delimiter">:</span> <span class="classifier">string, optional, default: “nan”</span></dt>
+<dd>The <code class="docutils literal"><span class="pre">out_of_bounds</span></code> parameter handles how x-values outside of the
+training domain are handled.  When set to “nan”, predicted y-values
+will be NaN.  When set to “clip”, predicted y-values will be
+set to the value corresponding to the nearest train interval endpoint.
+When set to “raise”, allow <code class="docutils literal"><span class="pre">interp1d</span></code> to throw ValueError.</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">X_min_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>Minimum value of input array <cite>X_</cite> for left bound.</dd>
+<dt><a href="#id3"><span class="problematic" id="id4">X_max_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>Maximum value of input array <cite>X_</cite> for right bound.</dd>
+<dt><a href="#id5"><span class="problematic" id="id6">f_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">function</span></dt>
+<dd>The stepwise interpolating function that covers the domain <cite>X_</cite>.</dd>
+</dl>
+<p>Ties are broken using the secondary method from Leeuw, 1977.</p>
+<p>Isotonic Median Regression: A Linear Programming Approach
+Nilotpal Chakravarti
+Mathematics of Operations Research
+Vol. 14, No. 2 (May, 1989), pp. 303-308</p>
+<p>Isotone Optimization in R : Pool-Adjacent-Violators
+Algorithm (PAVA) and Active Set Methods
+Leeuw, Hornik, Mair
+Journal of Statistical Software 2009</p>
+<p>Correctness of Kruskal’s algorithms for monotone regression with ties
+Leeuw, Psychometrica, 1977</p>
+</div></blockquote>
+<dl class="method">
+<dt id="ibex.sklearn.isotonic.IsotonicRegression.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y</em>, <em>sample_weight=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/isotonic.html#IsotonicRegression.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.isotonic.IsotonicRegression.fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit the model using X, y as training data.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape=(n_samples,)</span></dt>
+<dd>Training data.</dd>
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape=(n_samples,)</span></dt>
+<dd>Training target.</dd>
+<dt>sample_weight <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape=(n_samples,), optional, default: None</span></dt>
+<dd>Weights. If set to None, all weights will be set to 1 (equal
+weights).</dd>
+</dl>
+<dl class="docutils">
+<dt>self <span class="classifier-delimiter">:</span> <span class="classifier">object</span></dt>
+<dd>Returns an instance of self.</dd>
+</dl>
+<p>X is stored for future use, as <cite>transform</cite> needs X to interpolate
+new input data.</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.isotonic.IsotonicRegression.fit_transform">
+<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em>, <em>**fit_params</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.isotonic.IsotonicRegression.fit_transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit to data, then transform it.</p>
+<blockquote>
+<div><p>Fits transformer to X and y with optional parameters fit_params
+and returns a transformed version of X.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_features]</span></dt>
+<dd>Training set.</dd>
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples]</span></dt>
+<dd>Target values.</dd>
+</dl>
+<dl class="docutils">
+<dt>X_new <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_features_new]</span></dt>
+<dd>Transformed array.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.isotonic.IsotonicRegression.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/isotonic.html#IsotonicRegression.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.isotonic.IsotonicRegression.predict" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Predict new data by linear interpolation.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>T <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape=(n_samples,)</span></dt>
+<dd>Data to transform.</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id7"><span class="problematic" id="id8">T_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape=(n_samples,)</span></dt>
+<dd>Transformed data.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.isotonic.IsotonicRegression.score">
+<code class="descname">score</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.isotonic.IsotonicRegression.score" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Returns the coefficient of determination R^2 of the prediction.</p>
+<blockquote>
+<div><p>The coefficient R^2 is defined as (1 - u/v), where u is the residual
+sum of squares ((y_true - y_pred) ** 2).sum() and v is the total
+sum of squares ((y_true - y_true.mean()) ** 2).sum().
+The best possible score is 1.0 and it can be negative (because the
+model can be arbitrarily worse). A constant model that always
+predicts the expected value of y, disregarding the input features,
+would get a R^2 score of 0.0.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = (n_samples, n_features)</span></dt>
+<dd>Test samples.</dd>
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = (n_samples) or (n_samples, n_outputs)</span></dt>
+<dd>True values for X.</dd>
+<dt>sample_weight <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = [n_samples], optional</span></dt>
+<dd>Sample weights.</dd>
+</dl>
+<dl class="docutils">
+<dt>score <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>R^2 of self.predict(X) wrt. y.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.isotonic.IsotonicRegression.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/isotonic.html#IsotonicRegression.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.isotonic.IsotonicRegression.transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Transform new data by linear interpolation</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>T <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape=(n_samples,)</span></dt>
+<dd>Data to transform.</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id9"><span class="problematic" id="id10">T_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape=(n_samples,)</span></dt>
+<dd>The transformed data</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex_sklearn_isotonic_isotonicregression.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex_sklearn_isotonic_isotonicregression.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

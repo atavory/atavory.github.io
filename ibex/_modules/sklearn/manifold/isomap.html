@@ -1,0 +1,329 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.manifold.isomap &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.manifold.isomap</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Isomap for manifold learning&quot;&quot;&quot;</span>
+
+<span class="c1"># Author: Jake Vanderplas  -- &lt;vanderplas@astro.washington.edu&gt;</span>
+<span class="c1"># License: BSD 3 clause (C) 2011</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span>
+<span class="kn">from</span> <span class="nn">..neighbors</span> <span class="k">import</span> <span class="n">NearestNeighbors</span><span class="p">,</span> <span class="n">kneighbors_graph</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_array</span>
+<span class="kn">from</span> <span class="nn">..utils.graph</span> <span class="k">import</span> <span class="n">graph_shortest_path</span>
+<span class="kn">from</span> <span class="nn">..decomposition</span> <span class="k">import</span> <span class="n">KernelPCA</span>
+<span class="kn">from</span> <span class="nn">..preprocessing</span> <span class="k">import</span> <span class="n">KernelCenterer</span>
+
+
+<span class="k">class</span> <span class="nc">Isomap</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Isomap Embedding</span>
+
+<span class="sd">    Non-linear dimensionality reduction through Isometric Mapping</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;isomap&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_neighbors : integer</span>
+<span class="sd">        number of neighbors to consider for each point.</span>
+
+<span class="sd">    n_components : integer</span>
+<span class="sd">        number of coordinates for the manifold</span>
+
+<span class="sd">    eigen_solver : [&#39;auto&#39;|&#39;arpack&#39;|&#39;dense&#39;]</span>
+<span class="sd">        &#39;auto&#39; : Attempt to choose the most efficient solver</span>
+<span class="sd">        for the given problem.</span>
+
+<span class="sd">        &#39;arpack&#39; : Use Arnoldi decomposition to find the eigenvalues</span>
+<span class="sd">        and eigenvectors.</span>
+
+<span class="sd">        &#39;dense&#39; : Use a direct solver (i.e. LAPACK)</span>
+<span class="sd">        for the eigenvalue decomposition.</span>
+
+<span class="sd">    tol : float</span>
+<span class="sd">        Convergence tolerance passed to arpack or lobpcg.</span>
+<span class="sd">        not used if eigen_solver == &#39;dense&#39;.</span>
+
+<span class="sd">    max_iter : integer</span>
+<span class="sd">        Maximum number of iterations for the arpack solver.</span>
+<span class="sd">        not used if eigen_solver == &#39;dense&#39;.</span>
+
+<span class="sd">    path_method : string [&#39;auto&#39;|&#39;FW&#39;|&#39;D&#39;]</span>
+<span class="sd">        Method to use in finding shortest path.</span>
+
+<span class="sd">        &#39;auto&#39; : attempt to choose the best algorithm automatically.</span>
+
+<span class="sd">        &#39;FW&#39; : Floyd-Warshall algorithm.</span>
+
+<span class="sd">        &#39;D&#39; : Dijkstra&#39;s algorithm.</span>
+
+<span class="sd">    neighbors_algorithm : string [&#39;auto&#39;|&#39;brute&#39;|&#39;kd_tree&#39;|&#39;ball_tree&#39;]</span>
+<span class="sd">        Algorithm to use for nearest neighbors search,</span>
+<span class="sd">        passed to neighbors.NearestNeighbors instance.</span>
+
+<span class="sd">    n_jobs : int, optional (default = 1)</span>
+<span class="sd">        The number of parallel jobs to run.</span>
+<span class="sd">        If ``-1``, then the number of jobs is set to the number of CPU cores.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    embedding_ : array-like, shape (n_samples, n_components)</span>
+<span class="sd">        Stores the embedding vectors.</span>
+
+<span class="sd">    kernel_pca_ : object</span>
+<span class="sd">        `KernelPCA` object used to implement the embedding.</span>
+
+<span class="sd">    training_data_ : array-like, shape (n_samples, n_features)</span>
+<span class="sd">        Stores the training data.</span>
+
+<span class="sd">    nbrs_ : sklearn.neighbors.NearestNeighbors instance</span>
+<span class="sd">        Stores nearest neighbors instance, including BallTree or KDtree</span>
+<span class="sd">        if applicable.</span>
+
+<span class="sd">    dist_matrix_ : array-like, shape (n_samples, n_samples)</span>
+<span class="sd">        Stores the geodesic distance matrix of training data.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    .. [1] Tenenbaum, J.B.; De Silva, V.; &amp; Langford, J.C. A global geometric</span>
+<span class="sd">           framework for nonlinear dimensionality reduction. Science 290 (5500)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">eigen_solver</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span>
+                 <span class="n">tol</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">path_method</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span>
+                 <span class="n">neighbors_algorithm</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span> <span class="o">=</span> <span class="n">n_neighbors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">=</span> <span class="n">n_components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eigen_solver</span> <span class="o">=</span> <span class="n">eigen_solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_method</span> <span class="o">=</span> <span class="n">path_method</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">neighbors_algorithm</span> <span class="o">=</span> <span class="n">neighbors_algorithm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
+
+    <span class="k">def</span> <span class="nf">_fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbrs_</span> <span class="o">=</span> <span class="n">NearestNeighbors</span><span class="p">(</span><span class="n">n_neighbors</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span><span class="p">,</span>
+                                      <span class="n">algorithm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">neighbors_algorithm</span><span class="p">,</span>
+                                      <span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbrs_</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">training_data_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbrs_</span><span class="o">.</span><span class="n">_fit_X</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernel_pca_</span> <span class="o">=</span> <span class="n">KernelPCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span>
+                                     <span class="n">kernel</span><span class="o">=</span><span class="s2">&quot;precomputed&quot;</span><span class="p">,</span>
+                                     <span class="n">eigen_solver</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eigen_solver</span><span class="p">,</span>
+                                     <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span>
+                                     <span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">)</span>
+
+        <span class="n">kng</span> <span class="o">=</span> <span class="n">kneighbors_graph</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nbrs_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span><span class="p">,</span>
+                               <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;distance&#39;</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dist_matrix_</span> <span class="o">=</span> <span class="n">graph_shortest_path</span><span class="p">(</span><span class="n">kng</span><span class="p">,</span>
+                                                <span class="n">method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">path_method</span><span class="p">,</span>
+                                                <span class="n">directed</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dist_matrix_</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">G</span> <span class="o">*=</span> <span class="o">-</span><span class="mf">0.5</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">embedding_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_pca_</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">reconstruction_error</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the reconstruction error for the embedding.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        reconstruction_error : float</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -------</span>
+<span class="sd">        The cost function of an isomap embedding is</span>
+
+<span class="sd">        ``E = frobenius_norm[K(D) - K(D_fit)] / n_samples``</span>
+
+<span class="sd">        Where D is the matrix of distances for the input data X,</span>
+<span class="sd">        D_fit is the matrix of distances for the output embedding X_fit,</span>
+<span class="sd">        and K is the isomap kernel:</span>
+
+<span class="sd">        ``K(D) = -0.5 * (I - 1/n_samples) * D^2 * (I - 1/n_samples)``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dist_matrix_</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">G_center</span> <span class="o">=</span> <span class="n">KernelCenterer</span><span class="p">()</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
+        <span class="n">evals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_pca_</span><span class="o">.</span><span class="n">lambdas_</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">G_center</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">evals</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">/</span> <span class="n">G</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+<div class="viewcode-block" id="Isomap.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_manifold_isomap.html#ibex.sklearn.manifold.Isomap.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the embedding vectors for data X</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix, BallTree, KDTree, NearestNeighbors}</span>
+<span class="sd">            Sample data, shape = (n_samples, n_features), in the form of a</span>
+<span class="sd">            numpy array, precomputed tree, or NearestNeighbors</span>
+<span class="sd">            object.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : returns an instance of self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="Isomap.fit_transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_manifold_isomap.html#ibex.sklearn.manifold.Isomap.fit_transform">[docs]</a>    <span class="k">def</span> <span class="nf">fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model from data in X and transform X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix, BallTree, KDTree}</span>
+<span class="sd">            Training vector, where n_samples in the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X_new : array-like, shape (n_samples, n_components)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">embedding_</span></div>
+
+<div class="viewcode-block" id="Isomap.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_manifold_isomap.html#ibex.sklearn.manifold.Isomap.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Transform X.</span>
+
+<span class="sd">        This is implemented by linking the points X into the graph of geodesic</span>
+<span class="sd">        distances of the training data. First the `n_neighbors` nearest</span>
+<span class="sd">        neighbors of X are found in the training data, and from these the</span>
+<span class="sd">        shortest geodesic distances from each point in X to each point in</span>
+<span class="sd">        the training data are computed in order to construct the kernel.</span>
+<span class="sd">        The embedding of X is the projection of this kernel onto the</span>
+<span class="sd">        embedding vectors of the training set.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X_new : array-like, shape (n_samples, n_components)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">distances</span><span class="p">,</span> <span class="n">indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbrs_</span><span class="o">.</span><span class="n">kneighbors</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">return_distance</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Create the graph of shortest distances from X to self.training_data_</span>
+        <span class="c1"># via the nearest neighbors of X.</span>
+        <span class="c1"># This can be done as a single array operation, but it potentially</span>
+        <span class="c1"># takes a lot of memory.  To avoid that, use a loop:</span>
+        <span class="n">G_X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_data_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">G_X</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dist_matrix_</span><span class="p">[</span><span class="n">indices</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">+</span>
+                            <span class="n">distances</span><span class="p">[</span><span class="n">i</span><span class="p">][:,</span> <span class="kc">None</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">G_X</span> <span class="o">**=</span> <span class="mi">2</span>
+        <span class="n">G_X</span> <span class="o">*=</span> <span class="o">-</span><span class="mf">0.5</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_pca_</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">G_X</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

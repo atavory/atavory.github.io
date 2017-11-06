@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>ibex.sklearn._cross_val_predict &#8212; ibex 0.1.1 documentation</title>
+    <title>ibex.sklearn._cross_val_predict &#8212; ibex latest documentation</title>
     <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../',
-        VERSION:     '0.1.1',
+        VERSION:     'latest',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -51,6 +51,7 @@
 
 <span class="kn">from</span> <span class="nn">.._xy_estimator</span> <span class="k">import</span> <span class="n">make_estimator</span><span class="p">,</span> <span class="n">make_xy</span>
 <span class="kn">from</span> <span class="nn">.._utils</span> <span class="k">import</span> <span class="n">verify_x_type</span><span class="p">,</span> <span class="n">verify_y_type</span>
+<span class="kn">from</span> <span class="nn">.__init__</span> <span class="k">import</span> <span class="n">_sklearn_ver</span>
 
 
 <div class="viewcode-block" id="cross_val_predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_model_selection_cross_val_predict.html#ibex.sklearn.model_selection.cross_val_predict">[docs]</a><span class="k">def</span> <span class="nf">cross_val_predict</span><span class="p">(</span>
@@ -125,8 +126,11 @@
 <span class="sd">    Example:</span>
 
 <span class="sd">        &gt;&gt;&gt; import pandas as pd</span>
-<span class="sd">        &gt;&gt;&gt; from ibex.sklearn import model_selection as pd_model_selection</span>
-<span class="sd">        &gt;&gt;&gt; from ibex.sklearn import linear_model as pd_linear_model</span>
+<span class="sd">        &gt;&gt;&gt; from ibex.sklearn.linear_model import LinearRegression</span>
+<span class="sd">        &gt;&gt;&gt; try:</span>
+<span class="sd">        ...     from ibex.sklearn.model_selection import cross_val_predict</span>
+<span class="sd">        ... except: # Older sklearn versions</span>
+<span class="sd">        ...     from ibex.sklearn.cross_validation import cross_val_predict</span>
 
 <span class="sd">        &gt;&gt;&gt; df = pd.DataFrame({</span>
 <span class="sd">        ...         &#39;x&#39;: range(100),</span>
@@ -134,8 +138,8 @@
 <span class="sd">        ...     },</span>
 <span class="sd">        ...     index=[&#39;i%d&#39; % i for i in range(100)])</span>
 
-<span class="sd">        &gt;&gt;&gt; pd_model_selection.cross_val_predict(</span>
-<span class="sd">        ...     pd_linear_model.LinearRegression(),</span>
+<span class="sd">        &gt;&gt;&gt; cross_val_predict(</span>
+<span class="sd">        ...     LinearRegression(),</span>
 <span class="sd">        ...     df[[&#39;x&#39;]],</span>
 <span class="sd">        ...     df[&#39;y&#39;])</span>
 <span class="sd">        i0     ...</span>
@@ -152,17 +156,32 @@
 
     <span class="n">est</span> <span class="o">=</span> <span class="n">make_estimator</span><span class="p">(</span><span class="n">estimator</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
     <span class="n">X_</span><span class="p">,</span> <span class="n">y_</span> <span class="o">=</span> <span class="n">make_xy</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
-    <span class="n">y_hat</span> <span class="o">=</span> <span class="n">_orig_cross_val_predict</span><span class="p">(</span>
-        <span class="n">est</span><span class="p">,</span>
-        <span class="n">X_</span><span class="p">,</span>
-        <span class="n">y_</span><span class="p">,</span>
-        <span class="n">groups</span><span class="p">,</span>
-        <span class="n">cv</span><span class="p">,</span>
-        <span class="n">n_jobs</span><span class="p">,</span>
-        <span class="n">verbose</span><span class="p">,</span>
-        <span class="n">fit_params</span><span class="p">,</span>
-        <span class="n">pre_dispatch</span><span class="p">,</span>
-        <span class="n">method</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">_sklearn_ver</span> <span class="o">&gt;</span> <span class="mi">17</span><span class="p">:</span>
+        <span class="n">y_hat</span> <span class="o">=</span> <span class="n">_orig_cross_val_predict</span><span class="p">(</span>
+            <span class="n">est</span><span class="p">,</span>
+            <span class="n">X_</span><span class="p">,</span>
+            <span class="n">y_</span><span class="p">,</span>
+            <span class="n">groups</span><span class="p">,</span>
+            <span class="n">cv</span><span class="p">,</span>
+            <span class="n">n_jobs</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="p">,</span>
+            <span class="n">fit_params</span><span class="p">,</span>
+            <span class="n">pre_dispatch</span><span class="p">,</span>
+            <span class="n">method</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">groups</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;groups not supported for cross_val_predict in this version of sklearn&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">!=</span> <span class="s1">&#39;predict&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;method not supported for cross_val_predict in this version of sklearn&#39;</span><span class="p">)</span>
+        <span class="n">y_hat</span> <span class="o">=</span> <span class="n">_orig_cross_val_predict</span><span class="p">(</span>
+            <span class="n">est</span><span class="p">,</span>
+            <span class="n">X_</span><span class="p">,</span>
+            <span class="n">y_</span><span class="p">,</span>
+            <span class="n">cv</span><span class="p">,</span>
+            <span class="n">n_jobs</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="p">,</span>
+            <span class="n">fit_params</span><span class="p">,</span>
+            <span class="n">pre_dispatch</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_hat</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">y_hat</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">y</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>

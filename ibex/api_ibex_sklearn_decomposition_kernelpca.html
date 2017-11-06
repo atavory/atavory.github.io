@@ -1,0 +1,327 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>KernelPCA &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="kernelpca">
+<h1><code class="docutils literal"><span class="pre">KernelPCA</span></code><a class="headerlink" href="#kernelpca" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="ibex.sklearn.decomposition.KernelPCA">
+<em class="property">class </em><code class="descclassname">ibex.sklearn.decomposition.</code><code class="descname">KernelPCA</code><span class="sig-paren">(</span><em>n_components=None</em>, <em>kernel='linear'</em>, <em>gamma=None</em>, <em>degree=3</em>, <em>coef0=1</em>, <em>kernel_params=None</em>, <em>alpha=1.0</em>, <em>fit_inverse_transform=False</em>, <em>eigen_solver='auto'</em>, <em>tol=0</em>, <em>max_iter=None</em>, <em>remove_zero_eig=False</em>, <em>random_state=None</em>, <em>copy_X=True</em>, <em>n_jobs=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.decomposition.KernelPCA" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.decomposition.kernel_pca.KernelPCA</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Kernel Principal component analysis (KPCA)</p>
+<blockquote>
+<div><p>Non-linear dimensionality reduction through the use of kernels (see
+<a class="reference external" href="http://scikit-learn.org/stable/modules/metrics.html#metrics" title="(in scikit-learn v0.19.1)"><span>Pairwise metrics, Affinities and Kernels</span></a>).</p>
+<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/decomposition.html#kernel-pca" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
+<dl class="docutils">
+<dt>n_components <span class="classifier-delimiter">:</span> <span class="classifier">int, default=None</span></dt>
+<dd>Number of components. If None, all non-zero components are kept.</dd>
+<dt>kernel <span class="classifier-delimiter">:</span> <span class="classifier">“linear” | “poly” | “rbf” | “sigmoid” | “cosine” | “precomputed”</span></dt>
+<dd>Kernel. Default=”linear”.</dd>
+<dt>gamma <span class="classifier-delimiter">:</span> <span class="classifier">float, default=1/n_features</span></dt>
+<dd>Kernel coefficient for rbf, poly and sigmoid kernels. Ignored by other
+kernels.</dd>
+<dt>degree <span class="classifier-delimiter">:</span> <span class="classifier">int, default=3</span></dt>
+<dd>Degree for poly kernels. Ignored by other kernels.</dd>
+<dt>coef0 <span class="classifier-delimiter">:</span> <span class="classifier">float, default=1</span></dt>
+<dd>Independent term in poly and sigmoid kernels.
+Ignored by other kernels.</dd>
+<dt>kernel_params <span class="classifier-delimiter">:</span> <span class="classifier">mapping of string to any, default=None</span></dt>
+<dd>Parameters (keyword arguments) and values for kernel passed as
+callable object. Ignored by other kernels.</dd>
+<dt>alpha <span class="classifier-delimiter">:</span> <span class="classifier">int, default=1.0</span></dt>
+<dd>Hyperparameter of the ridge regression that learns the
+inverse transform (when fit_inverse_transform=True).</dd>
+<dt>fit_inverse_transform <span class="classifier-delimiter">:</span> <span class="classifier">bool, default=False</span></dt>
+<dd>Learn the inverse transform for non-precomputed kernels.
+(i.e. learn to find the pre-image of a point)</dd>
+<dt>eigen_solver <span class="classifier-delimiter">:</span> <span class="classifier">string [‘auto’|’dense’|’arpack’], default=’auto’</span></dt>
+<dd>Select eigensolver to use. If n_components is much less than
+the number of training samples, arpack may be more efficient
+than the dense eigensolver.</dd>
+<dt>tol <span class="classifier-delimiter">:</span> <span class="classifier">float, default=0</span></dt>
+<dd>Convergence tolerance for arpack.
+If 0, optimal value will be chosen by arpack.</dd>
+<dt>max_iter <span class="classifier-delimiter">:</span> <span class="classifier">int, default=None</span></dt>
+<dd>Maximum number of iterations for arpack.
+If None, optimal value will be chosen by arpack.</dd>
+<dt>remove_zero_eig <span class="classifier-delimiter">:</span> <span class="classifier">boolean, default=False</span></dt>
+<dd>If True, then all components with zero eigenvalues are removed, so
+that the number of components in the output may be &lt; n_components
+(and sometimes even zero due to numerical instability).
+When n_components is None, this parameter is ignored and components
+with zero eigenvalues are removed regardless.</dd>
+<dt>random_state <span class="classifier-delimiter">:</span> <span class="classifier">int, RandomState instance or None, optional (default=None)</span></dt>
+<dd><p class="first">If int, random_state is the seed used by the random number generator;
+If RandomState instance, random_state is the random number generator;
+If None, the random number generator is the RandomState instance used
+by <cite>np.random</cite>. Used when <code class="docutils literal"><span class="pre">eigen_solver</span></code> == ‘arpack’.</p>
+<div class="last versionadded">
+<p><span class="versionmodified">New in version 0.18.</span></p>
+</div>
+</dd>
+<dt>copy_X <span class="classifier-delimiter">:</span> <span class="classifier">boolean, default=True</span></dt>
+<dd><p class="first">If True, input X is copied and stored by the model in the <cite>X_fit_</cite>
+attribute. If no further changes will be done to X, setting
+<cite>copy_X=False</cite> saves memory by storing a reference.</p>
+<div class="last versionadded">
+<p><span class="versionmodified">New in version 0.18.</span></p>
+</div>
+</dd>
+<dt>n_jobs <span class="classifier-delimiter">:</span> <span class="classifier">int, default=1</span></dt>
+<dd><p class="first">The number of parallel jobs to run.
+If <cite>-1</cite>, then the number of jobs is set to the number of CPU cores.</p>
+<div class="last versionadded">
+<p><span class="versionmodified">New in version 0.18.</span></p>
+</div>
+</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">lambdas_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, (n_components,)</span></dt>
+<dd>Eigenvalues of the centered kernel matrix in decreasing order.
+If <cite>n_components</cite> and <cite>remove_zero_eig</cite> are not set,
+then all values are stored.</dd>
+<dt><a href="#id3"><span class="problematic" id="id4">alphas_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, (n_samples, n_components)</span></dt>
+<dd>Eigenvectors of the centered kernel matrix. If <cite>n_components</cite> and
+<cite>remove_zero_eig</cite> are not set, then all components are stored.</dd>
+<dt><a href="#id5"><span class="problematic" id="id6">dual_coef_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, (n_samples, n_features)</span></dt>
+<dd>Inverse transform matrix. Set if <cite>fit_inverse_transform</cite> is True.</dd>
+<dt><a href="#id7"><span class="problematic" id="id8">X_transformed_fit_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, (n_samples, n_components)</span></dt>
+<dd>Projection of the fitted data on the kernel principal components.</dd>
+<dt><a href="#id9"><span class="problematic" id="id10">X_fit_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">(n_samples, n_features)</span></dt>
+<dd>The data used to fit the model. If <cite>copy_X=False</cite>, then <cite>X_fit_</cite> is
+a reference. This attribute is used for the calls to transform.</dd>
+</dl>
+<dl class="docutils">
+<dt>Kernel PCA was introduced in:</dt>
+<dd>Bernhard Schoelkopf, Alexander J. Smola,
+and Klaus-Robert Mueller. 1999. Kernel principal
+component analysis. In Advances in kernel methods,
+MIT Press, Cambridge, MA, USA 327-352.</dd>
+</dl>
+</div></blockquote>
+<dl class="method">
+<dt id="ibex.sklearn.decomposition.KernelPCA.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/decomposition/kernel_pca.html#KernelPCA.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.decomposition.KernelPCA.fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit the model from data in X.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape (n_samples, n_features)</span></dt>
+<dd>Training vector, where n_samples in the number of samples
+and n_features is the number of features.</dd>
+</dl>
+<dl class="docutils">
+<dt>self <span class="classifier-delimiter">:</span> <span class="classifier">object</span></dt>
+<dd>Returns the instance itself.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.decomposition.KernelPCA.fit_transform">
+<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em>, <em>**params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/decomposition/kernel_pca.html#KernelPCA.fit_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.decomposition.KernelPCA.fit_transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit the model from data in X and transform X.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape (n_samples, n_features)</span></dt>
+<dd>Training vector, where n_samples in the number of samples
+and n_features is the number of features.</dd>
+</dl>
+<p>X_new : array-like, shape (n_samples, n_components)</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.decomposition.KernelPCA.inverse_transform">
+<code class="descname">inverse_transform</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/decomposition/kernel_pca.html#KernelPCA.inverse_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.decomposition.KernelPCA.inverse_transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Transform X back to original space.</p>
+<blockquote>
+<div><p>X : array-like, shape (n_samples, n_components)</p>
+<p>X_new : array-like, shape (n_samples, n_features)</p>
+<p>“Learning to Find Pre-Images”, G BakIr et al, 2004.</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.decomposition.KernelPCA.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/decomposition/kernel_pca.html#KernelPCA.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.decomposition.KernelPCA.transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Transform X.</p>
+<blockquote>
+<div><p>X : array-like, shape (n_samples, n_features)</p>
+<p>X_new : array-like, shape (n_samples, n_components)</p>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex_sklearn_decomposition_kernelpca.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex_sklearn_decomposition_kernelpca.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

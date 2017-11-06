@@ -1,0 +1,816 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.manifold.locally_linear &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.manifold.locally_linear</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Locally Linear Embedding&quot;&quot;&quot;</span>
+
+<span class="c1"># Author: Fabian Pedregosa -- &lt;fabian.pedregosa@inria.fr&gt;</span>
+<span class="c1">#         Jake Vanderplas  -- &lt;vanderplas@astro.washington.edu&gt;</span>
+<span class="c1"># License: BSD 3 clause (C) INRIA 2011</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="k">import</span> <span class="n">eigh</span><span class="p">,</span> <span class="n">svd</span><span class="p">,</span> <span class="n">qr</span><span class="p">,</span> <span class="n">solve</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">eye</span><span class="p">,</span> <span class="n">csr_matrix</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse.linalg</span> <span class="k">import</span> <span class="n">eigsh</span>
+
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_random_state</span><span class="p">,</span> <span class="n">check_array</span>
+<span class="kn">from</span> <span class="nn">..utils.extmath</span> <span class="k">import</span> <span class="n">stable_cumsum</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_is_fitted</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">FLOAT_DTYPES</span>
+<span class="kn">from</span> <span class="nn">..neighbors</span> <span class="k">import</span> <span class="n">NearestNeighbors</span>
+
+
+<span class="k">def</span> <span class="nf">barycenter_weights</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">reg</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute barycenter weights of X from Y along the first axis</span>
+
+<span class="sd">    We estimate the weights to assign to each point in Y[i] to recover</span>
+<span class="sd">    the point X[i]. The barycenter weights sum to 1.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array-like, shape (n_samples, n_dim)</span>
+
+<span class="sd">    Z : array-like, shape (n_samples, n_neighbors, n_dim)</span>
+
+<span class="sd">    reg : float, optional</span>
+<span class="sd">        amount of regularization to add for the problem to be</span>
+<span class="sd">        well-posed in the case of n_neighbors &gt; n_dim</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    B : array-like, shape (n_samples, n_neighbors)</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    See developers note for more information.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">FLOAT_DTYPES</span><span class="p">)</span>
+    <span class="n">Z</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">FLOAT_DTYPES</span><span class="p">,</span> <span class="n">allow_nd</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_neighbors</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">B</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_neighbors</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="c1"># this might raise a LinalgError if G is singular and has trace</span>
+    <span class="c1"># zero</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">A</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">Z</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)):</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">T</span> <span class="o">-</span> <span class="n">X</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>  <span class="c1"># broadcasting</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">C</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="n">trace</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">trace</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="n">reg</span> <span class="o">*</span> <span class="n">trace</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="n">reg</span>
+        <span class="n">G</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span><span class="n">Z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">R</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">sym_pos</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">B</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">w</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">B</span>
+
+
+<span class="k">def</span> <span class="nf">barycenter_kneighbors_graph</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="p">,</span> <span class="n">reg</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Computes the barycenter weighted graph of k-Neighbors for points in X</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : {array-like, sparse matrix, BallTree, KDTree, NearestNeighbors}</span>
+<span class="sd">        Sample data, shape = (n_samples, n_features), in the form of a</span>
+<span class="sd">        numpy array, sparse array, precomputed tree, or NearestNeighbors</span>
+<span class="sd">        object.</span>
+
+<span class="sd">    n_neighbors : int</span>
+<span class="sd">        Number of neighbors for each sample.</span>
+
+<span class="sd">    reg : float, optional</span>
+<span class="sd">        Amount of regularization when solving the least-squares</span>
+<span class="sd">        problem. Only relevant if mode=&#39;barycenter&#39;. If None, use the</span>
+<span class="sd">        default.</span>
+
+<span class="sd">    n_jobs : int, optional (default = 1)</span>
+<span class="sd">        The number of parallel jobs to run for neighbors search.</span>
+<span class="sd">        If ``-1``, then the number of jobs is set to the number of CPU cores.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    A : sparse matrix in CSR format, shape = [n_samples, n_samples]</span>
+<span class="sd">        A[i, j] is assigned the weight of edge that connects i to j.</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    sklearn.neighbors.kneighbors_graph</span>
+<span class="sd">    sklearn.neighbors.radius_neighbors_graph</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">knn</span> <span class="o">=</span> <span class="n">NearestNeighbors</span><span class="p">(</span><span class="n">n_neighbors</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">knn</span><span class="o">.</span><span class="n">_fit_X</span>
+    <span class="n">n_samples</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">ind</span> <span class="o">=</span> <span class="n">knn</span><span class="o">.</span><span class="n">kneighbors</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">return_distance</span><span class="o">=</span><span class="kc">False</span><span class="p">)[:,</span> <span class="mi">1</span><span class="p">:]</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">barycenter_weights</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">X</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span> <span class="n">reg</span><span class="o">=</span><span class="n">reg</span><span class="p">)</span>
+    <span class="n">indptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_samples</span> <span class="o">*</span> <span class="n">n_neighbors</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">csr_matrix</span><span class="p">((</span><span class="n">data</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">ind</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">indptr</span><span class="p">),</span>
+                      <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">null_space</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">k_skip</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">eigen_solver</span><span class="o">=</span><span class="s1">&#39;arpack&#39;</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1E-6</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+               <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find the null space of a matrix M.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    M : {array, matrix, sparse matrix, LinearOperator}</span>
+<span class="sd">        Input covariance matrix: should be symmetric positive semi-definite</span>
+
+<span class="sd">    k : integer</span>
+<span class="sd">        Number of eigenvalues/vectors to return</span>
+
+<span class="sd">    k_skip : integer, optional</span>
+<span class="sd">        Number of low eigenvalues to skip.</span>
+
+<span class="sd">    eigen_solver : string, {&#39;auto&#39;, &#39;arpack&#39;, &#39;dense&#39;}</span>
+<span class="sd">        auto : algorithm will attempt to choose the best method for input data</span>
+<span class="sd">        arpack : use arnoldi iteration in shift-invert mode.</span>
+<span class="sd">                    For this method, M may be a dense matrix, sparse matrix,</span>
+<span class="sd">                    or general linear operator.</span>
+<span class="sd">                    Warning: ARPACK can be unstable for some problems.  It is</span>
+<span class="sd">                    best to try several random seeds in order to check results.</span>
+<span class="sd">        dense  : use standard dense matrix operations for the eigenvalue</span>
+<span class="sd">                    decomposition.  For this method, M must be an array</span>
+<span class="sd">                    or matrix type.  This method should be avoided for</span>
+<span class="sd">                    large problems.</span>
+
+<span class="sd">    tol : float, optional</span>
+<span class="sd">        Tolerance for &#39;arpack&#39; method.</span>
+<span class="sd">        Not used if eigen_solver==&#39;dense&#39;.</span>
+
+<span class="sd">    max_iter : maximum number of iterations for &#39;arpack&#39; method</span>
+<span class="sd">        not used if eigen_solver==&#39;dense&#39;</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional (default=None)</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`. Used when ``solver`` == &#39;arpack&#39;.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">eigen_solver</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">200</span> <span class="ow">and</span> <span class="n">k</span> <span class="o">+</span> <span class="n">k_skip</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="n">eigen_solver</span> <span class="o">=</span> <span class="s1">&#39;arpack&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">eigen_solver</span> <span class="o">=</span> <span class="s1">&#39;dense&#39;</span>
+
+    <span class="k">if</span> <span class="n">eigen_solver</span> <span class="o">==</span> <span class="s1">&#39;arpack&#39;</span><span class="p">:</span>
+        <span class="n">random_state</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="c1"># initialize with [-1,1] as in ARPACK</span>
+        <span class="n">v0</span> <span class="o">=</span> <span class="n">random_state</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">eigen_values</span><span class="p">,</span> <span class="n">eigen_vectors</span> <span class="o">=</span> <span class="n">eigsh</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">k</span> <span class="o">+</span> <span class="n">k_skip</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                                                <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">maxiter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span>
+                                                <span class="n">v0</span><span class="o">=</span><span class="n">v0</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">RuntimeError</span> <span class="k">as</span> <span class="n">msg</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Error in determining null-space with ARPACK. &quot;</span>
+                             <span class="s2">&quot;Error message: &#39;</span><span class="si">%s</span><span class="s2">&#39;. &quot;</span>
+                             <span class="s2">&quot;Note that method=&#39;arpack&#39; can fail when the &quot;</span>
+                             <span class="s2">&quot;weight matrix is singular or otherwise &quot;</span>
+                             <span class="s2">&quot;ill-behaved.  method=&#39;dense&#39; is recommended. &quot;</span>
+                             <span class="s2">&quot;See online documentation for more information.&quot;</span>
+                             <span class="o">%</span> <span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">eigen_vectors</span><span class="p">[:,</span> <span class="n">k_skip</span><span class="p">:],</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">eigen_values</span><span class="p">[</span><span class="n">k_skip</span><span class="p">:])</span>
+    <span class="k">elif</span> <span class="n">eigen_solver</span> <span class="o">==</span> <span class="s1">&#39;dense&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="s1">&#39;toarray&#39;</span><span class="p">):</span>
+            <span class="n">M</span> <span class="o">=</span> <span class="n">M</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+        <span class="n">eigen_values</span><span class="p">,</span> <span class="n">eigen_vectors</span> <span class="o">=</span> <span class="n">eigh</span><span class="p">(</span>
+            <span class="n">M</span><span class="p">,</span> <span class="n">eigvals</span><span class="o">=</span><span class="p">(</span><span class="n">k_skip</span><span class="p">,</span> <span class="n">k</span> <span class="o">+</span> <span class="n">k_skip</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span> <span class="n">overwrite_a</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">eigen_values</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">eigen_vectors</span><span class="p">[:,</span> <span class="n">index</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">eigen_values</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unrecognized eigen_solver &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span> <span class="n">eigen_solver</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">locally_linear_embedding</span><span class="p">(</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span> <span class="n">reg</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">eigen_solver</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span>
+        <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;standard&#39;</span><span class="p">,</span> <span class="n">hessian_tol</span><span class="o">=</span><span class="mf">1E-4</span><span class="p">,</span> <span class="n">modified_tol</span><span class="o">=</span><span class="mf">1E-12</span><span class="p">,</span>
+        <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform a Locally Linear Embedding analysis on the data.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;locally_linear_embedding&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : {array-like, sparse matrix, BallTree, KDTree, NearestNeighbors}</span>
+<span class="sd">        Sample data, shape = (n_samples, n_features), in the form of a</span>
+<span class="sd">        numpy array, sparse array, precomputed tree, or NearestNeighbors</span>
+<span class="sd">        object.</span>
+
+<span class="sd">    n_neighbors : integer</span>
+<span class="sd">        number of neighbors to consider for each point.</span>
+
+<span class="sd">    n_components : integer</span>
+<span class="sd">        number of coordinates for the manifold.</span>
+
+<span class="sd">    reg : float</span>
+<span class="sd">        regularization constant, multiplies the trace of the local covariance</span>
+<span class="sd">        matrix of the distances.</span>
+
+<span class="sd">    eigen_solver : string, {&#39;auto&#39;, &#39;arpack&#39;, &#39;dense&#39;}</span>
+<span class="sd">        auto : algorithm will attempt to choose the best method for input data</span>
+
+<span class="sd">        arpack : use arnoldi iteration in shift-invert mode.</span>
+<span class="sd">                    For this method, M may be a dense matrix, sparse matrix,</span>
+<span class="sd">                    or general linear operator.</span>
+<span class="sd">                    Warning: ARPACK can be unstable for some problems.  It is</span>
+<span class="sd">                    best to try several random seeds in order to check results.</span>
+
+<span class="sd">        dense  : use standard dense matrix operations for the eigenvalue</span>
+<span class="sd">                    decomposition.  For this method, M must be an array</span>
+<span class="sd">                    or matrix type.  This method should be avoided for</span>
+<span class="sd">                    large problems.</span>
+
+<span class="sd">    tol : float, optional</span>
+<span class="sd">        Tolerance for &#39;arpack&#39; method</span>
+<span class="sd">        Not used if eigen_solver==&#39;dense&#39;.</span>
+
+<span class="sd">    max_iter : integer</span>
+<span class="sd">        maximum number of iterations for the arpack solver.</span>
+
+<span class="sd">    method : {&#39;standard&#39;, &#39;hessian&#39;, &#39;modified&#39;, &#39;ltsa&#39;}</span>
+<span class="sd">        standard : use the standard locally linear embedding algorithm.</span>
+<span class="sd">                   see reference [1]_</span>
+<span class="sd">        hessian  : use the Hessian eigenmap method.  This method requires</span>
+<span class="sd">                   n_neighbors &gt; n_components * (1 + (n_components + 1) / 2.</span>
+<span class="sd">                   see reference [2]_</span>
+<span class="sd">        modified : use the modified locally linear embedding algorithm.</span>
+<span class="sd">                   see reference [3]_</span>
+<span class="sd">        ltsa     : use local tangent space alignment algorithm</span>
+<span class="sd">                   see reference [4]_</span>
+
+<span class="sd">    hessian_tol : float, optional</span>
+<span class="sd">        Tolerance for Hessian eigenmapping method.</span>
+<span class="sd">        Only used if method == &#39;hessian&#39;</span>
+
+<span class="sd">    modified_tol : float, optional</span>
+<span class="sd">        Tolerance for modified LLE method.</span>
+<span class="sd">        Only used if method == &#39;modified&#39;</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional (default=None)</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`. Used when ``solver`` == &#39;arpack&#39;.</span>
+
+<span class="sd">    n_jobs : int, optional (default = 1)</span>
+<span class="sd">        The number of parallel jobs to run for neighbors search.</span>
+<span class="sd">        If ``-1``, then the number of jobs is set to the number of CPU cores.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Y : array-like, shape [n_samples, n_components]</span>
+<span class="sd">        Embedding vectors.</span>
+
+<span class="sd">    squared_error : float</span>
+<span class="sd">        Reconstruction error for the embedding vectors. Equivalent to</span>
+<span class="sd">        ``norm(Y - W Y, &#39;fro&#39;)**2``, where W are the reconstruction weights.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    .. [1] `Roweis, S. &amp; Saul, L. Nonlinear dimensionality reduction</span>
+<span class="sd">        by locally linear embedding.  Science 290:2323 (2000).`</span>
+<span class="sd">    .. [2] `Donoho, D. &amp; Grimes, C. Hessian eigenmaps: Locally</span>
+<span class="sd">        linear embedding techniques for high-dimensional data.</span>
+<span class="sd">        Proc Natl Acad Sci U S A.  100:5591 (2003).`</span>
+<span class="sd">    .. [3] `Zhang, Z. &amp; Wang, J. MLLE: Modified Locally Linear</span>
+<span class="sd">        Embedding Using Multiple Weights.`</span>
+<span class="sd">        http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.70.382</span>
+<span class="sd">    .. [4] `Zhang, Z. &amp; Zha, H. Principal manifolds and nonlinear</span>
+<span class="sd">        dimensionality reduction via tangent space alignment.</span>
+<span class="sd">        Journal of Shanghai Univ.  8:406 (2004)`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">eigen_solver</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="s1">&#39;arpack&#39;</span><span class="p">,</span> <span class="s1">&#39;dense&#39;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;unrecognized eigen_solver &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span> <span class="n">eigen_solver</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;standard&#39;</span><span class="p">,</span> <span class="s1">&#39;hessian&#39;</span><span class="p">,</span> <span class="s1">&#39;modified&#39;</span><span class="p">,</span> <span class="s1">&#39;ltsa&#39;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;unrecognized method &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span> <span class="n">method</span><span class="p">)</span>
+
+    <span class="n">nbrs</span> <span class="o">=</span> <span class="n">NearestNeighbors</span><span class="p">(</span><span class="n">n_neighbors</span><span class="o">=</span><span class="n">n_neighbors</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">)</span>
+    <span class="n">nbrs</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">nbrs</span><span class="o">.</span><span class="n">_fit_X</span>
+
+    <span class="n">N</span><span class="p">,</span> <span class="n">d_in</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="k">if</span> <span class="n">n_components</span> <span class="o">&gt;</span> <span class="n">d_in</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;output dimension must be less than or equal &quot;</span>
+                         <span class="s2">&quot;to input dimension&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_neighbors</span> <span class="o">&gt;=</span> <span class="n">N</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;n_neighbors must be less than number of points&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">n_neighbors</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;n_neighbors must be positive&quot;</span><span class="p">)</span>
+
+    <span class="n">M_sparse</span> <span class="o">=</span> <span class="p">(</span><span class="n">eigen_solver</span> <span class="o">!=</span> <span class="s1">&#39;dense&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;standard&#39;</span><span class="p">:</span>
+        <span class="n">W</span> <span class="o">=</span> <span class="n">barycenter_kneighbors_graph</span><span class="p">(</span>
+            <span class="n">nbrs</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="n">n_neighbors</span><span class="p">,</span> <span class="n">reg</span><span class="o">=</span><span class="n">reg</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">)</span>
+
+        <span class="c1"># we&#39;ll compute M = (I-W)&#39;(I-W)</span>
+        <span class="c1"># depending on the solver, we&#39;ll do this differently</span>
+        <span class="k">if</span> <span class="n">M_sparse</span><span class="p">:</span>
+            <span class="n">M</span> <span class="o">=</span> <span class="n">eye</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="n">W</span><span class="o">.</span><span class="n">format</span><span class="p">)</span> <span class="o">-</span> <span class="n">W</span>
+            <span class="n">M</span> <span class="o">=</span> <span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">M</span><span class="p">)</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">M</span> <span class="o">=</span> <span class="p">(</span><span class="n">W</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">W</span> <span class="o">-</span> <span class="n">W</span><span class="o">.</span><span class="n">T</span> <span class="o">-</span> <span class="n">W</span><span class="p">)</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+            <span class="n">M</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span><span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>  <span class="c1"># W = W - I = W - I</span>
+
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;hessian&#39;</span><span class="p">:</span>
+        <span class="n">dp</span> <span class="o">=</span> <span class="n">n_components</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_components</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+
+        <span class="k">if</span> <span class="n">n_neighbors</span> <span class="o">&lt;=</span> <span class="n">n_components</span> <span class="o">+</span> <span class="n">dp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;for method=&#39;hessian&#39;, n_neighbors must be &quot;</span>
+                             <span class="s2">&quot;greater than &quot;</span>
+                             <span class="s2">&quot;[n_components * (n_components + 3) / 2]&quot;</span><span class="p">)</span>
+
+        <span class="n">neighbors</span> <span class="o">=</span> <span class="n">nbrs</span><span class="o">.</span><span class="n">kneighbors</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="n">n_neighbors</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                                    <span class="n">return_distance</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">neighbors</span> <span class="o">=</span> <span class="n">neighbors</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span>
+
+        <span class="n">Yi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n_neighbors</span><span class="p">,</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">n_components</span> <span class="o">+</span> <span class="n">dp</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">Yi</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+        <span class="n">use_svd</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_neighbors</span> <span class="o">&gt;</span> <span class="n">d_in</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="n">Gi</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+            <span class="n">Gi</span> <span class="o">-=</span> <span class="n">Gi</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="c1"># build Hessian estimator</span>
+            <span class="k">if</span> <span class="n">use_svd</span><span class="p">:</span>
+                <span class="n">U</span> <span class="o">=</span> <span class="n">svd</span><span class="p">(</span><span class="n">Gi</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">Ci</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Gi</span><span class="p">,</span> <span class="n">Gi</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+                <span class="n">U</span> <span class="o">=</span> <span class="n">eigh</span><span class="p">(</span><span class="n">Ci</span><span class="p">)[</span><span class="mi">1</span><span class="p">][:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="n">Yi</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:</span><span class="mi">1</span> <span class="o">+</span> <span class="n">n_components</span><span class="p">]</span> <span class="o">=</span> <span class="n">U</span><span class="p">[:,</span> <span class="p">:</span><span class="n">n_components</span><span class="p">]</span>
+
+            <span class="n">j</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">n_components</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_components</span><span class="p">):</span>
+                <span class="n">Yi</span><span class="p">[:,</span> <span class="n">j</span><span class="p">:</span><span class="n">j</span> <span class="o">+</span> <span class="n">n_components</span> <span class="o">-</span> <span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">U</span><span class="p">[:,</span> <span class="n">k</span><span class="p">:</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span>
+                                                 <span class="n">U</span><span class="p">[:,</span> <span class="n">k</span><span class="p">:</span><span class="n">n_components</span><span class="p">])</span>
+                <span class="n">j</span> <span class="o">+=</span> <span class="n">n_components</span> <span class="o">-</span> <span class="n">k</span>
+
+            <span class="n">Q</span><span class="p">,</span> <span class="n">R</span> <span class="o">=</span> <span class="n">qr</span><span class="p">(</span><span class="n">Yi</span><span class="p">)</span>
+
+            <span class="n">w</span> <span class="o">=</span> <span class="n">Q</span><span class="p">[:,</span> <span class="n">n_components</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">w</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="n">S</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">S</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">hessian_tol</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">w</span> <span class="o">/=</span> <span class="n">S</span>
+
+            <span class="n">nbrs_x</span><span class="p">,</span> <span class="n">nbrs_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">M</span><span class="p">[</span><span class="n">nbrs_x</span><span class="p">,</span> <span class="n">nbrs_y</span><span class="p">]</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">w</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">M_sparse</span><span class="p">:</span>
+            <span class="n">M</span> <span class="o">=</span> <span class="n">csr_matrix</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;modified&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">n_neighbors</span> <span class="o">&lt;</span> <span class="n">n_components</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;modified LLE requires &quot;</span>
+                             <span class="s2">&quot;n_neighbors &gt;= n_components&quot;</span><span class="p">)</span>
+
+        <span class="n">neighbors</span> <span class="o">=</span> <span class="n">nbrs</span><span class="o">.</span><span class="n">kneighbors</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="n">n_neighbors</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                                    <span class="n">return_distance</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">neighbors</span> <span class="o">=</span> <span class="n">neighbors</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span>
+
+        <span class="c1"># find the eigenvectors and eigenvalues of each local covariance</span>
+        <span class="c1"># matrix. We want V[i] to be a [n_neighbors x n_neighbors] matrix,</span>
+        <span class="c1"># where the columns are eigenvectors</span>
+        <span class="n">V</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="p">))</span>
+        <span class="n">nev</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">d_in</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="p">)</span>
+        <span class="n">evals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">N</span><span class="p">,</span> <span class="n">nev</span><span class="p">])</span>
+
+        <span class="c1"># choose the most efficient way to find the eigenvectors</span>
+        <span class="n">use_svd</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_neighbors</span> <span class="o">&gt;</span> <span class="n">d_in</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">use_svd</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+                <span class="n">X_nbrs</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">-</span> <span class="n">X</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">V</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">evals</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">_</span> <span class="o">=</span> <span class="n">svd</span><span class="p">(</span><span class="n">X_nbrs</span><span class="p">,</span>
+                                        <span class="n">full_matrices</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">evals</span> <span class="o">**=</span> <span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+                <span class="n">X_nbrs</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">-</span> <span class="n">X</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">C_nbrs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X_nbrs</span><span class="p">,</span> <span class="n">X_nbrs</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+                <span class="n">evi</span><span class="p">,</span> <span class="n">vi</span> <span class="o">=</span> <span class="n">eigh</span><span class="p">(</span><span class="n">C_nbrs</span><span class="p">)</span>
+                <span class="n">evals</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">evi</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">V</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">vi</span><span class="p">[:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># find regularized weights: this is like normal LLE.</span>
+        <span class="c1"># because we&#39;ve already computed the SVD of each covariance matrix,</span>
+        <span class="c1"># it&#39;s faster to use this rather than np.linalg.solve</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="mf">1E-3</span> <span class="o">*</span> <span class="n">evals</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">V</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_neighbors</span><span class="p">))</span>
+        <span class="n">tmp</span><span class="p">[:,</span> <span class="p">:</span><span class="n">nev</span><span class="p">]</span> <span class="o">/=</span> <span class="n">evals</span> <span class="o">+</span> <span class="n">reg</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="n">tmp</span><span class="p">[:,</span> <span class="n">nev</span><span class="p">:]</span> <span class="o">/=</span> <span class="n">reg</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+
+        <span class="n">w_reg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="n">w_reg</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">V</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">tmp</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">w_reg</span> <span class="o">/=</span> <span class="n">w_reg</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">]</span>
+
+        <span class="c1"># calculate eta: the median of the ratio of small to large eigenvalues</span>
+        <span class="c1"># across the points.  This is used to determine s_i, below</span>
+        <span class="n">rho</span> <span class="o">=</span> <span class="n">evals</span><span class="p">[:,</span> <span class="n">n_components</span><span class="p">:]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">evals</span><span class="p">[:,</span> <span class="p">:</span><span class="n">n_components</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">eta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">rho</span><span class="p">)</span>
+
+        <span class="c1"># find s_i, the size of the &quot;almost null space&quot; for each point:</span>
+        <span class="c1"># this is the size of the largest set of eigenvalues</span>
+        <span class="c1"># such that Sum[v; v in set]/Sum[v; v not in set] &lt; eta</span>
+        <span class="n">s_range</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">evals_cumsum</span> <span class="o">=</span> <span class="n">stable_cumsum</span><span class="p">(</span><span class="n">evals</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">eta_range</span> <span class="o">=</span> <span class="n">evals_cumsum</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">:]</span> <span class="o">/</span> <span class="n">evals_cumsum</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="n">s_range</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">eta_range</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">eta</span><span class="p">)</span>
+        <span class="n">s_range</span> <span class="o">+=</span> <span class="n">n_neighbors</span> <span class="o">-</span> <span class="n">nev</span>  <span class="c1"># number of zero eigenvalues</span>
+
+        <span class="c1"># Now calculate M.</span>
+        <span class="c1"># This is the [N x N] matrix whose null space is the desired embedding</span>
+        <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="n">s_i</span> <span class="o">=</span> <span class="n">s_range</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+            <span class="c1"># select bottom s_i eigenvectors and calculate alpha</span>
+            <span class="n">Vi</span> <span class="o">=</span> <span class="n">V</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="n">n_neighbors</span> <span class="o">-</span> <span class="n">s_i</span><span class="p">:]</span>
+            <span class="n">alpha_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">Vi</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">s_i</span><span class="p">)</span>
+
+            <span class="c1"># compute Householder matrix which satisfies</span>
+            <span class="c1">#  Hi*Vi.T*ones(n_neighbors) = alpha_i*ones(s)</span>
+            <span class="c1"># using prescription from paper</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="n">alpha_i</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">s_i</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Vi</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_neighbors</span><span class="p">))</span>
+
+            <span class="n">norm_h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">norm_h</span> <span class="o">&lt;</span> <span class="n">modified_tol</span><span class="p">:</span>
+                <span class="n">h</span> <span class="o">*=</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">h</span> <span class="o">/=</span> <span class="n">norm_h</span>
+
+            <span class="c1"># Householder matrix is</span>
+            <span class="c1">#  &gt;&gt; Hi = np.identity(s_i) - 2*np.outer(h,h)</span>
+            <span class="c1"># Then the weight matrix is</span>
+            <span class="c1">#  &gt;&gt; Wi = np.dot(Vi,Hi) + (1-alpha_i) * w_reg[i,:,None]</span>
+            <span class="c1"># We do this much more efficiently:</span>
+            <span class="n">Wi</span> <span class="o">=</span> <span class="p">(</span><span class="n">Vi</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Vi</span><span class="p">,</span> <span class="n">h</span><span class="p">),</span> <span class="n">h</span><span class="p">)</span> <span class="o">+</span>
+                  <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">alpha_i</span><span class="p">)</span> <span class="o">*</span> <span class="n">w_reg</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">])</span>
+
+            <span class="c1"># Update M as follows:</span>
+            <span class="c1"># &gt;&gt; W_hat = np.zeros( (N,s_i) )</span>
+            <span class="c1"># &gt;&gt; W_hat[neighbors[i],:] = Wi</span>
+            <span class="c1"># &gt;&gt; W_hat[i] -= 1</span>
+            <span class="c1"># &gt;&gt; M += np.dot(W_hat,W_hat.T)</span>
+            <span class="c1"># We can do this much more efficiently:</span>
+            <span class="n">nbrs_x</span><span class="p">,</span> <span class="n">nbrs_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">M</span><span class="p">[</span><span class="n">nbrs_x</span><span class="p">,</span> <span class="n">nbrs_y</span><span class="p">]</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Wi</span><span class="p">,</span> <span class="n">Wi</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+            <span class="n">Wi_sum1</span> <span class="o">=</span> <span class="n">Wi</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">-=</span> <span class="n">Wi_sum1</span>
+            <span class="n">M</span><span class="p">[</span><span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">i</span><span class="p">]</span> <span class="o">-=</span> <span class="n">Wi_sum1</span>
+            <span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="n">s_i</span>
+
+        <span class="k">if</span> <span class="n">M_sparse</span><span class="p">:</span>
+            <span class="n">M</span> <span class="o">=</span> <span class="n">csr_matrix</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;ltsa&#39;</span><span class="p">:</span>
+        <span class="n">neighbors</span> <span class="o">=</span> <span class="n">nbrs</span><span class="o">.</span><span class="n">kneighbors</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="n">n_neighbors</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                                    <span class="n">return_distance</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">neighbors</span> <span class="o">=</span> <span class="n">neighbors</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span>
+
+        <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="n">N</span><span class="p">))</span>
+
+        <span class="n">use_svd</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_neighbors</span> <span class="o">&gt;</span> <span class="n">d_in</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="n">Xi</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+            <span class="n">Xi</span> <span class="o">-=</span> <span class="n">Xi</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="c1"># compute n_components largest eigenvalues of Xi * Xi^T</span>
+            <span class="k">if</span> <span class="n">use_svd</span><span class="p">:</span>
+                <span class="n">v</span> <span class="o">=</span> <span class="n">svd</span><span class="p">(</span><span class="n">Xi</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">Ci</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Xi</span><span class="p">,</span> <span class="n">Xi</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+                <span class="n">v</span> <span class="o">=</span> <span class="n">eigh</span><span class="p">(</span><span class="n">Ci</span><span class="p">)[</span><span class="mi">1</span><span class="p">][:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="n">Gi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_neighbors</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="n">Gi</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[:,</span> <span class="p">:</span><span class="n">n_components</span><span class="p">]</span>
+            <span class="n">Gi</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">n_neighbors</span><span class="p">)</span>
+
+            <span class="n">GiGiT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Gi</span><span class="p">,</span> <span class="n">Gi</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+            <span class="n">nbrs_x</span><span class="p">,</span> <span class="n">nbrs_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">M</span><span class="p">[</span><span class="n">nbrs_x</span><span class="p">,</span> <span class="n">nbrs_y</span><span class="p">]</span> <span class="o">-=</span> <span class="n">GiGiT</span>
+            <span class="n">M</span><span class="p">[</span><span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">return</span> <span class="n">null_space</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span> <span class="n">k_skip</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">eigen_solver</span><span class="o">=</span><span class="n">eigen_solver</span><span class="p">,</span>
+                      <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">LocallyLinearEmbedding</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Locally Linear Embedding</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;locally_linear_embedding&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_neighbors : integer</span>
+<span class="sd">        number of neighbors to consider for each point.</span>
+
+<span class="sd">    n_components : integer</span>
+<span class="sd">        number of coordinates for the manifold</span>
+
+<span class="sd">    reg : float</span>
+<span class="sd">        regularization constant, multiplies the trace of the local covariance</span>
+<span class="sd">        matrix of the distances.</span>
+
+<span class="sd">    eigen_solver : string, {&#39;auto&#39;, &#39;arpack&#39;, &#39;dense&#39;}</span>
+<span class="sd">        auto : algorithm will attempt to choose the best method for input data</span>
+
+<span class="sd">        arpack : use arnoldi iteration in shift-invert mode.</span>
+<span class="sd">                    For this method, M may be a dense matrix, sparse matrix,</span>
+<span class="sd">                    or general linear operator.</span>
+<span class="sd">                    Warning: ARPACK can be unstable for some problems.  It is</span>
+<span class="sd">                    best to try several random seeds in order to check results.</span>
+
+<span class="sd">        dense  : use standard dense matrix operations for the eigenvalue</span>
+<span class="sd">                    decomposition.  For this method, M must be an array</span>
+<span class="sd">                    or matrix type.  This method should be avoided for</span>
+<span class="sd">                    large problems.</span>
+
+<span class="sd">    tol : float, optional</span>
+<span class="sd">        Tolerance for &#39;arpack&#39; method</span>
+<span class="sd">        Not used if eigen_solver==&#39;dense&#39;.</span>
+
+<span class="sd">    max_iter : integer</span>
+<span class="sd">        maximum number of iterations for the arpack solver.</span>
+<span class="sd">        Not used if eigen_solver==&#39;dense&#39;.</span>
+
+<span class="sd">    method : string (&#39;standard&#39;, &#39;hessian&#39;, &#39;modified&#39; or &#39;ltsa&#39;)</span>
+<span class="sd">        standard : use the standard locally linear embedding algorithm.  see</span>
+<span class="sd">                   reference [1]</span>
+<span class="sd">        hessian  : use the Hessian eigenmap method. This method requires</span>
+<span class="sd">                   ``n_neighbors &gt; n_components * (1 + (n_components + 1) / 2``</span>
+<span class="sd">                   see reference [2]</span>
+<span class="sd">        modified : use the modified locally linear embedding algorithm.</span>
+<span class="sd">                   see reference [3]</span>
+<span class="sd">        ltsa     : use local tangent space alignment algorithm</span>
+<span class="sd">                   see reference [4]</span>
+
+<span class="sd">    hessian_tol : float, optional</span>
+<span class="sd">        Tolerance for Hessian eigenmapping method.</span>
+<span class="sd">        Only used if ``method == &#39;hessian&#39;``</span>
+
+<span class="sd">    modified_tol : float, optional</span>
+<span class="sd">        Tolerance for modified LLE method.</span>
+<span class="sd">        Only used if ``method == &#39;modified&#39;``</span>
+
+<span class="sd">    neighbors_algorithm : string [&#39;auto&#39;|&#39;brute&#39;|&#39;kd_tree&#39;|&#39;ball_tree&#39;]</span>
+<span class="sd">        algorithm to use for nearest neighbors search,</span>
+<span class="sd">        passed to neighbors.NearestNeighbors instance</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional (default=None)</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`. Used when ``eigen_solver`` == &#39;arpack&#39;.</span>
+
+<span class="sd">    n_jobs : int, optional (default = 1)</span>
+<span class="sd">        The number of parallel jobs to run.</span>
+<span class="sd">        If ``-1``, then the number of jobs is set to the number of CPU cores.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    embedding_vectors_ : array-like, shape [n_components, n_samples]</span>
+<span class="sd">        Stores the embedding vectors</span>
+
+<span class="sd">    reconstruction_error_ : float</span>
+<span class="sd">        Reconstruction error associated with `embedding_vectors_`</span>
+
+<span class="sd">    nbrs_ : NearestNeighbors object</span>
+<span class="sd">        Stores nearest neighbors instance, including BallTree or KDtree</span>
+<span class="sd">        if applicable.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    .. [1] `Roweis, S. &amp; Saul, L. Nonlinear dimensionality reduction</span>
+<span class="sd">        by locally linear embedding.  Science 290:2323 (2000).`</span>
+<span class="sd">    .. [2] `Donoho, D. &amp; Grimes, C. Hessian eigenmaps: Locally</span>
+<span class="sd">        linear embedding techniques for high-dimensional data.</span>
+<span class="sd">        Proc Natl Acad Sci U S A.  100:5591 (2003).`</span>
+<span class="sd">    .. [3] `Zhang, Z. &amp; Wang, J. MLLE: Modified Locally Linear</span>
+<span class="sd">        Embedding Using Multiple Weights.`</span>
+<span class="sd">        http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.70.382</span>
+<span class="sd">    .. [4] `Zhang, Z. &amp; Zha, H. Principal manifolds and nonlinear</span>
+<span class="sd">        dimensionality reduction via tangent space alignment.</span>
+<span class="sd">        Journal of Shanghai Univ.  8:406 (2004)`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">reg</span><span class="o">=</span><span class="mf">1E-3</span><span class="p">,</span>
+                 <span class="n">eigen_solver</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1E-6</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                 <span class="n">method</span><span class="o">=</span><span class="s1">&#39;standard&#39;</span><span class="p">,</span> <span class="n">hessian_tol</span><span class="o">=</span><span class="mf">1E-4</span><span class="p">,</span> <span class="n">modified_tol</span><span class="o">=</span><span class="mf">1E-12</span><span class="p">,</span>
+                 <span class="n">neighbors_algorithm</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span> <span class="o">=</span> <span class="n">n_neighbors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">=</span> <span class="n">n_components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reg</span> <span class="o">=</span> <span class="n">reg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eigen_solver</span> <span class="o">=</span> <span class="n">eigen_solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="n">method</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hessian_tol</span> <span class="o">=</span> <span class="n">hessian_tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">modified_tol</span> <span class="o">=</span> <span class="n">modified_tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">neighbors_algorithm</span> <span class="o">=</span> <span class="n">neighbors_algorithm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
+
+    <span class="k">def</span> <span class="nf">_fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbrs_</span> <span class="o">=</span> <span class="n">NearestNeighbors</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span><span class="p">,</span>
+                                      <span class="n">algorithm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">neighbors_algorithm</span><span class="p">,</span>
+                                      <span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">)</span>
+
+        <span class="n">random_state</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbrs_</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embedding_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">reconstruction_error_</span> <span class="o">=</span> \
+            <span class="n">locally_linear_embedding</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">nbrs_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span>
+                <span class="n">eigen_solver</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eigen_solver</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
+                <span class="n">max_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="p">,</span>
+                <span class="n">hessian_tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">hessian_tol</span><span class="p">,</span> <span class="n">modified_tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">modified_tol</span><span class="p">,</span>
+                <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">,</span> <span class="n">reg</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">reg</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LocallyLinearEmbedding.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_manifold_locallylinearembedding.html#ibex.sklearn.manifold.LocallyLinearEmbedding.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the embedding vectors for data X</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like of shape [n_samples, n_features]</span>
+<span class="sd">            training set.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : returns an instance of self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="LocallyLinearEmbedding.fit_transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_manifold_locallylinearembedding.html#ibex.sklearn.manifold.LocallyLinearEmbedding.fit_transform">[docs]</a>    <span class="k">def</span> <span class="nf">fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the embedding vectors for data X and transform X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like of shape [n_samples, n_features]</span>
+<span class="sd">            training set.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X_new : array-like, shape (n_samples, n_components)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">embedding_</span></div>
+
+<div class="viewcode-block" id="LocallyLinearEmbedding.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_manifold_locallylinearembedding.html#ibex.sklearn.manifold.LocallyLinearEmbedding.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Transform new points into embedding space.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X_new : array, shape = [n_samples, n_components]</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Because of scaling performed by this method, it is discouraged to use</span>
+<span class="sd">        it together with methods that are not scale-invariant (like SVMs)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;nbrs_&quot;</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">ind</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbrs_</span><span class="o">.</span><span class="n">kneighbors</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span><span class="p">,</span>
+                                    <span class="n">return_distance</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">barycenter_weights</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbrs_</span><span class="o">.</span><span class="n">_fit_X</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span>
+                                     <span class="n">reg</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">reg</span><span class="p">)</span>
+        <span class="n">X_new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">X_new</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">embedding_</span><span class="p">[</span><span class="n">ind</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">X_new</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

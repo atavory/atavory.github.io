@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>ibex.FrameMixin &#8212; ibex 0.1.1 documentation</title>
+    <title>ibex.FrameMixin &#8212; ibex latest documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1.1',
+        VERSION:     'latest',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -71,16 +71,16 @@ which simply relays its input.</p>
 </div>
 <p>Note the following general points:</p>
 <ol class="arabic simple">
-<li>We subclass <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.BaseEstimator.html#sklearn.base.BaseEstimator" title="(in scikit-learn v0.19.0)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.BaseEstimator</span></code></a>, as this is an estimator.</li>
-<li>We subclass <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.TransformerMixin.html#sklearn.base.TransformerMixin" title="(in scikit-learn v0.19.0)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.TransformerMixin</span></code></a>, as, in this case, this is specifically a transformer.</li>
+<li>We subclass <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.BaseEstimator.html#sklearn.base.BaseEstimator" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.BaseEstimator</span></code></a>, as this is an estimator.</li>
+<li>We subclass <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.TransformerMixin.html#sklearn.base.TransformerMixin" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.TransformerMixin</span></code></a>, as, in this case, this is specifically a transformer.</li>
 <li>We subclass <a class="reference internal" href="#ibex.FrameMixin" title="ibex.FrameMixin"><code class="xref py py-class docutils literal"><span class="pre">ibex.FrameMixin</span></code></a>, as this estimator deals with <code class="docutils literal"><span class="pre">pandas</span></code> entities.</li>
 </ol>
 <p>4. In <code class="docutils literal"><span class="pre">fit</span></code>, we make sure to set <a class="reference internal" href="#ibex.FrameMixin.x_columns" title="ibex.FrameMixin.x_columns"><code class="xref py py-attr docutils literal"><span class="pre">ibex.FrameMixin.x_columns</span></code></a>;, and, if relevant,
-<a class="reference internal" href="#ibex.FrameMixin.y_columns" title="ibex.FrameMixin.y_columns"><code class="xref py py-attr docutils literal"><span class="pre">ibex.FrameMixin.y_columns</span></code></a> (if <code class="docutils literal"><span class="pre">y</span></code> is a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>); this will ensure that the
+<a class="reference internal" href="#ibex.FrameMixin.y_columns" title="ibex.FrameMixin.y_columns"><code class="xref py py-attr docutils literal"><span class="pre">ibex.FrameMixin.y_columns</span></code></a> (if <code class="docutils literal"><span class="pre">y</span></code> is a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>); this will ensure that the
 transformer will “remember” the columns it should see in further calls.</p>
 <p>5. In <code class="docutils literal"><span class="pre">transform</span></code>, we first use <code class="docutils literal"><span class="pre">x_columns</span></code>. This will verify the columns of <code class="docutils literal"><span class="pre">X</span></code>, and also reorder
 them according to the original order seen in <code class="docutils literal"><span class="pre">fit</span></code> (if needed).</p>
-<p>Suppose we define two <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> objects, <code class="docutils literal"><span class="pre">X_1</span></code> and <code class="docutils literal"><span class="pre">X_2</span></code>, with different columns:</p>
+<p>Suppose we define two <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> objects, <code class="docutils literal"><span class="pre">X_1</span></code> and <code class="docutils literal"><span class="pre">X_2</span></code>, with different columns:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="go">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">X_1</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]})</span>
@@ -104,10 +104,13 @@ them according to the original order seen in <code class="docutils literal"><spa
 </pre></div>
 </div>
 <p>The following <code class="docutils literal"><span class="pre">transform</span></code> will fail, as the estimator was not fitted:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">exceptions</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">try</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="kn">from</span> <span class="nn">sklearn.exceptions</span> <span class="k">import</span> <span class="n">NotFittedError</span>
+<span class="gp">... </span><span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="kn">from</span> <span class="nn">sklearn.utils.validation</span> <span class="k">import</span> <span class="n">NotFittedError</span> <span class="c1"># Older Versions</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">try</span><span class="p">:</span>
 <span class="gp">... </span>    <span class="n">Id</span><span class="p">()</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X_2</span><span class="p">)</span>
-<span class="gp">... </span><span class="k">except</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">NotFittedError</span><span class="p">:</span>
+<span class="gp">... </span><span class="k">except</span> <span class="n">NotFittedError</span><span class="p">:</span>
 <span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;caught&#39;</span><span class="p">)</span>
 <span class="go">caught</span>
 </pre></div>
@@ -135,7 +138,7 @@ them according to the original order seen in <code class="docutils literal"><spa
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><a class="reference internal" href="api_ibex_sklearn_pipeline_feature_union.html#ibex.sklearn.pipeline.FeatureUnion" title="ibex.sklearn.pipeline.FeatureUnion"><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.pipeline.FeatureUnion</span></code></a></td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><a class="reference internal" href="api_ibex_sklearn_pipeline_featureunion.html#ibex.sklearn.pipeline.FeatureUnion" title="ibex.sklearn.pipeline.FeatureUnion"><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.pipeline.FeatureUnion</span></code></a></td>
 </tr>
 </tbody>
 </table>

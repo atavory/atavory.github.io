@@ -1,0 +1,333 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>RidgeClassifierCV &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="ridgeclassifiercv">
+<h1><code class="docutils literal"><span class="pre">RidgeClassifierCV</span></code><a class="headerlink" href="#ridgeclassifiercv" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="ibex.sklearn.linear_model.RidgeClassifierCV">
+<em class="property">class </em><code class="descclassname">ibex.sklearn.linear_model.</code><code class="descname">RidgeClassifierCV</code><span class="sig-paren">(</span><em>alphas=(0.1</em>, <em>1.0</em>, <em>10.0)</em>, <em>fit_intercept=True</em>, <em>normalize=False</em>, <em>scoring=None</em>, <em>cv=None</em>, <em>class_weight=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.RidgeClassifierCV" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.linear_model.ridge.RidgeClassifierCV</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Ridge classifier with built-in cross-validation.</p>
+<blockquote>
+<div><p>By default, it performs Generalized Cross-Validation, which is a form of
+efficient Leave-One-Out cross-validation. Currently, only the n_features &gt;
+n_samples case is handled efficiently.</p>
+<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/linear_model.html#ridge-regression" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
+<dl class="docutils">
+<dt>alphas <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_alphas]</span></dt>
+<dd>Array of alpha values to try.
+Regularization strength; must be a positive float. Regularization
+improves the conditioning of the problem and reduces the variance of
+the estimates. Larger values specify stronger regularization.
+Alpha corresponds to <code class="docutils literal"><span class="pre">C^-1</span></code> in other linear models such as
+LogisticRegression or LinearSVC.</dd>
+<dt>fit_intercept <span class="classifier-delimiter">:</span> <span class="classifier">boolean</span></dt>
+<dd>Whether to calculate the intercept for this model. If set
+to false, no intercept will be used in calculations
+(e.g. data is expected to be already centered).</dd>
+<dt>normalize <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default False</span></dt>
+<dd>This parameter is ignored when <code class="docutils literal"><span class="pre">fit_intercept</span></code> is set to False.
+If True, the regressors X will be normalized before regression by
+subtracting the mean and dividing by the l2-norm.
+If you wish to standardize, please use
+<a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html#sklearn.preprocessing.StandardScaler" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.preprocessing.StandardScaler</span></code></a> before calling <code class="docutils literal"><span class="pre">fit</span></code>
+on an estimator with <code class="docutils literal"><span class="pre">normalize=False</span></code>.</dd>
+<dt>scoring <span class="classifier-delimiter">:</span> <span class="classifier">string, callable or None, optional, default: None</span></dt>
+<dd>A string (see model evaluation documentation) or
+a scorer callable object / function with signature
+<code class="docutils literal"><span class="pre">scorer(estimator,</span> <span class="pre">X,</span> <span class="pre">y)</span></code>.</dd>
+<dt>cv <span class="classifier-delimiter">:</span> <span class="classifier">int, cross-validation generator or an iterable, optional</span></dt>
+<dd><p class="first">Determines the cross-validation splitting strategy.
+Possible inputs for cv are:</p>
+<ul class="simple">
+<li>None, to use the efficient Leave-One-Out cross-validation</li>
+<li>integer, to specify the number of folds.</li>
+<li>An object to be used as a cross-validation generator.</li>
+<li>An iterable yielding train/test splits.</li>
+</ul>
+<p class="last">Refer <a class="reference external" href="http://scikit-learn.org/stable/modules/cross_validation.html#cross-validation" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a> for the various
+cross-validation strategies that can be used here.</p>
+</dd>
+<dt>class_weight <span class="classifier-delimiter">:</span> <span class="classifier">dict or ‘balanced’, optional</span></dt>
+<dd><p class="first">Weights associated with classes in the form <code class="docutils literal"><span class="pre">{class_label:</span> <span class="pre">weight}</span></code>.
+If not given, all classes are supposed to have weight one.</p>
+<p class="last">The “balanced” mode uses the values of y to automatically adjust
+weights inversely proportional to class frequencies in the input data
+as <code class="docutils literal"><span class="pre">n_samples</span> <span class="pre">/</span> <span class="pre">(n_classes</span> <span class="pre">*</span> <span class="pre">np.bincount(y))</span></code></p>
+</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">cv_values_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = [n_samples, n_alphas] or     shape = [n_samples, n_responses, n_alphas], optional</span></dt>
+<dd>Cross-validation values for each alpha (if <cite>store_cv_values=True</cite> and</dd>
+</dl>
+<p><cite>cv=None</cite>). After <cite>fit()</cite> has been called, this attribute will contain     the mean squared errors (by default) or the values of the     <cite>{loss,score}_func</cite> function (if provided in the constructor).</p>
+<dl class="docutils">
+<dt><a href="#id3"><span class="problematic" id="id4">coef_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = [n_features] or [n_targets, n_features]</span></dt>
+<dd>Weight vector(s).</dd>
+<dt><a href="#id5"><span class="problematic" id="id6">intercept_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">float | array, shape = (n_targets,)</span></dt>
+<dd>Independent term in decision function. Set to 0.0 if
+<code class="docutils literal"><span class="pre">fit_intercept</span> <span class="pre">=</span> <span class="pre">False</span></code>.</dd>
+<dt><a href="#id7"><span class="problematic" id="id8">alpha_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>Estimated regularization parameter</dd>
+</dl>
+<p>Ridge: Ridge regression
+RidgeClassifier: Ridge classifier
+RidgeCV: Ridge regression with built-in cross validation</p>
+<p>For multi-class classification, n_class classifiers are trained in
+a one-versus-all approach. Concretely, this is implemented by taking
+advantage of the multi-variate response support in Ridge.</p>
+</div></blockquote>
+<dl class="method">
+<dt id="ibex.sklearn.linear_model.RidgeClassifierCV.decision_function">
+<code class="descname">decision_function</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.RidgeClassifierCV.decision_function" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Predict confidence scores for samples.</p>
+<blockquote>
+<div><p>The confidence score for a sample is the signed distance of that
+sample to the hyperplane.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape = (n_samples, n_features)</span></dt>
+<dd>Samples.</dd>
+</dl>
+<dl class="docutils">
+<dt>array, shape=(n_samples,) if n_classes == 2 else (n_samples, n_classes)</dt>
+<dd>Confidence scores per (sample, class) combination. In the binary
+case, confidence score for self.classes_[1] where &gt;0 means this
+class would be predicted.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.linear_model.RidgeClassifierCV.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y</em>, <em>sample_weight=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/linear_model/ridge.html#RidgeClassifierCV.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.linear_model.RidgeClassifierCV.fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit the ridge classifier.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape (n_samples, n_features)</span></dt>
+<dd>Training vectors, where n_samples is the number of samples
+and n_features is the number of features.</dd>
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape (n_samples,)</span></dt>
+<dd>Target values. Will be cast to X’s dtype if necessary</dd>
+<dt>sample_weight <span class="classifier-delimiter">:</span> <span class="classifier">float or numpy array of shape (n_samples,)</span></dt>
+<dd>Sample weight.</dd>
+</dl>
+<dl class="docutils">
+<dt>self <span class="classifier-delimiter">:</span> <span class="classifier">object</span></dt>
+<dd>Returns self.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.linear_model.RidgeClassifierCV.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.RidgeClassifierCV.predict" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Predict class labels for samples in X.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape = [n_samples, n_features]</span></dt>
+<dd>Samples.</dd>
+</dl>
+<dl class="docutils">
+<dt>C <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = [n_samples]</span></dt>
+<dd>Predicted class label per sample.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.linear_model.RidgeClassifierCV.score">
+<code class="descname">score</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.RidgeClassifierCV.score" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Returns the mean accuracy on the given test data and labels.</p>
+<blockquote>
+<div><p>In multi-label classification, this is the subset accuracy
+which is a harsh metric since you require for each sample that
+each label set be correctly predicted.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = (n_samples, n_features)</span></dt>
+<dd>Test samples.</dd>
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = (n_samples) or (n_samples, n_outputs)</span></dt>
+<dd>True labels for X.</dd>
+<dt>sample_weight <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = [n_samples], optional</span></dt>
+<dd>Sample weights.</dd>
+</dl>
+<dl class="docutils">
+<dt>score <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>Mean accuracy of self.predict(X) wrt. y.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex_sklearn_linear_model_ridgeclassifiercv.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex_sklearn_linear_model_ridgeclassifiercv.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

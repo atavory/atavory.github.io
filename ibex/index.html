@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Ibex &#8212; ibex 0.1.1 documentation</title>
+    <title>Ibex &#8212; ibex latest documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1.1',
+        VERSION:     'latest',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -52,7 +52,7 @@
 <a class="reference external image-reference" href="https://badge.fury.io/py/ibex"><img alt="https://badge.fury.io/py/ibex.svg" src="https://badge.fury.io/py/ibex.svg" /></a>
 <p>This library aims for two (somewhat independent) goals:</p>
 <ul class="simple">
-<li>providing <a class="reference external" href="http://pandas.pydata.org/">pandas</a> adapters for <a class="reference external" href="http://scikit-learn.org/stable/developers/contributing.html#apis-of-scikit-learn-objects">estimators conforming to the sickit-learn protocol</a>, in particular those of <a class="reference external" href="http://scikit-learn.org/stable/">scikit-learn</a> itself</li>
+<li>providing <a class="reference external" href="http://pandas.pydata.org/">pandas</a> adapters for <a class="reference external" href="http://scikit-learn.org/stable/developers/contributing.html#apis-of-scikit-learn-objects">estimators conforming to the scikit-learn protocol</a>, in particular those of <a class="reference external" href="http://scikit-learn.org/stable/">scikit-learn</a> itself</li>
 <li>providing easier, and more succinct ways of combining estimators, features, and pipelines</li>
 </ul>
 <p>(You might also want to check out the excellent <a class="reference external" href="https://pypi.python.org/pypi/sklearn-pandas">pandas-sklearn</a> which has the same aims, but takes a very different
@@ -99,7 +99,10 @@ approach.)</p>
 <span class="gp">... </span>    <span class="n">featureunion__pca__n_components</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
 <span class="gp">... </span>    <span class="n">featureunion__selectkbest__k</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
 <span class="gp">... </span>    <span class="n">svc__C</span><span class="o">=</span><span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.model_selection</span> <span class="k">import</span> <span class="n">GridSearchCV</span> <span class="k">as</span> <span class="n">PdGridSearchCV</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">try</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="kn">from</span> <span class="nn">ibex.sklearn.model_selection</span> <span class="k">import</span> <span class="n">GridSearchCV</span> <span class="k">as</span> <span class="n">PdGridSearchCV</span>
+<span class="gp">... </span><span class="k">except</span><span class="p">:</span> <span class="c1"># Accomodate older versions of sklearn</span>
+<span class="gp">... </span>    <span class="kn">from</span> <span class="nn">ibex.sklearn.grid_search</span> <span class="k">import</span> <span class="n">GridSearchCV</span> <span class="k">as</span> <span class="n">PdGridSearchCV</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">PdGridSearchCV</span><span class="p">(</span><span class="n">clf</span><span class="p">,</span> <span class="n">param_grid</span><span class="o">=</span><span class="n">param_grid</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span> 
 <span class="gp">...</span>
 </pre></div>
@@ -174,7 +177,7 @@ approach.)</p>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api.html#ibex"><code class="docutils literal"><span class="pre">ibex</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="api.html#module-ibex">Module Doc</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api.html#notable-members">Notable Members</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#members">Members</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api.html#sklearn"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="api.html#tensorflow"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="api.html#xgboost"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>

@@ -1,0 +1,532 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.isotonic &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.isotonic</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Authors: Fabian Pedregosa &lt;fabian@fseoane.net&gt;</span>
+<span class="c1">#          Alexandre Gramfort &lt;alexandre.gramfort@inria.fr&gt;</span>
+<span class="c1">#          Nelle Varoquaux &lt;nelle.varoquaux@gmail.com&gt;</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">interpolate</span>
+<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="k">import</span> <span class="n">spearmanr</span>
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">,</span> <span class="n">RegressorMixin</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">as_float_array</span><span class="p">,</span> <span class="n">check_array</span><span class="p">,</span> <span class="n">check_consistent_length</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">deprecated</span>
+<span class="kn">from</span> <span class="nn">._isotonic</span> <span class="k">import</span> <span class="n">_inplace_contiguous_isotonic_regression</span><span class="p">,</span> <span class="n">_make_unique</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">math</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;check_increasing&#39;</span><span class="p">,</span> <span class="s1">&#39;isotonic_regression&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;IsotonicRegression&#39;</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">check_increasing</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Determine whether y is monotonically correlated with x.</span>
+
+<span class="sd">    y is found increasing or decreasing with respect to x based on a Spearman</span>
+<span class="sd">    correlation test.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : array-like, shape=(n_samples,)</span>
+<span class="sd">            Training data.</span>
+
+<span class="sd">    y : array-like, shape=(n_samples,)</span>
+<span class="sd">        Training target.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    increasing_bool : boolean</span>
+<span class="sd">        Whether the relationship is increasing or decreasing.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The Spearman correlation coefficient is estimated from the data, and the</span>
+<span class="sd">    sign of the resulting estimate is used as the result.</span>
+
+<span class="sd">    In the event that the 95% confidence interval based on Fisher transform</span>
+<span class="sd">    spans zero, a warning is raised.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Fisher transformation. Wikipedia.</span>
+<span class="sd">    https://en.wikipedia.org/wiki/Fisher_transformation</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Calculate Spearman rho estimate and set return accordingly.</span>
+    <span class="n">rho</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">spearmanr</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">increasing_bool</span> <span class="o">=</span> <span class="n">rho</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+
+    <span class="c1"># Run Fisher transform to get the rho CI, but handle rho=+/-1</span>
+    <span class="k">if</span> <span class="n">rho</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">F</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">((</span><span class="mf">1.</span> <span class="o">+</span> <span class="n">rho</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">-</span> <span class="n">rho</span><span class="p">))</span>
+        <span class="n">F_se</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="c1"># Use a 95% CI, i.e., +/-1.96 S.E.</span>
+        <span class="c1"># https://en.wikipedia.org/wiki/Fisher_transformation</span>
+        <span class="n">rho_0</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">F</span> <span class="o">-</span> <span class="mf">1.96</span> <span class="o">*</span> <span class="n">F_se</span><span class="p">)</span>
+        <span class="n">rho_1</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">F</span> <span class="o">+</span> <span class="mf">1.96</span> <span class="o">*</span> <span class="n">F_se</span><span class="p">)</span>
+
+        <span class="c1"># Warn if the CI spans zero.</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">rho_0</span><span class="p">)</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">rho_1</span><span class="p">):</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Confidence interval of the Spearman &quot;</span>
+                          <span class="s2">&quot;correlation coefficient spans zero. &quot;</span>
+                          <span class="s2">&quot;Determination of ``increasing`` may be &quot;</span>
+                          <span class="s2">&quot;suspect.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">increasing_bool</span>
+
+
+<span class="k">def</span> <span class="nf">isotonic_regression</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">y_min</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">y_max</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">increasing</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Solve the isotonic regression model::</span>
+
+<span class="sd">        min sum w[i] (y[i] - y_[i]) ** 2</span>
+
+<span class="sd">        subject to y_min = y_[1] &lt;= y_[2] ... &lt;= y_[n] = y_max</span>
+
+<span class="sd">    where:</span>
+<span class="sd">        - y[i] are inputs (real numbers)</span>
+<span class="sd">        - y_[i] are fitted</span>
+<span class="sd">        - w[i] are optional strictly positive weights (default to 1.0)</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;isotonic&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    y : iterable of floating-point values</span>
+<span class="sd">        The data.</span>
+
+<span class="sd">    sample_weight : iterable of floating-point values, optional, default: None</span>
+<span class="sd">        Weights on each point of the regression.</span>
+<span class="sd">        If None, weight is set to 1 (equal weights).</span>
+
+<span class="sd">    y_min : optional, default: None</span>
+<span class="sd">        If not None, set the lowest value of the fit to y_min.</span>
+
+<span class="sd">    y_max : optional, default: None</span>
+<span class="sd">        If not None, set the highest value of the fit to y_max.</span>
+
+<span class="sd">    increasing : boolean, optional, default: True</span>
+<span class="sd">        Whether to compute ``y_`` is increasing (if set to True) or decreasing</span>
+<span class="sd">        (if set to False)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    y_ : list of floating-point values</span>
+<span class="sd">        Isotonic fit of y.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    &quot;Active set algorithms for isotonic regression; A unifying framework&quot;</span>
+<span class="sd">    by Michael J. Best and Nilotpal Chakravarti, section 3.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">s_</span><span class="p">[:]</span> <span class="k">if</span> <span class="n">increasing</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">s_</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">order</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">sample_weight</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">sample_weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sample_weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">[</span><span class="n">order</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+    <span class="n">_inplace_contiguous_isotonic_regression</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">y_min</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">y_max</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Older versions of np.clip don&#39;t accept None as a bound, so use np.inf</span>
+        <span class="k">if</span> <span class="n">y_min</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">y_min</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="k">if</span> <span class="n">y_max</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">y_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">y_min</span><span class="p">,</span> <span class="n">y_max</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">y</span><span class="p">[</span><span class="n">order</span><span class="p">]</span>
+
+
+<span class="k">class</span> <span class="nc">IsotonicRegression</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Isotonic regression model.</span>
+
+<span class="sd">    The isotonic regression optimization problem is defined by::</span>
+
+<span class="sd">        min sum w_i (y[i] - y_[i]) ** 2</span>
+
+<span class="sd">        subject to y_[i] &lt;= y_[j] whenever X[i] &lt;= X[j]</span>
+<span class="sd">        and min(y_) = y_min, max(y_) = y_max</span>
+
+<span class="sd">    where:</span>
+<span class="sd">        - ``y[i]`` are inputs (real numbers)</span>
+<span class="sd">        - ``y_[i]`` are fitted</span>
+<span class="sd">        - ``X`` specifies the order.</span>
+<span class="sd">          If ``X`` is non-decreasing then ``y_`` is non-decreasing.</span>
+<span class="sd">        - ``w[i]`` are optional strictly positive weights (default to 1.0)</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;isotonic&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    y_min : optional, default: None</span>
+<span class="sd">        If not None, set the lowest value of the fit to y_min.</span>
+
+<span class="sd">    y_max : optional, default: None</span>
+<span class="sd">        If not None, set the highest value of the fit to y_max.</span>
+
+<span class="sd">    increasing : boolean or string, optional, default: True</span>
+<span class="sd">        If boolean, whether or not to fit the isotonic regression with y</span>
+<span class="sd">        increasing or decreasing.</span>
+
+<span class="sd">        The string value &quot;auto&quot; determines whether y should</span>
+<span class="sd">        increase or decrease based on the Spearman correlation estimate&#39;s</span>
+<span class="sd">        sign.</span>
+
+<span class="sd">    out_of_bounds : string, optional, default: &quot;nan&quot;</span>
+<span class="sd">        The ``out_of_bounds`` parameter handles how x-values outside of the</span>
+<span class="sd">        training domain are handled.  When set to &quot;nan&quot;, predicted y-values</span>
+<span class="sd">        will be NaN.  When set to &quot;clip&quot;, predicted y-values will be</span>
+<span class="sd">        set to the value corresponding to the nearest train interval endpoint.</span>
+<span class="sd">        When set to &quot;raise&quot;, allow ``interp1d`` to throw ValueError.</span>
+
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X_min_ : float</span>
+<span class="sd">        Minimum value of input array `X_` for left bound.</span>
+
+<span class="sd">    X_max_ : float</span>
+<span class="sd">        Maximum value of input array `X_` for right bound.</span>
+
+<span class="sd">    f_ : function</span>
+<span class="sd">        The stepwise interpolating function that covers the domain `X_`.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Ties are broken using the secondary method from Leeuw, 1977.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Isotonic Median Regression: A Linear Programming Approach</span>
+<span class="sd">    Nilotpal Chakravarti</span>
+<span class="sd">    Mathematics of Operations Research</span>
+<span class="sd">    Vol. 14, No. 2 (May, 1989), pp. 303-308</span>
+
+<span class="sd">    Isotone Optimization in R : Pool-Adjacent-Violators</span>
+<span class="sd">    Algorithm (PAVA) and Active Set Methods</span>
+<span class="sd">    Leeuw, Hornik, Mair</span>
+<span class="sd">    Journal of Statistical Software 2009</span>
+
+<span class="sd">    Correctness of Kruskal&#39;s algorithms for monotone regression with ties</span>
+<span class="sd">    Leeuw, Psychometrica, 1977</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_min</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">y_max</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">increasing</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">out_of_bounds</span><span class="o">=</span><span class="s1">&#39;nan&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_min</span> <span class="o">=</span> <span class="n">y_min</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_max</span> <span class="o">=</span> <span class="n">y_max</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">increasing</span> <span class="o">=</span> <span class="n">increasing</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_of_bounds</span> <span class="o">=</span> <span class="n">out_of_bounds</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;Attribute ``X_`` is deprecated in version 0.18 and will be&quot;</span>
+                <span class="s2">&quot; removed in version 0.20.&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">X_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_X_</span>
+
+    <span class="nd">@X_</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">X_</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_X_</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="nd">@X_</span><span class="o">.</span><span class="n">deleter</span>
+    <span class="k">def</span> <span class="nf">X_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_X_</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;Attribute ``y_`` is deprecated in version 0.18 and will&quot;</span>
+                <span class="s2">&quot; be removed in version 0.20.&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">y_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_y_</span>
+
+    <span class="nd">@y_</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">y_</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_y_</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="nd">@y_</span><span class="o">.</span><span class="n">deleter</span>
+    <span class="k">def</span> <span class="nf">y_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_y_</span>
+
+    <span class="k">def</span> <span class="nf">_check_fit_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;X should be a 1d array&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_build_f</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build the f_ interp1d function.&quot;&quot;&quot;</span>
+
+        <span class="c1"># Handle the out_of_bounds argument by setting bounds_error</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_of_bounds</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;raise&quot;</span><span class="p">,</span> <span class="s2">&quot;nan&quot;</span><span class="p">,</span> <span class="s2">&quot;clip&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The argument ``out_of_bounds`` must be in &quot;</span>
+                             <span class="s2">&quot;&#39;nan&#39;, &#39;clip&#39;, &#39;raise&#39;; got </span><span class="si">{0}</span><span class="s2">&quot;</span>
+                             <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_of_bounds</span><span class="p">))</span>
+
+        <span class="n">bounds_error</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_of_bounds</span> <span class="o">==</span> <span class="s2">&quot;raise&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># single y, constant prediction</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">f_</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">y</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">f_</span> <span class="o">=</span> <span class="n">interpolate</span><span class="o">.</span><span class="n">interp1d</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span>
+                                           <span class="n">bounds_error</span><span class="o">=</span><span class="n">bounds_error</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_build_y</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">,</span> <span class="n">trim_duplicates</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build the y_ IsotonicRegression.&quot;&quot;&quot;</span>
+        <span class="n">check_consistent_length</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">)</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="p">[</span><span class="n">check_array</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">ensure_2d</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">[</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">]]</span>
+
+        <span class="n">y</span> <span class="o">=</span> <span class="n">as_float_array</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_fit_data</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">)</span>
+
+        <span class="c1"># Determine increasing if auto-determination requested</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">increasing</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">increasing_</span> <span class="o">=</span> <span class="n">check_increasing</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">increasing_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">increasing</span>
+
+        <span class="c1"># If sample_weights is passed, removed zero-weight values and clean</span>
+        <span class="c1"># order</span>
+        <span class="k">if</span> <span class="n">sample_weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sample_weight</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">,</span> <span class="n">ensure_2d</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">sample_weight</span> <span class="o">&gt;</span> <span class="mi">0</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">sample_weight</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sample_weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+
+        <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">lexsort</span><span class="p">((</span><span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="p">))</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span> <span class="o">=</span> <span class="p">[</span><span class="n">array</span><span class="p">[</span><span class="n">order</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                               <span class="k">for</span> <span class="n">array</span> <span class="ow">in</span> <span class="p">[</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">]]</span>
+        <span class="n">unique_X</span><span class="p">,</span> <span class="n">unique_y</span><span class="p">,</span> <span class="n">unique_sample_weight</span> <span class="o">=</span> <span class="n">_make_unique</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">)</span>
+
+        <span class="c1"># Store _X_ and _y_ to maintain backward compat during the deprecation</span>
+        <span class="c1"># period of X_ and y_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_X_</span> <span class="o">=</span> <span class="n">X</span> <span class="o">=</span> <span class="n">unique_X</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_y_</span> <span class="o">=</span> <span class="n">y</span> <span class="o">=</span> <span class="n">isotonic_regression</span><span class="p">(</span><span class="n">unique_y</span><span class="p">,</span> <span class="n">unique_sample_weight</span><span class="p">,</span>
+                                           <span class="bp">self</span><span class="o">.</span><span class="n">y_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_max</span><span class="p">,</span>
+                                           <span class="n">increasing</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">increasing_</span><span class="p">)</span>
+
+        <span class="c1"># Handle the left and right bounds on X</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">X_min_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_max_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">trim_duplicates</span><span class="p">:</span>
+            <span class="c1"># Remove unnecessary points for faster prediction</span>
+            <span class="n">keep_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">),),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+            <span class="c1"># Aside from the 1st and last point, remove points whose y values</span>
+            <span class="c1"># are equal to both the point before and the point after it.</span>
+            <span class="n">keep_data</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">not_equal</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">y</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">]),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">not_equal</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">X</span><span class="p">[</span><span class="n">keep_data</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">keep_data</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># The ability to turn off trim_duplicates is only used to it make</span>
+            <span class="c1"># easier to unit test that removing duplicates in y does not have</span>
+            <span class="c1"># any impact the resulting interpolation function (besides</span>
+            <span class="c1"># prediction speed).</span>
+            <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span>
+
+<div class="viewcode-block" id="IsotonicRegression.fit"><a class="viewcode-back" href="../../api_ibex_sklearn_isotonic_isotonicregression.html#ibex.sklearn.isotonic.IsotonicRegression.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model using X, y as training data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape=(n_samples,)</span>
+<span class="sd">            Training data.</span>
+
+<span class="sd">        y : array-like, shape=(n_samples,)</span>
+<span class="sd">            Training target.</span>
+
+<span class="sd">        sample_weight : array-like, shape=(n_samples,), optional, default: None</span>
+<span class="sd">            Weights. If set to None, all weights will be set to 1 (equal</span>
+<span class="sd">            weights).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : object</span>
+<span class="sd">            Returns an instance of self.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        X is stored for future use, as `transform` needs X to interpolate</span>
+<span class="sd">        new input data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Transform y by running the isotonic regression algorithm and</span>
+        <span class="c1"># transform X accordingly.</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">)</span>
+
+        <span class="c1"># It is necessary to store the non-redundant part of the training set</span>
+        <span class="c1"># on the model to make it possible to support model persistence via</span>
+        <span class="c1"># the pickle module as the object built by scipy.interp1d is not</span>
+        <span class="c1"># picklable directly.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_necessary_X_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_necessary_y_</span> <span class="o">=</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span>
+
+        <span class="c1"># Build the interpolation function</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_build_f</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="IsotonicRegression.transform"><a class="viewcode-back" href="../../api_ibex_sklearn_isotonic_isotonicregression.html#ibex.sklearn.isotonic.IsotonicRegression.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">T</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Transform new data by linear interpolation</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        T : array-like, shape=(n_samples,)</span>
+<span class="sd">            Data to transform.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        T_ : array, shape=(n_samples,)</span>
+<span class="sd">            The transformed data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">as_float_array</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Isotonic regression input should be a 1d array&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Handle the out_of_bounds argument by clipping if needed</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_of_bounds</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;raise&quot;</span><span class="p">,</span> <span class="s2">&quot;nan&quot;</span><span class="p">,</span> <span class="s2">&quot;clip&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The argument ``out_of_bounds`` must be in &quot;</span>
+                             <span class="s2">&quot;&#39;nan&#39;, &#39;clip&#39;, &#39;raise&#39;; got </span><span class="si">{0}</span><span class="s2">&quot;</span>
+                             <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_of_bounds</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_of_bounds</span> <span class="o">==</span> <span class="s2">&quot;clip&quot;</span><span class="p">:</span>
+            <span class="n">T</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_min_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_max_</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">f_</span><span class="p">(</span><span class="n">T</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="IsotonicRegression.predict"><a class="viewcode-back" href="../../api_ibex_sklearn_isotonic_isotonicregression.html#ibex.sklearn.isotonic.IsotonicRegression.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">T</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Predict new data by linear interpolation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        T : array-like, shape=(n_samples,)</span>
+<span class="sd">            Data to transform.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        T_ : array, shape=(n_samples,)</span>
+<span class="sd">            Transformed data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">T</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Pickle-protocol - return state of the estimator. &quot;&quot;&quot;</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">IsotonicRegression</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__getstate__</span><span class="p">()</span>
+        <span class="c1"># remove interpolation method</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;f_&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">state</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Pickle-protocol - set state of the estimator.</span>
+
+<span class="sd">        We need to rebuild the interpolation function.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">IsotonicRegression</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__setstate__</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_necessary_X_&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_necessary_y_&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_build_f</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_necessary_X_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_necessary_y_</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,352 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>PassiveAggressiveRegressor &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="passiveaggressiveregressor">
+<h1><code class="docutils literal"><span class="pre">PassiveAggressiveRegressor</span></code><a class="headerlink" href="#passiveaggressiveregressor" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="ibex.sklearn.linear_model.PassiveAggressiveRegressor">
+<em class="property">class </em><code class="descclassname">ibex.sklearn.linear_model.</code><code class="descname">PassiveAggressiveRegressor</code><span class="sig-paren">(</span><em>C=1.0</em>, <em>fit_intercept=True</em>, <em>max_iter=None</em>, <em>tol=None</em>, <em>shuffle=True</em>, <em>verbose=0</em>, <em>loss='epsilon_insensitive'</em>, <em>epsilon=0.1</em>, <em>random_state=None</em>, <em>warm_start=False</em>, <em>average=False</em>, <em>n_iter=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.PassiveAggressiveRegressor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.linear_model.passive_aggressive.PassiveAggressiveRegressor</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Passive Aggressive Regressor</p>
+<blockquote>
+<div><p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/linear_model.html#passive-aggressive" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
+<dl class="docutils">
+<dt>C <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>Maximum step size (regularization). Defaults to 1.0.</dd>
+<dt>fit_intercept <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>Whether the intercept should be estimated or not. If False, the
+data is assumed to be already centered. Defaults to True.</dd>
+<dt>max_iter <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first">The maximum number of passes over the training data (aka epochs).
+It only impacts the behavior in the <code class="docutils literal"><span class="pre">fit</span></code> method, and not the
+<cite>partial_fit</cite>.
+Defaults to 5. Defaults to 1000 from 0.21, or if tol is not None.</p>
+<div class="last versionadded">
+<p><span class="versionmodified">New in version 0.19.</span></p>
+</div>
+</dd>
+<dt>tol <span class="classifier-delimiter">:</span> <span class="classifier">float or None, optional</span></dt>
+<dd><p class="first">The stopping criterion. If it is not None, the iterations will stop
+when (loss &gt; previous_loss - tol). Defaults to None.
+Defaults to 1e-3 from 0.21.</p>
+<div class="last versionadded">
+<p><span class="versionmodified">New in version 0.19.</span></p>
+</div>
+</dd>
+<dt>shuffle <span class="classifier-delimiter">:</span> <span class="classifier">bool, default=True</span></dt>
+<dd>Whether or not the training data should be shuffled after each epoch.</dd>
+<dt>verbose <span class="classifier-delimiter">:</span> <span class="classifier">integer, optional</span></dt>
+<dd>The verbosity level</dd>
+<dt>loss <span class="classifier-delimiter">:</span> <span class="classifier">string, optional</span></dt>
+<dd>The loss function to be used:
+epsilon_insensitive: equivalent to PA-I in the reference paper.
+squared_epsilon_insensitive: equivalent to PA-II in the reference
+paper.</dd>
+<dt>epsilon <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>If the difference between the current prediction and the correct label
+is below this threshold, the model is not updated.</dd>
+<dt>random_state <span class="classifier-delimiter">:</span> <span class="classifier">int, RandomState instance or None, optional, default=None</span></dt>
+<dd>The seed of the pseudo random number generator to use when shuffling
+the data.  If int, random_state is the seed used by the random number
+generator; If RandomState instance, random_state is the random number
+generator; If None, the random number generator is the RandomState
+instance used by <cite>np.random</cite>.</dd>
+<dt>warm_start <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd>When set to True, reuse the solution of the previous call to fit as
+initialization, otherwise, just erase the previous solution.</dd>
+<dt>average <span class="classifier-delimiter">:</span> <span class="classifier">bool or int, optional</span></dt>
+<dd><p class="first">When set to True, computes the averaged SGD weights and stores the
+result in the <code class="docutils literal"><span class="pre">coef_</span></code> attribute. If set to an int greater than 1,
+averaging will begin once the total number of samples seen reaches
+average. So average=10 will begin averaging after seeing 10 samples.</p>
+<div class="last versionadded">
+<p><span class="versionmodified">New in version 0.19: </span>parameter <em>average</em> to use weights averaging in SGD</p>
+</div>
+</dd>
+<dt>n_iter <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first">The number of passes over the training data (aka epochs).
+Defaults to None. Deprecated, will be removed in 0.21.</p>
+<div class="last versionchanged">
+<p><span class="versionmodified">Changed in version 0.19: </span>Deprecated</p>
+</div>
+</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">coef_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = [1, n_features] if n_classes == 2 else [n_classes,            n_features]</span></dt>
+<dd>Weights assigned to the features.</dd>
+<dt><a href="#id3"><span class="problematic" id="id4">intercept_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = [1] if n_classes == 2 else [n_classes]</span></dt>
+<dd>Constants in decision function.</dd>
+<dt><a href="#id5"><span class="problematic" id="id6">n_iter_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd>The actual number of iterations to reach the stopping criterion.</dd>
+</dl>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="k">import</span> <span class="n">PassiveAggressiveRegressor</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="k">import</span> <span class="n">make_regression</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">make_regression</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">regr</span> <span class="o">=</span> <span class="n">PassiveAggressiveRegressor</span><span class="p">(</span><span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">regr</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="go">PassiveAggressiveRegressor(C=1.0, average=False, epsilon=0.1,</span>
+<span class="go">              fit_intercept=True, loss=&#39;epsilon_insensitive&#39;, max_iter=5,</span>
+<span class="go">              n_iter=None, random_state=0, shuffle=True, tol=None,</span>
+<span class="go">              verbose=0, warm_start=False)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">regr</span><span class="o">.</span><span class="n">coef_</span><span class="p">)</span>
+<span class="go">[ 20.48736655  34.18818427  67.59122734  87.94731329]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">regr</span><span class="o">.</span><span class="n">intercept_</span><span class="p">)</span>
+<span class="go">[-0.02306214]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">regr</span><span class="o">.</span><span class="n">predict</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]))</span>
+<span class="go">[-0.02306214]</span>
+</pre></div>
+</div>
+<p>SGDRegressor</p>
+<p>Online Passive-Aggressive Algorithms
+&lt;<a class="reference external" href="http://jmlr.csail.mit.edu/papers/volume7/crammer06a/crammer06a.pdf">http://jmlr.csail.mit.edu/papers/volume7/crammer06a/crammer06a.pdf</a>&gt;
+K. Crammer, O. Dekel, J. Keshat, S. Shalev-Shwartz, Y. Singer - JMLR (2006)</p>
+</div></blockquote>
+<dl class="method">
+<dt id="ibex.sklearn.linear_model.PassiveAggressiveRegressor.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y</em>, <em>coef_init=None</em>, <em>intercept_init=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/linear_model/passive_aggressive.html#PassiveAggressiveRegressor.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.linear_model.PassiveAggressiveRegressor.fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit linear model with Passive Aggressive algorithm.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape = [n_samples, n_features]</span></dt>
+<dd>Training data</dd>
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples]</span></dt>
+<dd>Target values</dd>
+<dt>coef_init <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = [n_features]</span></dt>
+<dd>The initial coefficients to warm-start the optimization.</dd>
+<dt>intercept_init <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = [1]</span></dt>
+<dd>The initial intercept to warm-start the optimization.</dd>
+</dl>
+<p>self : returns an instance of self.</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.linear_model.PassiveAggressiveRegressor.partial_fit">
+<code class="descname">partial_fit</code><span class="sig-paren">(</span><em>X</em>, <em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/linear_model/passive_aggressive.html#PassiveAggressiveRegressor.partial_fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.linear_model.PassiveAggressiveRegressor.partial_fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit linear model with Passive Aggressive algorithm.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape = [n_samples, n_features]</span></dt>
+<dd>Subset of training data</dd>
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples]</span></dt>
+<dd>Subset of target values</dd>
+</dl>
+<p>self : returns an instance of self.</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.linear_model.PassiveAggressiveRegressor.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.PassiveAggressiveRegressor.predict" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Predict using the linear model</p>
+<blockquote>
+<div><p>X : {array-like, sparse matrix}, shape (n_samples, n_features)</p>
+<dl class="docutils">
+<dt>array, shape (n_samples,)</dt>
+<dd>Predicted target values per element in X.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.linear_model.PassiveAggressiveRegressor.score">
+<code class="descname">score</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.PassiveAggressiveRegressor.score" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Returns the coefficient of determination R^2 of the prediction.</p>
+<blockquote>
+<div><p>The coefficient R^2 is defined as (1 - u/v), where u is the residual
+sum of squares ((y_true - y_pred) ** 2).sum() and v is the total
+sum of squares ((y_true - y_true.mean()) ** 2).sum().
+The best possible score is 1.0 and it can be negative (because the
+model can be arbitrarily worse). A constant model that always
+predicts the expected value of y, disregarding the input features,
+would get a R^2 score of 0.0.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = (n_samples, n_features)</span></dt>
+<dd>Test samples.</dd>
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = (n_samples) or (n_samples, n_outputs)</span></dt>
+<dd>True values for X.</dd>
+<dt>sample_weight <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = [n_samples], optional</span></dt>
+<dd>Sample weights.</dd>
+</dl>
+<dl class="docutils">
+<dt>score <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>R^2 of self.predict(X) wrt. y.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex_sklearn_linear_model_passiveaggressiveregressor.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex_sklearn_linear_model_passiveaggressiveregressor.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

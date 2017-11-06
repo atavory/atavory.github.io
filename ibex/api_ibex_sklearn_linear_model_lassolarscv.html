@@ -1,0 +1,325 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>LassoLarsCV &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="lassolarscv">
+<h1><code class="docutils literal"><span class="pre">LassoLarsCV</span></code><a class="headerlink" href="#lassolarscv" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="ibex.sklearn.linear_model.LassoLarsCV">
+<em class="property">class </em><code class="descclassname">ibex.sklearn.linear_model.</code><code class="descname">LassoLarsCV</code><span class="sig-paren">(</span><em>fit_intercept=True</em>, <em>verbose=False</em>, <em>max_iter=500</em>, <em>normalize=True</em>, <em>precompute='auto'</em>, <em>cv=None</em>, <em>max_n_alphas=1000</em>, <em>n_jobs=1</em>, <em>eps=2.2204460492503131e-16</em>, <em>copy_X=True</em>, <em>positive=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.LassoLarsCV" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.linear_model.least_angle.LassoLarsCV</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Cross-validated Lasso, using the LARS algorithm</p>
+<blockquote>
+<div><p>The optimization objective for Lasso is:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n_samples</span><span class="p">))</span> <span class="o">*</span> <span class="o">||</span><span class="n">y</span> <span class="o">-</span> <span class="n">Xw</span><span class="o">||^</span><span class="mi">2</span><span class="n">_2</span> <span class="o">+</span> <span class="n">alpha</span> <span class="o">*</span> <span class="o">||</span><span class="n">w</span><span class="o">||</span><span class="n">_1</span>
+</pre></div>
+</div>
+<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/linear_model.html#least-angle-regression" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
+<dl class="docutils">
+<dt>fit_intercept <span class="classifier-delimiter">:</span> <span class="classifier">boolean</span></dt>
+<dd>whether to calculate the intercept for this model. If set
+to false, no intercept will be used in calculations
+(e.g. data is expected to be already centered).</dd>
+<dt>verbose <span class="classifier-delimiter">:</span> <span class="classifier">boolean or integer, optional</span></dt>
+<dd>Sets the verbosity amount</dd>
+<dt>max_iter <span class="classifier-delimiter">:</span> <span class="classifier">integer, optional</span></dt>
+<dd>Maximum number of iterations to perform.</dd>
+<dt>normalize <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default True</span></dt>
+<dd>This parameter is ignored when <code class="docutils literal"><span class="pre">fit_intercept</span></code> is set to False.
+If True, the regressors X will be normalized before regression by
+subtracting the mean and dividing by the l2-norm.
+If you wish to standardize, please use
+<a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html#sklearn.preprocessing.StandardScaler" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.preprocessing.StandardScaler</span></code></a> before calling <code class="docutils literal"><span class="pre">fit</span></code>
+on an estimator with <code class="docutils literal"><span class="pre">normalize=False</span></code>.</dd>
+<dt>precompute <span class="classifier-delimiter">:</span> <span class="classifier">True | False | ‘auto’</span></dt>
+<dd>Whether to use a precomputed Gram matrix to speed up
+calculations. If set to <code class="docutils literal"><span class="pre">'auto'</span></code> let us decide. The Gram matrix
+cannot be passed as argument since we will use only subsets of X.</dd>
+<dt>cv <span class="classifier-delimiter">:</span> <span class="classifier">int, cross-validation generator or an iterable, optional</span></dt>
+<dd><p class="first">Determines the cross-validation splitting strategy.
+Possible inputs for cv are:</p>
+<ul class="simple">
+<li>None, to use the default 3-fold cross-validation,</li>
+<li>integer, to specify the number of folds.</li>
+<li>An object to be used as a cross-validation generator.</li>
+<li>An iterable yielding train/test splits.</li>
+</ul>
+<p>For integer/None inputs, <code class="xref py py-class docutils literal"><span class="pre">KFold</span></code> is used.</p>
+<p class="last">Refer <a class="reference external" href="http://scikit-learn.org/stable/modules/cross_validation.html#cross-validation" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a> for the various
+cross-validation strategies that can be used here.</p>
+</dd>
+<dt>max_n_alphas <span class="classifier-delimiter">:</span> <span class="classifier">integer, optional</span></dt>
+<dd>The maximum number of points on the path used to compute the
+residuals in the cross-validation</dd>
+<dt>n_jobs <span class="classifier-delimiter">:</span> <span class="classifier">integer, optional</span></dt>
+<dd>Number of CPUs to use during the cross validation. If <code class="docutils literal"><span class="pre">-1</span></code>, use
+all the CPUs</dd>
+<dt>eps <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd>The machine-precision regularization in the computation of the
+Cholesky diagonal factors. Increase this for very ill-conditioned
+systems.</dd>
+<dt>copy_X <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default True</span></dt>
+<dd>If True, X will be copied; else, it may be overwritten.</dd>
+<dt>positive <span class="classifier-delimiter">:</span> <span class="classifier">boolean (default=False)</span></dt>
+<dd>Restrict coefficients to be &gt;= 0. Be aware that you might want to
+remove fit_intercept which is set True by default.
+Under the positive restriction the model coefficients do not converge
+to the ordinary-least-squares solution for small values of alpha.
+Only coefficients up to the smallest alpha value (<code class="docutils literal"><span class="pre">alphas_[alphas_</span> <span class="pre">&gt;</span>
+<span class="pre">0.].min()</span></code> when fit_path=True) reached by the stepwise Lars-Lasso
+algorithm are typically in congruence with the solution of the
+coordinate descent Lasso estimator.
+As a consequence using LassoLarsCV only makes sense for problems where
+a sparse solution is expected and/or reached.</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">coef_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_features,)</span></dt>
+<dd>parameter vector (w in the formulation formula)</dd>
+<dt><a href="#id3"><span class="problematic" id="id4">intercept_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>independent term in decision function.</dd>
+<dt><a href="#id5"><span class="problematic" id="id6">coef_path_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_features, n_alphas)</span></dt>
+<dd>the varying values of the coefficients along the path</dd>
+<dt><a href="#id7"><span class="problematic" id="id8">alpha_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>the estimated regularization parameter alpha</dd>
+<dt><a href="#id9"><span class="problematic" id="id10">alphas_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_alphas,)</span></dt>
+<dd>the different values of alpha along the path</dd>
+<dt><a href="#id11"><span class="problematic" id="id12">cv_alphas_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_cv_alphas,)</span></dt>
+<dd>all the values of alpha along the path for the different folds</dd>
+<dt><a href="#id13"><span class="problematic" id="id14">mse_path_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_folds, n_cv_alphas)</span></dt>
+<dd>the mean square error on left-out for each fold along the path
+(alpha values given by <code class="docutils literal"><span class="pre">cv_alphas</span></code>)</dd>
+<dt><a href="#id15"><span class="problematic" id="id16">n_iter_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array-like or int</span></dt>
+<dd>the number of iterations run by Lars with the optimal alpha.</dd>
+</dl>
+<p>The object solves the same problem as the LassoCV object. However,
+unlike the LassoCV, it find the relevant alphas values by itself.
+In general, because of this property, it will be more stable.
+However, it is more fragile to heavily multicollinear datasets.</p>
+<p>It is more efficient than the LassoCV if only a small number of
+features are selected compared to the total number, for instance if
+there are very few samples compared to the number of features.</p>
+<p>lars_path, LassoLars, LarsCV, LassoCV</p>
+</div></blockquote>
+<dl class="method">
+<dt id="ibex.sklearn.linear_model.LassoLarsCV.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.LassoLarsCV.fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit the model using X, y as training data.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape (n_samples, n_features)</span></dt>
+<dd>Training data.</dd>
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape (n_samples,)</span></dt>
+<dd>Target values.</dd>
+</dl>
+<dl class="docutils">
+<dt>self <span class="classifier-delimiter">:</span> <span class="classifier">object</span></dt>
+<dd>returns an instance of self.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.linear_model.LassoLarsCV.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.LassoLarsCV.predict" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Predict using the linear model</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape = (n_samples, n_features)</span></dt>
+<dd>Samples.</dd>
+</dl>
+<dl class="docutils">
+<dt>C <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = (n_samples,)</span></dt>
+<dd>Returns predicted values.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.linear_model.LassoLarsCV.score">
+<code class="descname">score</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.LassoLarsCV.score" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Returns the coefficient of determination R^2 of the prediction.</p>
+<blockquote>
+<div><p>The coefficient R^2 is defined as (1 - u/v), where u is the residual
+sum of squares ((y_true - y_pred) ** 2).sum() and v is the total
+sum of squares ((y_true - y_true.mean()) ** 2).sum().
+The best possible score is 1.0 and it can be negative (because the
+model can be arbitrarily worse). A constant model that always
+predicts the expected value of y, disregarding the input features,
+would get a R^2 score of 0.0.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = (n_samples, n_features)</span></dt>
+<dd>Test samples.</dd>
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = (n_samples) or (n_samples, n_outputs)</span></dt>
+<dd>True values for X.</dd>
+<dt>sample_weight <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = [n_samples], optional</span></dt>
+<dd>Sample weights.</dd>
+</dl>
+<dl class="docutils">
+<dt>score <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>R^2 of self.predict(X) wrt. y.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex_sklearn_linear_model_lassolarscv.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex_sklearn_linear_model_lassolarscv.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

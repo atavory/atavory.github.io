@@ -1,0 +1,586 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.cluster.spectral &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.cluster.spectral</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;Algorithms for spectral clustering&quot;&quot;&quot;</span>
+
+<span class="c1"># Author: Gael Varoquaux gael.varoquaux@normalesup.org</span>
+<span class="c1">#         Brian Cheung</span>
+<span class="c1">#         Wei LI &lt;kuantkid@gmail.com&gt;</span>
+<span class="c1"># License: BSD 3 clause</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClusterMixin</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_random_state</span><span class="p">,</span> <span class="n">as_float_array</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_array</span>
+<span class="kn">from</span> <span class="nn">..metrics.pairwise</span> <span class="k">import</span> <span class="n">pairwise_kernels</span>
+<span class="kn">from</span> <span class="nn">..neighbors</span> <span class="k">import</span> <span class="n">kneighbors_graph</span>
+<span class="kn">from</span> <span class="nn">..manifold</span> <span class="k">import</span> <span class="n">spectral_embedding</span>
+<span class="kn">from</span> <span class="nn">.k_means_</span> <span class="k">import</span> <span class="n">k_means</span>
+
+
+<span class="k">def</span> <span class="nf">discretize</span><span class="p">(</span><span class="n">vectors</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_svd_restarts</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">n_iter_max</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+               <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Search for a partition matrix (clustering) which is closest to the</span>
+<span class="sd">    eigenvector embedding.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    vectors : array-like, shape: (n_samples, n_clusters)</span>
+<span class="sd">        The embedding space of the samples.</span>
+
+<span class="sd">    copy : boolean, optional, default: True</span>
+<span class="sd">        Whether to copy vectors, or perform in-place normalization.</span>
+
+<span class="sd">    max_svd_restarts : int, optional, default: 30</span>
+<span class="sd">        Maximum number of attempts to restart SVD if convergence fails</span>
+
+<span class="sd">    n_iter_max : int, optional, default: 30</span>
+<span class="sd">        Maximum number of iterations to attempt in rotation and partition</span>
+<span class="sd">        matrix search if machine precision convergence is not reached</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional, default: None</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    labels : array of integers, shape: n_samples</span>
+<span class="sd">        The labels of the clusters.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    - Multiclass spectral clustering, 2003</span>
+<span class="sd">      Stella X. Yu, Jianbo Shi</span>
+<span class="sd">      http://www1.icsi.berkeley.edu/~stellayu/publication/doc/2003kwayICCV.pdf</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+
+<span class="sd">    The eigenvector embedding is used to iteratively search for the</span>
+<span class="sd">    closest discrete partition.  First, the eigenvector embedding is</span>
+<span class="sd">    normalized to the space of partition matrices. An optimal discrete</span>
+<span class="sd">    partition matrix closest to this normalized embedding multiplied by</span>
+<span class="sd">    an initial rotation is calculated.  Fixing this discrete partition</span>
+<span class="sd">    matrix, an optimal rotation matrix is calculated.  These two</span>
+<span class="sd">    calculations are performed until convergence.  The discrete partition</span>
+<span class="sd">    matrix is returned as the clustering solution.  Used in spectral</span>
+<span class="sd">    clustering, this method tends to be faster and more robust to random</span>
+<span class="sd">    initialization than k-means.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">csc_matrix</span>
+    <span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="k">import</span> <span class="n">LinAlgError</span>
+
+    <span class="n">random_state</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+
+    <span class="n">vectors</span> <span class="o">=</span> <span class="n">as_float_array</span><span class="p">(</span><span class="n">vectors</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="n">copy</span><span class="p">)</span>
+
+    <span class="n">eps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+    <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">=</span> <span class="n">vectors</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="c1"># Normalize the eigenvectors to an equal length of a vector of ones.</span>
+    <span class="c1"># Reorient the eigenvectors to point in the negative direction with respect</span>
+    <span class="c1"># to the first element.  This may have to do with constraining the</span>
+    <span class="c1"># eigenvectors to lie in a specific quadrant to make the discretization</span>
+    <span class="c1"># search easier.</span>
+    <span class="n">norm_ones</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">vectors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="n">vectors</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">vectors</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">vectors</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]))</span> \
+            <span class="o">*</span> <span class="n">norm_ones</span>
+        <span class="k">if</span> <span class="n">vectors</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">vectors</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">vectors</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">vectors</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">])</span>
+
+    <span class="c1"># Normalize the rows of the eigenvectors.  Samples should lie on the unit</span>
+    <span class="c1"># hypersphere centered at the origin.  This transforms the samples in the</span>
+    <span class="c1"># embedding space to the space of partition matrices.</span>
+    <span class="n">vectors</span> <span class="o">=</span> <span class="n">vectors</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">vectors</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+    <span class="n">svd_restarts</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">has_converged</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="c1"># If there is an exception we try to randomize and rerun SVD again</span>
+    <span class="c1"># do this max_svd_restarts times.</span>
+    <span class="k">while</span> <span class="p">(</span><span class="n">svd_restarts</span> <span class="o">&lt;</span> <span class="n">max_svd_restarts</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">has_converged</span><span class="p">:</span>
+
+        <span class="c1"># Initialize first column of rotation matrix with a row of the</span>
+        <span class="c1"># eigenvectors</span>
+        <span class="n">rotation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_components</span><span class="p">,</span> <span class="n">n_components</span><span class="p">))</span>
+        <span class="n">rotation</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">vectors</span><span class="p">[</span><span class="n">random_state</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">n_samples</span><span class="p">),</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="c1"># To initialize the rest of the rotation matrix, find the rows</span>
+        <span class="c1"># of the eigenvectors that are as orthogonal to each other as</span>
+        <span class="c1"># possible</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_components</span><span class="p">):</span>
+            <span class="c1"># Accumulate c to ensure row is as orthogonal as possible to</span>
+            <span class="c1"># previous picks as well as current one</span>
+            <span class="n">c</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">vectors</span><span class="p">,</span> <span class="n">rotation</span><span class="p">[:,</span> <span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]))</span>
+            <span class="n">rotation</span><span class="p">[:,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">vectors</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">argmin</span><span class="p">(),</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="n">last_objective_value</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">n_iter</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">has_converged</span><span class="p">:</span>
+            <span class="n">n_iter</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="n">t_discrete</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">vectors</span><span class="p">,</span> <span class="n">rotation</span><span class="p">)</span>
+
+            <span class="n">labels</span> <span class="o">=</span> <span class="n">t_discrete</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">vectors_discrete</span> <span class="o">=</span> <span class="n">csc_matrix</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)),</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">),</span> <span class="n">labels</span><span class="p">)),</span>
+                <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_components</span><span class="p">))</span>
+
+            <span class="n">t_svd</span> <span class="o">=</span> <span class="n">vectors_discrete</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">vectors</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">Vh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">t_svd</span><span class="p">)</span>
+                <span class="n">svd_restarts</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">except</span> <span class="n">LinAlgError</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;SVD did not converge, randomizing and trying again&quot;</span><span class="p">)</span>
+                <span class="k">break</span>
+
+            <span class="n">ncut_value</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_samples</span> <span class="o">-</span> <span class="n">S</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+            <span class="k">if</span> <span class="p">((</span><span class="nb">abs</span><span class="p">(</span><span class="n">ncut_value</span> <span class="o">-</span> <span class="n">last_objective_value</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">eps</span><span class="p">)</span> <span class="ow">or</span>
+                    <span class="p">(</span><span class="n">n_iter</span> <span class="o">&gt;</span> <span class="n">n_iter_max</span><span class="p">)):</span>
+                <span class="n">has_converged</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># otherwise calculate rotation and continue</span>
+                <span class="n">last_objective_value</span> <span class="o">=</span> <span class="n">ncut_value</span>
+                <span class="n">rotation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Vh</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">U</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">has_converged</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">LinAlgError</span><span class="p">(</span><span class="s1">&#39;SVD did not converge&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">labels</span>
+
+
+<span class="k">def</span> <span class="nf">spectral_clustering</span><span class="p">(</span><span class="n">affinity</span><span class="p">,</span> <span class="n">n_clusters</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">eigen_solver</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                        <span class="n">eigen_tol</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">assign_labels</span><span class="o">=</span><span class="s1">&#39;kmeans&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Apply clustering to a projection to the normalized laplacian.</span>
+
+<span class="sd">    In practice Spectral Clustering is very useful when the structure of</span>
+<span class="sd">    the individual clusters is highly non-convex or more generally when</span>
+<span class="sd">    a measure of the center and spread of the cluster is not a suitable</span>
+<span class="sd">    description of the complete cluster. For instance when clusters are</span>
+<span class="sd">    nested circles on the 2D plan.</span>
+
+<span class="sd">    If affinity is the adjacency matrix of a graph, this method can be</span>
+<span class="sd">    used to find normalized graph cuts.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;spectral_clustering&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    -----------</span>
+<span class="sd">    affinity : array-like or sparse matrix, shape: (n_samples, n_samples)</span>
+<span class="sd">        The affinity matrix describing the relationship of the samples to</span>
+<span class="sd">        embed. **Must be symmetric**.</span>
+
+<span class="sd">        Possible examples:</span>
+<span class="sd">          - adjacency matrix of a graph,</span>
+<span class="sd">          - heat kernel of the pairwise distance matrix of the samples,</span>
+<span class="sd">          - symmetric k-nearest neighbours connectivity matrix of the samples.</span>
+
+<span class="sd">    n_clusters : integer, optional</span>
+<span class="sd">        Number of clusters to extract.</span>
+
+<span class="sd">    n_components : integer, optional, default is n_clusters</span>
+<span class="sd">        Number of eigen vectors to use for the spectral embedding</span>
+
+<span class="sd">    eigen_solver : {None, &#39;arpack&#39;, &#39;lobpcg&#39;, or &#39;amg&#39;}</span>
+<span class="sd">        The eigenvalue decomposition strategy to use. AMG requires pyamg</span>
+<span class="sd">        to be installed. It can be faster on very large, sparse problems,</span>
+<span class="sd">        but may also lead to instabilities</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional, default: None</span>
+<span class="sd">        A pseudo random number generator used for the initialization of the</span>
+<span class="sd">        lobpcg eigen vectors decomposition when eigen_solver == &#39;amg&#39; and by</span>
+<span class="sd">        the K-Means initialization. If int, random_state is the seed used by</span>
+<span class="sd">        the random number generator; If RandomState instance, random_state is</span>
+<span class="sd">        the random number generator; If None, the random number generator is</span>
+<span class="sd">        the RandomState instance used by `np.random`.</span>
+
+<span class="sd">    n_init : int, optional, default: 10</span>
+<span class="sd">        Number of time the k-means algorithm will be run with different</span>
+<span class="sd">        centroid seeds. The final results will be the best output of</span>
+<span class="sd">        n_init consecutive runs in terms of inertia.</span>
+
+<span class="sd">    eigen_tol : float, optional, default: 0.0</span>
+<span class="sd">        Stopping criterion for eigendecomposition of the Laplacian matrix</span>
+<span class="sd">        when using arpack eigen_solver.</span>
+
+<span class="sd">    assign_labels : {&#39;kmeans&#39;, &#39;discretize&#39;}, default: &#39;kmeans&#39;</span>
+<span class="sd">        The strategy to use to assign labels in the embedding</span>
+<span class="sd">        space.  There are two ways to assign labels after the laplacian</span>
+<span class="sd">        embedding.  k-means can be applied and is a popular choice. But it can</span>
+<span class="sd">        also be sensitive to initialization. Discretization is another</span>
+<span class="sd">        approach which is less sensitive to random initialization. See</span>
+<span class="sd">        the &#39;Multiclass spectral clustering&#39; paper referenced below for</span>
+<span class="sd">        more details on the discretization approach.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    labels : array of integers, shape: n_samples</span>
+<span class="sd">        The labels of the clusters.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    - Normalized cuts and image segmentation, 2000</span>
+<span class="sd">      Jianbo Shi, Jitendra Malik</span>
+<span class="sd">      http://citeseer.ist.psu.edu/viewdoc/summary?doi=10.1.1.160.2324</span>
+
+<span class="sd">    - A Tutorial on Spectral Clustering, 2007</span>
+<span class="sd">      Ulrike von Luxburg</span>
+<span class="sd">      http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.165.9323</span>
+
+<span class="sd">    - Multiclass spectral clustering, 2003</span>
+<span class="sd">      Stella X. Yu, Jianbo Shi</span>
+<span class="sd">      http://www1.icsi.berkeley.edu/~stellayu/publication/doc/2003kwayICCV.pdf</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    ------</span>
+<span class="sd">    The graph should contain only one connect component, elsewhere</span>
+<span class="sd">    the results make little sense.</span>
+
+<span class="sd">    This algorithm solves the normalized cut for k=2: it is a</span>
+<span class="sd">    normalized spectral clustering.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">assign_labels</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;kmeans&#39;</span><span class="p">,</span> <span class="s1">&#39;discretize&#39;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The &#39;assign_labels&#39; parameter should be &quot;</span>
+                         <span class="s2">&quot;&#39;kmeans&#39; or &#39;discretize&#39;, but &#39;</span><span class="si">%s</span><span class="s2">&#39; was given&quot;</span>
+                         <span class="o">%</span> <span class="n">assign_labels</span><span class="p">)</span>
+
+    <span class="n">random_state</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+    <span class="n">n_components</span> <span class="o">=</span> <span class="n">n_clusters</span> <span class="k">if</span> <span class="n">n_components</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">n_components</span>
+    <span class="n">maps</span> <span class="o">=</span> <span class="n">spectral_embedding</span><span class="p">(</span><span class="n">affinity</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span>
+                              <span class="n">eigen_solver</span><span class="o">=</span><span class="n">eigen_solver</span><span class="p">,</span>
+                              <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">,</span>
+                              <span class="n">eigen_tol</span><span class="o">=</span><span class="n">eigen_tol</span><span class="p">,</span> <span class="n">drop_first</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">assign_labels</span> <span class="o">==</span> <span class="s1">&#39;kmeans&#39;</span><span class="p">:</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">k_means</span><span class="p">(</span><span class="n">maps</span><span class="p">,</span> <span class="n">n_clusters</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">,</span>
+                               <span class="n">n_init</span><span class="o">=</span><span class="n">n_init</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">discretize</span><span class="p">(</span><span class="n">maps</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">labels</span>
+
+
+<span class="k">class</span> <span class="nc">SpectralClustering</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClusterMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Apply clustering to a projection to the normalized laplacian.</span>
+
+<span class="sd">    In practice Spectral Clustering is very useful when the structure of</span>
+<span class="sd">    the individual clusters is highly non-convex or more generally when</span>
+<span class="sd">    a measure of the center and spread of the cluster is not a suitable</span>
+<span class="sd">    description of the complete cluster. For instance when clusters are</span>
+<span class="sd">    nested circles on the 2D plan.</span>
+
+<span class="sd">    If affinity is the adjacency matrix of a graph, this method can be</span>
+<span class="sd">    used to find normalized graph cuts.</span>
+
+<span class="sd">    When calling ``fit``, an affinity matrix is constructed using either</span>
+<span class="sd">    kernel function such the Gaussian (aka RBF) kernel of the euclidean</span>
+<span class="sd">    distanced ``d(X, X)``::</span>
+
+<span class="sd">            np.exp(-gamma * d(X,X) ** 2)</span>
+
+<span class="sd">    or a k-nearest neighbors connectivity matrix.</span>
+
+<span class="sd">    Alternatively, using ``precomputed``, a user-provided affinity</span>
+<span class="sd">    matrix can be used.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;spectral_clustering&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    -----------</span>
+<span class="sd">    n_clusters : integer, optional</span>
+<span class="sd">        The dimension of the projection subspace.</span>
+
+<span class="sd">    eigen_solver : {None, &#39;arpack&#39;, &#39;lobpcg&#39;, or &#39;amg&#39;}</span>
+<span class="sd">        The eigenvalue decomposition strategy to use. AMG requires pyamg</span>
+<span class="sd">        to be installed. It can be faster on very large, sparse problems,</span>
+<span class="sd">        but may also lead to instabilities</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional, default: None</span>
+<span class="sd">        A pseudo random number generator used for the initialization of the</span>
+<span class="sd">        lobpcg eigen vectors decomposition when eigen_solver == &#39;amg&#39; and by</span>
+<span class="sd">        the K-Means initialization.  If int, random_state is the seed used by</span>
+<span class="sd">        the random number generator; If RandomState instance, random_state is</span>
+<span class="sd">        the random number generator; If None, the random number generator is</span>
+<span class="sd">        the RandomState instance used by `np.random`.</span>
+
+<span class="sd">    n_init : int, optional, default: 10</span>
+<span class="sd">        Number of time the k-means algorithm will be run with different</span>
+<span class="sd">        centroid seeds. The final results will be the best output of</span>
+<span class="sd">        n_init consecutive runs in terms of inertia.</span>
+
+<span class="sd">    gamma : float, default=1.0</span>
+<span class="sd">        Kernel coefficient for rbf, poly, sigmoid, laplacian and chi2 kernels.</span>
+<span class="sd">        Ignored for ``affinity=&#39;nearest_neighbors&#39;``.</span>
+
+<span class="sd">    affinity : string, array-like or callable, default &#39;rbf&#39;</span>
+<span class="sd">        If a string, this may be one of &#39;nearest_neighbors&#39;, &#39;precomputed&#39;,</span>
+<span class="sd">        &#39;rbf&#39; or one of the kernels supported by</span>
+<span class="sd">        `sklearn.metrics.pairwise_kernels`.</span>
+
+<span class="sd">        Only kernels that produce similarity scores (non-negative values that</span>
+<span class="sd">        increase with similarity) should be used. This property is not checked</span>
+<span class="sd">        by the clustering algorithm.</span>
+
+<span class="sd">    n_neighbors : integer</span>
+<span class="sd">        Number of neighbors to use when constructing the affinity matrix using</span>
+<span class="sd">        the nearest neighbors method. Ignored for ``affinity=&#39;rbf&#39;``.</span>
+
+<span class="sd">    eigen_tol : float, optional, default: 0.0</span>
+<span class="sd">        Stopping criterion for eigendecomposition of the Laplacian matrix</span>
+<span class="sd">        when using arpack eigen_solver.</span>
+
+<span class="sd">    assign_labels : {&#39;kmeans&#39;, &#39;discretize&#39;}, default: &#39;kmeans&#39;</span>
+<span class="sd">        The strategy to use to assign labels in the embedding</span>
+<span class="sd">        space. There are two ways to assign labels after the laplacian</span>
+<span class="sd">        embedding. k-means can be applied and is a popular choice. But it can</span>
+<span class="sd">        also be sensitive to initialization. Discretization is another approach</span>
+<span class="sd">        which is less sensitive to random initialization.</span>
+
+<span class="sd">    degree : float, default=3</span>
+<span class="sd">        Degree of the polynomial kernel. Ignored by other kernels.</span>
+
+<span class="sd">    coef0 : float, default=1</span>
+<span class="sd">        Zero coefficient for polynomial and sigmoid kernels.</span>
+<span class="sd">        Ignored by other kernels.</span>
+
+<span class="sd">    kernel_params : dictionary of string to any, optional</span>
+<span class="sd">        Parameters (keyword arguments) and values for kernel passed as</span>
+<span class="sd">        callable object. Ignored by other kernels.</span>
+
+<span class="sd">    n_jobs : int, optional (default = 1)</span>
+<span class="sd">        The number of parallel jobs to run.</span>
+<span class="sd">        If ``-1``, then the number of jobs is set to the number of CPU cores.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    affinity_matrix_ : array-like, shape (n_samples, n_samples)</span>
+<span class="sd">        Affinity matrix used for clustering. Available only if after calling</span>
+<span class="sd">        ``fit``.</span>
+
+<span class="sd">    labels_ :</span>
+<span class="sd">        Labels of each point</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    If you have an affinity matrix, such as a distance matrix,</span>
+<span class="sd">    for which 0 means identical elements, and high values means</span>
+<span class="sd">    very dissimilar elements, it can be transformed in a</span>
+<span class="sd">    similarity matrix that is well suited for the algorithm by</span>
+<span class="sd">    applying the Gaussian (RBF, heat) kernel::</span>
+
+<span class="sd">        np.exp(- dist_matrix ** 2 / (2. * delta ** 2))</span>
+
+<span class="sd">    Where ``delta`` is a free parameter representing the width of the Gaussian</span>
+<span class="sd">    kernel.</span>
+
+<span class="sd">    Another alternative is to take a symmetric version of the k</span>
+<span class="sd">    nearest neighbors connectivity matrix of the points.</span>
+
+<span class="sd">    If the pyamg package is installed, it is used: this greatly</span>
+<span class="sd">    speeds up computation.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    - Normalized cuts and image segmentation, 2000</span>
+<span class="sd">      Jianbo Shi, Jitendra Malik</span>
+<span class="sd">      http://citeseer.ist.psu.edu/viewdoc/summary?doi=10.1.1.160.2324</span>
+
+<span class="sd">    - A Tutorial on Spectral Clustering, 2007</span>
+<span class="sd">      Ulrike von Luxburg</span>
+<span class="sd">      http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.165.9323</span>
+
+<span class="sd">    - Multiclass spectral clustering, 2003</span>
+<span class="sd">      Stella X. Yu, Jianbo Shi</span>
+<span class="sd">      http://www1.icsi.berkeley.edu/~stellayu/publication/doc/2003kwayICCV.pdf</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_clusters</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">eigen_solver</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">n_init</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">affinity</span><span class="o">=</span><span class="s1">&#39;rbf&#39;</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                 <span class="n">eigen_tol</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">assign_labels</span><span class="o">=</span><span class="s1">&#39;kmeans&#39;</span><span class="p">,</span> <span class="n">degree</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">coef0</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                 <span class="n">kernel_params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span> <span class="o">=</span> <span class="n">n_clusters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eigen_solver</span> <span class="o">=</span> <span class="n">eigen_solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_init</span> <span class="o">=</span> <span class="n">n_init</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">gamma</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">affinity</span> <span class="o">=</span> <span class="n">affinity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span> <span class="o">=</span> <span class="n">n_neighbors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eigen_tol</span> <span class="o">=</span> <span class="n">eigen_tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assign_labels</span> <span class="o">=</span> <span class="n">assign_labels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">degree</span> <span class="o">=</span> <span class="n">degree</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef0</span> <span class="o">=</span> <span class="n">coef0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernel_params</span> <span class="o">=</span> <span class="n">kernel_params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
+
+<div class="viewcode-block" id="SpectralClustering.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_cluster_spectralclustering.html#ibex.sklearn.cluster.SpectralClustering.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates an affinity matrix for X using the selected affinity,</span>
+<span class="sd">        then applies spectral clustering to this affinity matrix.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like or sparse matrix, shape (n_samples, n_features)</span>
+<span class="sd">            OR, if affinity==`precomputed`, a precomputed affinity</span>
+<span class="sd">            matrix of shape (n_samples, n_samples)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="s1">&#39;csc&#39;</span><span class="p">,</span> <span class="s1">&#39;coo&#39;</span><span class="p">],</span>
+                        <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">affinity</span> <span class="o">!=</span> <span class="s2">&quot;precomputed&quot;</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;The spectral clustering API has changed. ``fit``&quot;</span>
+                          <span class="s2">&quot;now constructs an affinity matrix from data. To use&quot;</span>
+                          <span class="s2">&quot; a custom affinity matrix, &quot;</span>
+                          <span class="s2">&quot;set ``affinity=precomputed``.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">affinity</span> <span class="o">==</span> <span class="s1">&#39;nearest_neighbors&#39;</span><span class="p">:</span>
+            <span class="n">connectivity</span> <span class="o">=</span> <span class="n">kneighbors_graph</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span><span class="p">,</span> <span class="n">include_self</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                            <span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">affinity_matrix_</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">connectivity</span> <span class="o">+</span> <span class="n">connectivity</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">affinity</span> <span class="o">==</span> <span class="s1">&#39;precomputed&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">affinity_matrix_</span> <span class="o">=</span> <span class="n">X</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_params</span>
+            <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">affinity</span><span class="p">):</span>
+                <span class="n">params</span><span class="p">[</span><span class="s1">&#39;gamma&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span>
+                <span class="n">params</span><span class="p">[</span><span class="s1">&#39;degree&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">degree</span>
+                <span class="n">params</span><span class="p">[</span><span class="s1">&#39;coef0&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coef0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">affinity_matrix_</span> <span class="o">=</span> <span class="n">pairwise_kernels</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">affinity</span><span class="p">,</span>
+                                                     <span class="n">filter_params</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                                     <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="n">random_state</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">labels_</span> <span class="o">=</span> <span class="n">spectral_clustering</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">affinity_matrix_</span><span class="p">,</span>
+                                           <span class="n">n_clusters</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span><span class="p">,</span>
+                                           <span class="n">eigen_solver</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eigen_solver</span><span class="p">,</span>
+                                           <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">,</span>
+                                           <span class="n">n_init</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_init</span><span class="p">,</span>
+                                           <span class="n">eigen_tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eigen_tol</span><span class="p">,</span>
+                                           <span class="n">assign_labels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">assign_labels</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_pairwise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">affinity</span> <span class="o">==</span> <span class="s2">&quot;precomputed&quot;</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

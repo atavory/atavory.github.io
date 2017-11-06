@@ -1,0 +1,264 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>SpectralEmbedding &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="spectralembedding">
+<h1><code class="docutils literal"><span class="pre">SpectralEmbedding</span></code><a class="headerlink" href="#spectralembedding" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="ibex.sklearn.manifold.SpectralEmbedding">
+<em class="property">class </em><code class="descclassname">ibex.sklearn.manifold.</code><code class="descname">SpectralEmbedding</code><span class="sig-paren">(</span><em>n_components=2</em>, <em>affinity='nearest_neighbors'</em>, <em>gamma=None</em>, <em>random_state=None</em>, <em>eigen_solver=None</em>, <em>n_neighbors=None</em>, <em>n_jobs=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.manifold.SpectralEmbedding" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.manifold.spectral_embedding_.SpectralEmbedding</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Spectral embedding for non-linear dimensionality reduction.</p>
+<blockquote>
+<div><p>Forms an affinity matrix given by the specified function and
+applies spectral decomposition to the corresponding graph laplacian.
+The resulting transformation is given by the value of the
+eigenvectors for each data point.</p>
+<p>Note : Laplacian Eigenmaps is the actual algorithm implemented here.</p>
+<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/manifold.html#spectral-embedding" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
+<dl class="docutils">
+<dt>n_components <span class="classifier-delimiter">:</span> <span class="classifier">integer, default: 2</span></dt>
+<dd>The dimension of the projected subspace.</dd>
+<dt>affinity <span class="classifier-delimiter">:</span> <span class="classifier">string or callable, default</span> <span class="classifier-delimiter">:</span> <span class="classifier">“nearest_neighbors”</span></dt>
+<dd><dl class="first last docutils">
+<dt>How to construct the affinity matrix.</dt>
+<dd><ul class="first last simple">
+<li>‘nearest_neighbors’ : construct affinity matrix by knn graph</li>
+<li>‘rbf’ : construct affinity matrix by rbf kernel</li>
+<li>‘precomputed’ : interpret X as precomputed affinity matrix</li>
+<li>callable : use passed in function as affinity
+the function takes in data matrix (n_samples, n_features)
+and return affinity matrix (n_samples, n_samples).</li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt>gamma <span class="classifier-delimiter">:</span> <span class="classifier">float, optional, default</span> <span class="classifier-delimiter">:</span> <span class="classifier">1/n_features</span></dt>
+<dd>Kernel coefficient for rbf kernel.</dd>
+<dt>random_state <span class="classifier-delimiter">:</span> <span class="classifier">int, RandomState instance or None, optional, default: None</span></dt>
+<dd>A pseudo random number generator used for the initialization of the
+lobpcg eigenvectors.  If int, random_state is the seed used by the
+random number generator; If RandomState instance, random_state is the
+random number generator; If None, the random number generator is the
+RandomState instance used by <cite>np.random</cite>. Used when <code class="docutils literal"><span class="pre">solver</span></code> ==
+‘amg’.</dd>
+<dt>eigen_solver <span class="classifier-delimiter">:</span> <span class="classifier">{None, ‘arpack’, ‘lobpcg’, or ‘amg’}</span></dt>
+<dd>The eigenvalue decomposition strategy to use. AMG requires pyamg
+to be installed. It can be faster on very large, sparse problems,
+but may also lead to instabilities.</dd>
+<dt>n_neighbors <span class="classifier-delimiter">:</span> <span class="classifier">int, default</span> <span class="classifier-delimiter">:</span> <span class="classifier">max(n_samples/10 , 1)</span></dt>
+<dd>Number of nearest neighbors for nearest_neighbors graph building.</dd>
+<dt>n_jobs <span class="classifier-delimiter">:</span> <span class="classifier">int, optional (default = 1)</span></dt>
+<dd>The number of parallel jobs to run.
+If <code class="docutils literal"><span class="pre">-1</span></code>, then the number of jobs is set to the number of CPU cores.</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">embedding_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = (n_samples, n_components)</span></dt>
+<dd>Spectral embedding of the training matrix.</dd>
+<dt><a href="#id3"><span class="problematic" id="id4">affinity_matrix_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = (n_samples, n_samples)</span></dt>
+<dd>Affinity_matrix constructed from samples or precomputed.</dd>
+</dl>
+<ul class="simple">
+<li>A Tutorial on Spectral Clustering, 2007
+Ulrike von Luxburg
+<a class="reference external" href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.165.9323">http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.165.9323</a></li>
+<li>On Spectral Clustering: Analysis and an algorithm, 2001
+Andrew Y. Ng, Michael I. Jordan, Yair Weiss
+<a class="reference external" href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.19.8100">http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.19.8100</a></li>
+<li>Normalized cuts and image segmentation, 2000
+Jianbo Shi, Jitendra Malik
+<a class="reference external" href="http://citeseer.ist.psu.edu/viewdoc/summary?doi=10.1.1.160.2324">http://citeseer.ist.psu.edu/viewdoc/summary?doi=10.1.1.160.2324</a></li>
+</ul>
+</div></blockquote>
+<dl class="method">
+<dt id="ibex.sklearn.manifold.SpectralEmbedding.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/manifold/spectral_embedding_.html#SpectralEmbedding.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.manifold.SpectralEmbedding.fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit the model from data in X.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape (n_samples, n_features)</span></dt>
+<dd><p class="first">Training vector, where n_samples is the number of samples
+and n_features is the number of features.</p>
+<p class="last">If affinity is “precomputed”
+X : array-like, shape (n_samples, n_samples),
+Interpret X as precomputed adjacency graph computed from
+samples.</p>
+</dd>
+</dl>
+<dl class="docutils">
+<dt>self <span class="classifier-delimiter">:</span> <span class="classifier">object</span></dt>
+<dd>Returns the instance itself.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.manifold.SpectralEmbedding.fit_transform">
+<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/manifold/spectral_embedding_.html#SpectralEmbedding.fit_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.manifold.SpectralEmbedding.fit_transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit the model from data in X and transform X.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape (n_samples, n_features)</span></dt>
+<dd><p class="first">Training vector, where n_samples is the number of samples
+and n_features is the number of features.</p>
+<p class="last">If affinity is “precomputed”
+X : array-like, shape (n_samples, n_samples),
+Interpret X as precomputed adjacency graph computed from
+samples.</p>
+</dd>
+</dl>
+<p>X_new : array-like, shape (n_samples, n_components)</p>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex_sklearn_manifold_spectralembedding.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex_sklearn_manifold_spectralembedding.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

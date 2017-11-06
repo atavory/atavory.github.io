@@ -1,0 +1,699 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.decomposition.fastica_ &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.decomposition.fastica_</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Python implementation of the fast ICA algorithms.</span>
+
+<span class="sd">Reference: Tables 8.3 and 8.4 page 196 in the book:</span>
+<span class="sd">Independent Component Analysis, by  Hyvarinen et al.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Authors: Pierre Lafaye de Micheaux, Stefan van der Walt, Gael Varoquaux,</span>
+<span class="c1">#          Bertrand Thirion, Alexandre Gramfort, Denis A. Engemann</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">linalg</span>
+
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span>
+<span class="kn">from</span> <span class="nn">..externals</span> <span class="k">import</span> <span class="n">six</span>
+<span class="kn">from</span> <span class="nn">..externals.six</span> <span class="k">import</span> <span class="n">moves</span>
+<span class="kn">from</span> <span class="nn">..externals.six</span> <span class="k">import</span> <span class="n">string_types</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_array</span><span class="p">,</span> <span class="n">as_float_array</span><span class="p">,</span> <span class="n">check_random_state</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_is_fitted</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">FLOAT_DTYPES</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;fastica&#39;</span><span class="p">,</span> <span class="s1">&#39;FastICA&#39;</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_gs_decorrelation</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Orthonormalize w wrt the first j rows of W</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    w : ndarray of shape(n)</span>
+<span class="sd">        Array to be orthogonalized</span>
+
+<span class="sd">    W : ndarray of shape(p, n)</span>
+<span class="sd">        Null space definition</span>
+
+<span class="sd">    j : int &lt; p</span>
+<span class="sd">        The no of (from the first) rows of Null space W wrt which w is</span>
+<span class="sd">        orthogonalized.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Assumes that W is orthogonal</span>
+<span class="sd">    w changed in place</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">w</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">W</span><span class="p">[:</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="n">W</span><span class="p">[:</span><span class="n">j</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">w</span>
+
+
+<span class="k">def</span> <span class="nf">_sym_decorrelation</span><span class="p">(</span><span class="n">W</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Symmetric decorrelation</span>
+<span class="sd">    i.e. W &lt;- (W * W.T) ^{-1/2} * W</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">s</span><span class="p">,</span> <span class="n">u</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">W</span><span class="p">,</span> <span class="n">W</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+    <span class="c1"># u (resp. s) contains the eigenvectors (resp. square roots of</span>
+    <span class="c1"># the eigenvalues) of W * W.T</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">u</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">s</span><span class="p">)),</span> <span class="n">u</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="n">W</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_ica_def</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">fun_args</span><span class="p">,</span> <span class="n">max_iter</span><span class="p">,</span> <span class="n">w_init</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Deflationary FastICA using fun approx to neg-entropy function</span>
+
+<span class="sd">    Used internally by FastICA.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">n_components</span> <span class="o">=</span> <span class="n">w_init</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">W</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_components</span><span class="p">,</span> <span class="n">n_components</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">n_iter</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># j is the index of the extracted component</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_components</span><span class="p">):</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">w_init</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">w</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">w</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">moves</span><span class="o">.</span><span class="n">xrange</span><span class="p">(</span><span class="n">max_iter</span><span class="p">):</span>
+            <span class="n">gwtx</span><span class="p">,</span> <span class="n">g_wtx</span> <span class="o">=</span> <span class="n">g</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">X</span><span class="p">),</span> <span class="n">fun_args</span><span class="p">)</span>
+
+            <span class="n">w1</span> <span class="o">=</span> <span class="p">(</span><span class="n">X</span> <span class="o">*</span> <span class="n">gwtx</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">g_wtx</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span> <span class="n">w</span>
+
+            <span class="n">_gs_decorrelation</span><span class="p">(</span><span class="n">w1</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span>
+
+            <span class="n">w1</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">w1</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+
+            <span class="n">lim</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">w1</span> <span class="o">*</span> <span class="n">w</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="n">w1</span>
+            <span class="k">if</span> <span class="n">lim</span> <span class="o">&lt;</span> <span class="n">tol</span><span class="p">:</span>
+                <span class="k">break</span>
+
+        <span class="n">n_iter</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">W</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">w</span>
+
+    <span class="k">return</span> <span class="n">W</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">n_iter</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_ica_par</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">fun_args</span><span class="p">,</span> <span class="n">max_iter</span><span class="p">,</span> <span class="n">w_init</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Parallel FastICA.</span>
+
+<span class="sd">    Used internally by FastICA --main loop</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">W</span> <span class="o">=</span> <span class="n">_sym_decorrelation</span><span class="p">(</span><span class="n">w_init</span><span class="p">)</span>
+    <span class="k">del</span> <span class="n">w_init</span>
+    <span class="n">p_</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="n">moves</span><span class="o">.</span><span class="n">xrange</span><span class="p">(</span><span class="n">max_iter</span><span class="p">):</span>
+        <span class="n">gwtx</span><span class="p">,</span> <span class="n">g_wtx</span> <span class="o">=</span> <span class="n">g</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">W</span><span class="p">,</span> <span class="n">X</span><span class="p">),</span> <span class="n">fun_args</span><span class="p">)</span>
+        <span class="n">W1</span> <span class="o">=</span> <span class="n">_sym_decorrelation</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">gwtx</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">/</span> <span class="n">p_</span>
+                                <span class="o">-</span> <span class="n">g_wtx</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">W</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">gwtx</span><span class="p">,</span> <span class="n">g_wtx</span>
+        <span class="c1"># builtin max, abs are faster than numpy counter parts.</span>
+        <span class="n">lim</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">W1</span><span class="p">,</span> <span class="n">W</span><span class="o">.</span><span class="n">T</span><span class="p">)))</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">W</span> <span class="o">=</span> <span class="n">W1</span>
+        <span class="k">if</span> <span class="n">lim</span> <span class="o">&lt;</span> <span class="n">tol</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;FastICA did not converge. Consider increasing &#39;</span>
+                      <span class="s1">&#39;tolerance or the maximum number of iterations.&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">W</span><span class="p">,</span> <span class="n">ii</span> <span class="o">+</span> <span class="mi">1</span>
+
+
+<span class="c1"># Some standard non-linear functions.</span>
+<span class="c1"># XXX: these should be optimized, as they can be a bottleneck.</span>
+<span class="k">def</span> <span class="nf">_logcosh</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">fun_args</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">fun_args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>  <span class="c1"># comment it out?</span>
+
+    <span class="n">x</span> <span class="o">*=</span> <span class="n">alpha</span>
+    <span class="n">gx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>  <span class="c1"># apply the tanh inplace</span>
+    <span class="n">g_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="c1"># XXX compute in chunks to avoid extra allocation</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">gx_i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">gx</span><span class="p">):</span>  <span class="c1"># please don&#39;t vectorize.</span>
+        <span class="n">g_x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">alpha</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">gx_i</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">gx</span><span class="p">,</span> <span class="n">g_x</span>
+
+
+<span class="k">def</span> <span class="nf">_exp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">fun_args</span><span class="p">):</span>
+    <span class="n">exp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">gx</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">exp</span>
+    <span class="n">g_x</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">x</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">exp</span>
+    <span class="k">return</span> <span class="n">gx</span><span class="p">,</span> <span class="n">g_x</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_cube</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">fun_args</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">x</span> <span class="o">**</span> <span class="mi">3</span><span class="p">,</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">x</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">fastica</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s2">&quot;parallel&quot;</span><span class="p">,</span> <span class="n">whiten</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">fun</span><span class="o">=</span><span class="s2">&quot;logcosh&quot;</span><span class="p">,</span> <span class="n">fun_args</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-04</span><span class="p">,</span> <span class="n">w_init</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_X_mean</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">compute_sources</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">return_n_iter</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform Fast Independent Component Analysis.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;ICA&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">        Training vector, where n_samples is the number of samples and</span>
+<span class="sd">        n_features is the number of features.</span>
+
+<span class="sd">    n_components : int, optional</span>
+<span class="sd">        Number of components to extract. If None no dimension reduction</span>
+<span class="sd">        is performed.</span>
+
+<span class="sd">    algorithm : {&#39;parallel&#39;, &#39;deflation&#39;}, optional</span>
+<span class="sd">        Apply a parallel or deflational FASTICA algorithm.</span>
+
+<span class="sd">    whiten : boolean, optional</span>
+<span class="sd">        If True perform an initial whitening of the data.</span>
+<span class="sd">        If False, the data is assumed to have already been</span>
+<span class="sd">        preprocessed: it should be centered, normed and white.</span>
+<span class="sd">        Otherwise you will get incorrect results.</span>
+<span class="sd">        In this case the parameter n_components will be ignored.</span>
+
+<span class="sd">    fun : string or function, optional. Default: &#39;logcosh&#39;</span>
+<span class="sd">        The functional form of the G function used in the</span>
+<span class="sd">        approximation to neg-entropy. Could be either &#39;logcosh&#39;, &#39;exp&#39;,</span>
+<span class="sd">        or &#39;cube&#39;.</span>
+<span class="sd">        You can also provide your own function. It should return a tuple</span>
+<span class="sd">        containing the value of the function, and of its derivative, in the</span>
+<span class="sd">        point. Example:</span>
+
+<span class="sd">        def my_g(x):</span>
+<span class="sd">            return x ** 3, 3 * x ** 2</span>
+
+<span class="sd">    fun_args : dictionary, optional</span>
+<span class="sd">        Arguments to send to the functional form.</span>
+<span class="sd">        If empty or None and if fun=&#39;logcosh&#39;, fun_args will take value</span>
+<span class="sd">        {&#39;alpha&#39; : 1.0}</span>
+
+<span class="sd">    max_iter : int, optional</span>
+<span class="sd">        Maximum number of iterations to perform.</span>
+
+<span class="sd">    tol : float, optional</span>
+<span class="sd">        A positive scalar giving the tolerance at which the</span>
+<span class="sd">        un-mixing matrix is considered to have converged.</span>
+
+<span class="sd">    w_init : (n_components, n_components) array, optional</span>
+<span class="sd">        Initial un-mixing array of dimension (n.comp,n.comp).</span>
+<span class="sd">        If None (default) then an array of normal r.v.&#39;s is used.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional (default=None)</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`.</span>
+
+<span class="sd">    return_X_mean : bool, optional</span>
+<span class="sd">        If True, X_mean is returned too.</span>
+
+<span class="sd">    compute_sources : bool, optional</span>
+<span class="sd">        If False, sources are not computed, but only the rotation matrix.</span>
+<span class="sd">        This can save memory when working with big data. Defaults to True.</span>
+
+<span class="sd">    return_n_iter : bool, optional</span>
+<span class="sd">        Whether or not to return the number of iterations.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    K : array, shape (n_components, n_features) | None.</span>
+<span class="sd">        If whiten is &#39;True&#39;, K is the pre-whitening matrix that projects data</span>
+<span class="sd">        onto the first n_components principal components. If whiten is &#39;False&#39;,</span>
+<span class="sd">        K is &#39;None&#39;.</span>
+
+<span class="sd">    W : array, shape (n_components, n_components)</span>
+<span class="sd">        Estimated un-mixing matrix.</span>
+<span class="sd">        The mixing matrix can be obtained by::</span>
+
+<span class="sd">            w = np.dot(W, K.T)</span>
+<span class="sd">            A = w.T * (w * w.T).I</span>
+
+<span class="sd">    S : array, shape (n_samples, n_components) | None</span>
+<span class="sd">        Estimated source matrix</span>
+
+<span class="sd">    X_mean : array, shape (n_features, )</span>
+<span class="sd">        The mean over features. Returned only if return_X_mean is True.</span>
+
+<span class="sd">    n_iter : int</span>
+<span class="sd">        If the algorithm is &quot;deflation&quot;, n_iter is the</span>
+<span class="sd">        maximum number of iterations run across all components. Else</span>
+<span class="sd">        they are just the number of iterations taken to converge. This is</span>
+<span class="sd">        returned only when return_n_iter is set to `True`.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+
+<span class="sd">    The data matrix X is considered to be a linear combination of</span>
+<span class="sd">    non-Gaussian (independent) components i.e. X = AS where columns of S</span>
+<span class="sd">    contain the independent components and A is a linear mixing</span>
+<span class="sd">    matrix. In short ICA attempts to `un-mix&#39; the data by estimating an</span>
+<span class="sd">    un-mixing matrix W where ``S = W K X.``</span>
+
+<span class="sd">    This implementation was originally made for data of shape</span>
+<span class="sd">    [n_features, n_samples]. Now the input is transposed</span>
+<span class="sd">    before the algorithm is applied. This makes it slightly</span>
+<span class="sd">    faster for Fortran-ordered input.</span>
+
+<span class="sd">    Implemented using FastICA:</span>
+<span class="sd">    `A. Hyvarinen and E. Oja, Independent Component Analysis:</span>
+<span class="sd">    Algorithms and Applications, Neural Networks, 13(4-5), 2000,</span>
+<span class="sd">    pp. 411-430`</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">random_state</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+    <span class="n">fun_args</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">fun_args</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">fun_args</span>
+    <span class="c1"># make interface compatible with other decompositions</span>
+    <span class="c1"># a copy is required only for non whitened data</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="n">whiten</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">FLOAT_DTYPES</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">fun_args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="mi">1</span> <span class="o">&lt;=</span> <span class="n">alpha</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;alpha must be in [1,2]&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">fun</span> <span class="o">==</span> <span class="s1">&#39;logcosh&#39;</span><span class="p">:</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">_logcosh</span>
+    <span class="k">elif</span> <span class="n">fun</span> <span class="o">==</span> <span class="s1">&#39;exp&#39;</span><span class="p">:</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">_exp</span>
+    <span class="k">elif</span> <span class="n">fun</span> <span class="o">==</span> <span class="s1">&#39;cube&#39;</span><span class="p">:</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">_cube</span>
+    <span class="k">elif</span> <span class="n">callable</span><span class="p">(</span><span class="n">fun</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">g</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">fun_args</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">fun</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">fun_args</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">exc</span> <span class="o">=</span> <span class="ne">ValueError</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fun</span><span class="p">,</span> <span class="n">six</span><span class="o">.</span><span class="n">string_types</span><span class="p">)</span> <span class="k">else</span> <span class="ne">TypeError</span>
+        <span class="k">raise</span> <span class="n">exc</span><span class="p">(</span><span class="s2">&quot;Unknown function </span><span class="si">%r</span><span class="s2">;&quot;</span>
+                  <span class="s2">&quot; should be one of &#39;logcosh&#39;, &#39;exp&#39;, &#39;cube&#39; or callable&quot;</span>
+                  <span class="o">%</span> <span class="n">fun</span><span class="p">)</span>
+
+    <span class="n">n</span><span class="p">,</span> <span class="n">p</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">whiten</span> <span class="ow">and</span> <span class="n">n_components</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">n_components</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Ignoring n_components with whiten=False.&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">n_components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">n_components</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">n_components</span> <span class="o">&gt;</span> <span class="nb">min</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="p">)):</span>
+        <span class="n">n_components</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;n_components is too large: it will be set to </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">n_components</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">whiten</span><span class="p">:</span>
+        <span class="c1"># Centering the columns (ie the variables)</span>
+        <span class="n">X_mean</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">-=</span> <span class="n">X_mean</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+        <span class="c1"># Whitening and preprocessing by PCA</span>
+        <span class="n">u</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">del</span> <span class="n">_</span>
+        <span class="n">K</span> <span class="o">=</span> <span class="p">(</span><span class="n">u</span> <span class="o">/</span> <span class="n">d</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">[:</span><span class="n">n_components</span><span class="p">]</span>  <span class="c1"># see (6.33) p.140</span>
+        <span class="k">del</span> <span class="n">u</span><span class="p">,</span> <span class="n">d</span>
+        <span class="n">X1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+        <span class="c1"># see (13.6) p.267 Here X1 is white and data</span>
+        <span class="c1"># in X has been projected onto a subspace by PCA</span>
+        <span class="n">X1</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># X must be casted to floats to avoid typing issues with numpy</span>
+        <span class="c1"># 2.0 and the line below</span>
+        <span class="n">X1</span> <span class="o">=</span> <span class="n">as_float_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># copy has been taken care of</span>
+
+    <span class="k">if</span> <span class="n">w_init</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">w_init</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">random_state</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n_components</span><span class="p">,</span>
+                            <span class="n">n_components</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X1</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">w_init</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">w_init</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">w_init</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="n">n_components</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;w_init has invalid shape -- should be </span><span class="si">%(shape)s</span><span class="s1">&#39;</span>
+                             <span class="o">%</span> <span class="p">{</span><span class="s1">&#39;shape&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="n">n_components</span><span class="p">)})</span>
+
+    <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;tol&#39;</span><span class="p">:</span> <span class="n">tol</span><span class="p">,</span>
+              <span class="s1">&#39;g&#39;</span><span class="p">:</span> <span class="n">g</span><span class="p">,</span>
+              <span class="s1">&#39;fun_args&#39;</span><span class="p">:</span> <span class="n">fun_args</span><span class="p">,</span>
+              <span class="s1">&#39;max_iter&#39;</span><span class="p">:</span> <span class="n">max_iter</span><span class="p">,</span>
+              <span class="s1">&#39;w_init&#39;</span><span class="p">:</span> <span class="n">w_init</span><span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;parallel&#39;</span><span class="p">:</span>
+        <span class="n">W</span><span class="p">,</span> <span class="n">n_iter</span> <span class="o">=</span> <span class="n">_ica_par</span><span class="p">(</span><span class="n">X1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;deflation&#39;</span><span class="p">:</span>
+        <span class="n">W</span><span class="p">,</span> <span class="n">n_iter</span> <span class="o">=</span> <span class="n">_ica_def</span><span class="p">(</span><span class="n">X1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Invalid algorithm: must be either `parallel` or&#39;</span>
+                         <span class="s1">&#39; `deflation`.&#39;</span><span class="p">)</span>
+    <span class="k">del</span> <span class="n">X1</span>
+
+    <span class="k">if</span> <span class="n">whiten</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">compute_sources</span><span class="p">:</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">W</span><span class="p">,</span> <span class="n">K</span><span class="p">),</span> <span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">return_X_mean</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">return_n_iter</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">K</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">X_mean</span><span class="p">,</span> <span class="n">n_iter</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">K</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">X_mean</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">return_n_iter</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">K</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">n_iter</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">K</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">S</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">compute_sources</span><span class="p">:</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">W</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">return_X_mean</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">return_n_iter</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">n_iter</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">return_n_iter</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">n_iter</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">S</span>
+
+
+<span class="k">class</span> <span class="nc">FastICA</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;FastICA: a fast algorithm for Independent Component Analysis.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;ICA&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_components : int, optional</span>
+<span class="sd">        Number of components to use. If none is passed, all are used.</span>
+
+<span class="sd">    algorithm : {&#39;parallel&#39;, &#39;deflation&#39;}</span>
+<span class="sd">        Apply parallel or deflational algorithm for FastICA.</span>
+
+<span class="sd">    whiten : boolean, optional</span>
+<span class="sd">        If whiten is false, the data is already considered to be</span>
+<span class="sd">        whitened, and no whitening is performed.</span>
+
+<span class="sd">    fun : string or function, optional. Default: &#39;logcosh&#39;</span>
+<span class="sd">        The functional form of the G function used in the</span>
+<span class="sd">        approximation to neg-entropy. Could be either &#39;logcosh&#39;, &#39;exp&#39;,</span>
+<span class="sd">        or &#39;cube&#39;.</span>
+<span class="sd">        You can also provide your own function. It should return a tuple</span>
+<span class="sd">        containing the value of the function, and of its derivative, in the</span>
+<span class="sd">        point. Example:</span>
+
+<span class="sd">        def my_g(x):</span>
+<span class="sd">            return x ** 3, 3 * x ** 2</span>
+
+<span class="sd">    fun_args : dictionary, optional</span>
+<span class="sd">        Arguments to send to the functional form.</span>
+<span class="sd">        If empty and if fun=&#39;logcosh&#39;, fun_args will take value</span>
+<span class="sd">        {&#39;alpha&#39; : 1.0}.</span>
+
+<span class="sd">    max_iter : int, optional</span>
+<span class="sd">        Maximum number of iterations during fit.</span>
+
+<span class="sd">    tol : float, optional</span>
+<span class="sd">        Tolerance on update at each iteration.</span>
+
+<span class="sd">    w_init : None of an (n_components, n_components) ndarray</span>
+<span class="sd">        The mixing matrix to be used to initialize the algorithm.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional (default=None)</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    components_ : 2D array, shape (n_components, n_features)</span>
+<span class="sd">        The unmixing matrix.</span>
+
+<span class="sd">    mixing_ : array, shape (n_features, n_components)</span>
+<span class="sd">        The mixing matrix.</span>
+
+<span class="sd">    n_iter_ : int</span>
+<span class="sd">        If the algorithm is &quot;deflation&quot;, n_iter is the</span>
+<span class="sd">        maximum number of iterations run across all components. Else</span>
+<span class="sd">        they are just the number of iterations taken to converge.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Implementation based on</span>
+<span class="sd">    `A. Hyvarinen and E. Oja, Independent Component Analysis:</span>
+<span class="sd">    Algorithms and Applications, Neural Networks, 13(4-5), 2000,</span>
+<span class="sd">    pp. 411-430`</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;parallel&#39;</span><span class="p">,</span> <span class="n">whiten</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">fun</span><span class="o">=</span><span class="s1">&#39;logcosh&#39;</span><span class="p">,</span> <span class="n">fun_args</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span>
+                 <span class="n">w_init</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FastICA</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">=</span> <span class="n">n_components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span> <span class="o">=</span> <span class="n">algorithm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">whiten</span> <span class="o">=</span> <span class="n">whiten</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fun</span> <span class="o">=</span> <span class="n">fun</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fun_args</span> <span class="o">=</span> <span class="n">fun_args</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w_init</span> <span class="o">=</span> <span class="n">w_init</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">compute_sources</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training data, where n_samples is the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+
+<span class="sd">        compute_sources : bool</span>
+<span class="sd">            If False, sources are not computes but only the rotation matrix.</span>
+<span class="sd">            This can save memory when working with big data. Defaults to False.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            X_new : array-like, shape (n_samples, n_components)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">fun_args</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fun_args</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">fun_args</span>
+        <span class="n">whitening</span><span class="p">,</span> <span class="n">unmixing</span><span class="p">,</span> <span class="n">sources</span><span class="p">,</span> <span class="n">X_mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">=</span> <span class="n">fastica</span><span class="p">(</span>
+            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span><span class="p">,</span>
+            <span class="n">whiten</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">whiten</span><span class="p">,</span> <span class="n">fun</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fun</span><span class="p">,</span> <span class="n">fun_args</span><span class="o">=</span><span class="n">fun_args</span><span class="p">,</span>
+            <span class="n">max_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span> <span class="n">w_init</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">w_init</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">,</span> <span class="n">return_X_mean</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">compute_sources</span><span class="o">=</span><span class="n">compute_sources</span><span class="p">,</span> <span class="n">return_n_iter</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">whiten</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">unmixing</span><span class="p">,</span> <span class="n">whitening</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span> <span class="o">=</span> <span class="n">X_mean</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">whitening_</span> <span class="o">=</span> <span class="n">whitening</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">=</span> <span class="n">unmixing</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mixing_</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">compute_sources</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__sources</span> <span class="o">=</span> <span class="n">sources</span>
+
+        <span class="k">return</span> <span class="n">sources</span>
+
+<div class="viewcode-block" id="FastICA.fit_transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_decomposition_fastica.html#ibex.sklearn.decomposition.FastICA.fit_transform">[docs]</a>    <span class="k">def</span> <span class="nf">fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model and recover the sources from X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training data, where n_samples is the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X_new : array-like, shape (n_samples, n_components)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">compute_sources</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FastICA.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_decomposition_fastica.html#ibex.sklearn.decomposition.FastICA.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model to X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training data, where n_samples is the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">compute_sources</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="FastICA.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_decomposition_fastica.html#ibex.sklearn.decomposition.FastICA.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Recover the sources from X (apply the unmixing matrix).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Data to transform, where n_samples is the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+<span class="sd">        y : (ignored)</span>
+<span class="sd">            .. deprecated:: 0.19</span>
+<span class="sd">               This parameter will be removed in 0.21.</span>
+<span class="sd">        copy : bool (optional)</span>
+<span class="sd">            If False, data passed to fit are overwritten. Defaults to True.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X_new : array-like, shape (n_samples, n_components)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">string_types</span><span class="p">)</span> <span class="ow">or</span> <span class="n">y</span> <span class="o">!=</span> <span class="s1">&#39;deprecated&#39;</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;The parameter y on transform() is &quot;</span>
+                          <span class="s2">&quot;deprecated since 0.19 and will be removed in 0.21&quot;</span><span class="p">,</span>
+                          <span class="ne">DeprecationWarning</span><span class="p">)</span>
+
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;mixing_&#39;</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="n">copy</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">FLOAT_DTYPES</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">whiten</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="o">.</span><span class="n">T</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FastICA.inverse_transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_decomposition_fastica.html#ibex.sklearn.decomposition.FastICA.inverse_transform">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Transform the sources back to the mixed data (apply mixing matrix).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_components)</span>
+<span class="sd">            Sources, where n_samples is the number of samples</span>
+<span class="sd">            and n_components is the number of components.</span>
+<span class="sd">        copy : bool (optional)</span>
+<span class="sd">            If False, data passed to fit are overwritten. Defaults to True.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X_new : array-like, shape (n_samples, n_features)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;mixing_&#39;</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="p">(</span><span class="n">copy</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">whiten</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">FLOAT_DTYPES</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mixing_</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">whiten</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span>
+
+        <span class="k">return</span> <span class="n">X</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

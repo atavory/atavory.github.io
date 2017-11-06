@@ -1,0 +1,664 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.neighbors.approximate &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.neighbors.approximate</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Approximate nearest neighbor search&quot;&quot;&quot;</span>
+<span class="c1"># Author: Maheshakya Wijewardena &lt;maheshakya.10@cse.mrt.ac.lk&gt;</span>
+<span class="c1">#         Joel Nothman &lt;joel.nothman@gmail.com&gt;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">sparse</span>
+
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">KNeighborsMixin</span><span class="p">,</span> <span class="n">RadiusNeighborsMixin</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_array</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_random_state</span>
+<span class="kn">from</span> <span class="nn">..metrics.pairwise</span> <span class="k">import</span> <span class="n">pairwise_distances</span>
+
+<span class="kn">from</span> <span class="nn">..random_projection</span> <span class="k">import</span> <span class="n">GaussianRandomProjection</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;LSHForest&quot;</span><span class="p">]</span>
+
+<span class="n">HASH_DTYPE</span> <span class="o">=</span> <span class="s1">&#39;&gt;u4&#39;</span>
+<span class="n">MAX_HASH_SIZE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">HASH_DTYPE</span><span class="p">)</span><span class="o">.</span><span class="n">itemsize</span> <span class="o">*</span> <span class="mi">8</span>
+
+
+<span class="k">def</span> <span class="nf">_find_matching_indices</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="n">bin_X</span><span class="p">,</span> <span class="n">left_mask</span><span class="p">,</span> <span class="n">right_mask</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Finds indices in sorted array of integers.</span>
+
+<span class="sd">    Most significant h bits in the binary representations of the</span>
+<span class="sd">    integers are matched with the items&#39; most significant h bits.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">left_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="n">bin_X</span> <span class="o">&amp;</span> <span class="n">left_mask</span><span class="p">)</span>
+    <span class="n">right_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="n">bin_X</span> <span class="o">|</span> <span class="n">right_mask</span><span class="p">,</span>
+                                  <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">left_index</span><span class="p">,</span> <span class="n">right_index</span>
+
+
+<span class="k">def</span> <span class="nf">_find_longest_prefix_match</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="n">bin_X</span><span class="p">,</span> <span class="n">hash_size</span><span class="p">,</span>
+                               <span class="n">left_masks</span><span class="p">,</span> <span class="n">right_masks</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Find the longest prefix match in tree for each query in bin_X</span>
+
+<span class="sd">    Most significant bits are considered as the prefix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">hi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">bin_X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">)</span>
+    <span class="n">hi</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">hash_size</span><span class="p">)</span>
+    <span class="n">lo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">bin_X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">bin_X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">)</span>
+
+    <span class="n">left_idx</span><span class="p">,</span> <span class="n">right_idx</span> <span class="o">=</span> <span class="n">_find_matching_indices</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="n">bin_X</span><span class="p">,</span>
+                                                 <span class="n">left_masks</span><span class="p">[</span><span class="n">hi</span><span class="p">],</span>
+                                                 <span class="n">right_masks</span><span class="p">[</span><span class="n">hi</span><span class="p">])</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="n">right_idx</span> <span class="o">&gt;</span> <span class="n">left_idx</span>
+    <span class="n">res</span><span class="p">[</span><span class="n">found</span><span class="p">]</span> <span class="o">=</span> <span class="n">lo</span><span class="p">[</span><span class="n">found</span><span class="p">]</span> <span class="o">=</span> <span class="n">hash_size</span>
+
+    <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">bin_X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">kept</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="n">lo</span> <span class="o">&lt;</span> <span class="n">hi</span><span class="p">]</span>  <span class="c1"># indices remaining in bin_X mask</span>
+    <span class="k">while</span> <span class="n">kept</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">mid</span> <span class="o">=</span> <span class="p">(</span><span class="n">lo</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">kept</span><span class="p">)</span> <span class="o">+</span> <span class="n">hi</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">kept</span><span class="p">))</span> <span class="o">//</span> <span class="mi">2</span>
+
+        <span class="n">left_idx</span><span class="p">,</span> <span class="n">right_idx</span> <span class="o">=</span> <span class="n">_find_matching_indices</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span>
+                                                     <span class="n">bin_X</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">kept</span><span class="p">),</span>
+                                                     <span class="n">left_masks</span><span class="p">[</span><span class="n">mid</span><span class="p">],</span>
+                                                     <span class="n">right_masks</span><span class="p">[</span><span class="n">mid</span><span class="p">])</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">right_idx</span> <span class="o">&gt;</span> <span class="n">left_idx</span>
+        <span class="n">mid_found</span> <span class="o">=</span> <span class="n">mid</span><span class="p">[</span><span class="n">found</span><span class="p">]</span>
+        <span class="n">lo</span><span class="p">[</span><span class="n">kept</span><span class="p">[</span><span class="n">found</span><span class="p">]]</span> <span class="o">=</span> <span class="n">mid_found</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">res</span><span class="p">[</span><span class="n">kept</span><span class="p">[</span><span class="n">found</span><span class="p">]]</span> <span class="o">=</span> <span class="n">mid_found</span>
+        <span class="n">hi</span><span class="p">[</span><span class="n">kept</span><span class="p">[</span><span class="o">~</span><span class="n">found</span><span class="p">]]</span> <span class="o">=</span> <span class="n">mid</span><span class="p">[</span><span class="o">~</span><span class="n">found</span><span class="p">]</span>
+
+        <span class="n">kept</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="n">lo</span> <span class="o">&lt;</span> <span class="n">hi</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">res</span>
+
+
+<span class="k">class</span> <span class="nc">ProjectionToHashMixin</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Turn a transformed real-valued array into a hash&quot;&quot;&quot;</span>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_to_hash</span><span class="p">(</span><span class="n">projected</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">projected</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">%</span> <span class="mi">8</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Require reduced dimensionality to be a multiple &#39;</span>
+                             <span class="s1">&#39;of 8 for hashing&#39;</span><span class="p">)</span>
+        <span class="c1"># XXX: perhaps non-copying operation better</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">packbits</span><span class="p">((</span><span class="n">projected</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">))</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">HASH_DTYPE</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">projected</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_hash</span><span class="p">(</span><span class="nb">super</span><span class="p">(</span><span class="n">ProjectionToHashMixin</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X</span><span class="p">))</span>
+
+
+<span class="k">class</span> <span class="nc">GaussianRandomProjectionHash</span><span class="p">(</span><span class="n">ProjectionToHashMixin</span><span class="p">,</span>
+                                   <span class="n">GaussianRandomProjection</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Use GaussianRandomProjection to produce a cosine LSH fingerprint&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">n_components</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+                 <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GaussianRandomProjectionHash</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">n_components</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_array_of_arrays</span><span class="p">(</span><span class="n">list_of_arrays</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates an array of array from list of arrays.&quot;&quot;&quot;</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">list_of_arrays</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>
+    <span class="n">out</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">list_of_arrays</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">class</span> <span class="nc">LSHForest</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">KNeighborsMixin</span><span class="p">,</span> <span class="n">RadiusNeighborsMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Performs approximate nearest neighbor search using LSH forest.</span>
+
+<span class="sd">    LSH Forest: Locality Sensitive Hashing forest [1] is an alternative</span>
+<span class="sd">    method for vanilla approximate nearest neighbor search methods.</span>
+<span class="sd">    LSH forest data structure has been implemented using sorted</span>
+<span class="sd">    arrays and binary search and 32 bit fixed-length hashes.</span>
+<span class="sd">    Random projection is used as the hash family which approximates</span>
+<span class="sd">    cosine distance.</span>
+
+<span class="sd">    The cosine distance is defined as ``1 - cosine_similarity``: the lowest</span>
+<span class="sd">    value is 0 (identical point) but it is bounded above by 2 for the farthest</span>
+<span class="sd">    points. Its value does not depend on the norm of the vector points but</span>
+<span class="sd">    only on their relative angles.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    n_estimators : int (default = 10)</span>
+<span class="sd">        Number of trees in the LSH Forest.</span>
+
+<span class="sd">    radius : float, optinal (default = 1.0)</span>
+<span class="sd">        Radius from the data point to its neighbors. This is the parameter</span>
+<span class="sd">        space to use by default for the :meth:`radius_neighbors` queries.</span>
+
+<span class="sd">    n_candidates : int (default = 50)</span>
+<span class="sd">        Minimum number of candidates evaluated per estimator, assuming enough</span>
+<span class="sd">        items meet the `min_hash_match` constraint.</span>
+
+<span class="sd">    n_neighbors : int (default = 5)</span>
+<span class="sd">        Number of neighbors to be returned from query function when</span>
+<span class="sd">        it is not provided to the :meth:`kneighbors` method.</span>
+
+<span class="sd">    min_hash_match : int (default = 4)</span>
+<span class="sd">        lowest hash length to be searched when candidate selection is</span>
+<span class="sd">        performed for nearest neighbors.</span>
+
+<span class="sd">    radius_cutoff_ratio : float, optional (default = 0.9)</span>
+<span class="sd">        A value ranges from 0 to 1. Radius neighbors will be searched until</span>
+<span class="sd">        the ratio between total neighbors within the radius and the total</span>
+<span class="sd">        candidates becomes less than this value unless it is terminated by</span>
+<span class="sd">        hash length reaching `min_hash_match`.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional (default=None)</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    hash_functions_ : list of GaussianRandomProjectionHash objects</span>
+<span class="sd">        Hash function g(p,x) for a tree is an array of 32 randomly generated</span>
+<span class="sd">        float arrays with the same dimension as the data set. This array is</span>
+<span class="sd">        stored in GaussianRandomProjectionHash object and can be obtained</span>
+<span class="sd">        from ``components_`` attribute.</span>
+
+<span class="sd">    trees_ : array, shape (n_estimators, n_samples)</span>
+<span class="sd">        Each tree (corresponding to a hash function) contains an array of</span>
+<span class="sd">        sorted hashed values. The array representation may change in future</span>
+<span class="sd">        versions.</span>
+
+<span class="sd">    original_indices_ : array, shape (n_estimators, n_samples)</span>
+<span class="sd">        Original indices of sorted hashed values in the fitted index.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    .. [1] M. Bawa, T. Condie and P. Ganesan, &quot;LSH Forest: Self-Tuning</span>
+<span class="sd">           Indexes for Similarity Search&quot;, WWW &#39;05 Proceedings of the</span>
+<span class="sd">           14th international conference on World Wide Web,  651-660,</span>
+<span class="sd">           2005.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">      &gt;&gt;&gt; from sklearn.neighbors import LSHForest</span>
+
+<span class="sd">      &gt;&gt;&gt; X_train = [[5, 5, 2], [21, 5, 5], [1, 1, 1], [8, 9, 1], [6, 10, 2]]</span>
+<span class="sd">      &gt;&gt;&gt; X_test = [[9, 1, 6], [3, 1, 10], [7, 10, 3]]</span>
+<span class="sd">      &gt;&gt;&gt; lshf = LSHForest(random_state=42)</span>
+<span class="sd">      &gt;&gt;&gt; lshf.fit(X_train)  # doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">      LSHForest(min_hash_match=4, n_candidates=50, n_estimators=10,</span>
+<span class="sd">                n_neighbors=5, radius=1.0, radius_cutoff_ratio=0.9,</span>
+<span class="sd">                random_state=42)</span>
+<span class="sd">      &gt;&gt;&gt; distances, indices = lshf.kneighbors(X_test, n_neighbors=2)</span>
+<span class="sd">      &gt;&gt;&gt; distances                                        # doctest: +ELLIPSIS</span>
+<span class="sd">      array([[ 0.069...,  0.149...],</span>
+<span class="sd">             [ 0.229...,  0.481...],</span>
+<span class="sd">             [ 0.004...,  0.014...]])</span>
+<span class="sd">      &gt;&gt;&gt; indices</span>
+<span class="sd">      array([[1, 2],</span>
+<span class="sd">             [2, 0],</span>
+<span class="sd">             [4, 0]])</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_estimators</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">n_candidates</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+                 <span class="n">n_neighbors</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">min_hash_match</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">radius_cutoff_ratio</span><span class="o">=.</span><span class="mi">9</span><span class="p">,</span>
+                 <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_estimators</span> <span class="o">=</span> <span class="n">n_estimators</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radius</span> <span class="o">=</span> <span class="n">radius</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_candidates</span> <span class="o">=</span> <span class="n">n_candidates</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span> <span class="o">=</span> <span class="n">n_neighbors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_hash_match</span> <span class="o">=</span> <span class="n">min_hash_match</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radius_cutoff_ratio</span> <span class="o">=</span> <span class="n">radius_cutoff_ratio</span>
+
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;LSHForest has poor performance and has been deprecated &quot;</span>
+                      <span class="s2">&quot;in 0.19. It will be removed in version 0.21.&quot;</span><span class="p">,</span>
+                      <span class="ne">DeprecationWarning</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_compute_distances</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">candidates</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computes the cosine distance.</span>
+
+<span class="sd">        Distance is from the query to points in the candidates array.</span>
+<span class="sd">        Returns argsort of distances in the candidates</span>
+<span class="sd">        array and sorted distances.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">candidates</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">0</span><span class="p">,):</span>
+            <span class="c1"># needed since _fit_X[np.array([])] doesn&#39;t work if _fit_X sparse</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span><span class="p">):</span>
+            <span class="n">candidate_X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span><span class="p">[</span><span class="n">candidates</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">candidate_X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">candidates</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;clip&#39;</span><span class="p">)</span>
+        <span class="n">distances</span> <span class="o">=</span> <span class="n">pairwise_distances</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">candidate_X</span><span class="p">,</span>
+                                       <span class="n">metric</span><span class="o">=</span><span class="s1">&#39;cosine&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">distance_positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">distances</span><span class="p">)</span>
+        <span class="n">distances</span> <span class="o">=</span> <span class="n">distances</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">distance_positions</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;clip&#39;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">distance_positions</span><span class="p">,</span> <span class="n">distances</span>
+
+    <span class="k">def</span> <span class="nf">_generate_masks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates left and right masks for all hash lengths.&quot;&quot;&quot;</span>
+        <span class="n">tri_size</span> <span class="o">=</span> <span class="n">MAX_HASH_SIZE</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="c1"># Called once on fitting, output is independent of hashes</span>
+        <span class="n">left_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tril</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">tri_size</span><span class="p">,</span> <span class="n">tri_size</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">))[:,</span> <span class="mi">1</span><span class="p">:]</span>
+        <span class="n">right_mask</span> <span class="o">=</span> <span class="n">left_mask</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_left_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">packbits</span><span class="p">(</span><span class="n">left_mask</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">HASH_DTYPE</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_right_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">packbits</span><span class="p">(</span><span class="n">right_mask</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">HASH_DTYPE</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_candidates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">max_depth</span><span class="p">,</span> <span class="n">bin_queries</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Performs the Synchronous ascending phase.</span>
+
+<span class="sd">        Returns an array of candidates, their distance ranks and</span>
+<span class="sd">        distances.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">index_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># Number of candidates considered including duplicates</span>
+        <span class="c1"># XXX: not sure whether this is being calculated correctly wrt</span>
+        <span class="c1">#      duplicates from different iterations through a single tree</span>
+        <span class="n">n_candidates</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">candidate_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">min_candidates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_candidates</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_estimators</span>
+        <span class="k">while</span> <span class="p">(</span><span class="n">max_depth</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_hash_match</span> <span class="ow">and</span>
+               <span class="p">(</span><span class="n">n_candidates</span> <span class="o">&lt;</span> <span class="n">min_candidates</span> <span class="ow">or</span>
+                <span class="nb">len</span><span class="p">(</span><span class="n">candidate_set</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">n_neighbors</span><span class="p">)):</span>
+
+            <span class="n">left_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_left_mask</span><span class="p">[</span><span class="n">max_depth</span><span class="p">]</span>
+            <span class="n">right_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_mask</span><span class="p">[</span><span class="n">max_depth</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_estimators</span><span class="p">):</span>
+                <span class="n">start</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="n">_find_matching_indices</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trees_</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                                     <span class="n">bin_queries</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                                     <span class="n">left_mask</span><span class="p">,</span> <span class="n">right_mask</span><span class="p">)</span>
+                <span class="n">n_candidates</span> <span class="o">+=</span> <span class="n">stop</span> <span class="o">-</span> <span class="n">start</span>
+                <span class="n">candidate_set</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">original_indices_</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+            <span class="n">max_depth</span> <span class="o">-=</span> <span class="mi">1</span>
+
+        <span class="n">candidates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromiter</span><span class="p">(</span><span class="n">candidate_set</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">candidate_set</span><span class="p">),</span>
+                                 <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">)</span>
+        <span class="c1"># For insufficient candidates, candidates are filled.</span>
+        <span class="c1"># Candidates are filled from unselected indices uniformly.</span>
+        <span class="k">if</span> <span class="n">candidates</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">n_neighbors</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;Number of candidates is not sufficient to retrieve&quot;</span>
+                <span class="s2">&quot; </span><span class="si">%i</span><span class="s2"> neighbors with&quot;</span>
+                <span class="s2">&quot; min_hash_match = </span><span class="si">%i</span><span class="s2">. Candidates are filled up&quot;</span>
+                <span class="s2">&quot; uniformly from unselected&quot;</span>
+                <span class="s2">&quot; indices.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n_neighbors</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_hash_match</span><span class="p">))</span>
+            <span class="n">remaining</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">index_size</span><span class="p">),</span> <span class="n">candidates</span><span class="p">)</span>
+            <span class="n">to_fill</span> <span class="o">=</span> <span class="n">n_neighbors</span> <span class="o">-</span> <span class="n">candidates</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">candidates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">candidates</span><span class="p">,</span> <span class="n">remaining</span><span class="p">[:</span><span class="n">to_fill</span><span class="p">]))</span>
+
+        <span class="n">ranks</span><span class="p">,</span> <span class="n">distances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_distances</span><span class="p">(</span><span class="n">query</span><span class="p">,</span>
+                                                   <span class="n">candidates</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">candidates</span><span class="p">[</span><span class="n">ranks</span><span class="p">[:</span><span class="n">n_neighbors</span><span class="p">]],</span>
+                <span class="n">distances</span><span class="p">[:</span><span class="n">n_neighbors</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">_get_radius_neighbors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">max_depth</span><span class="p">,</span> <span class="n">bin_queries</span><span class="p">,</span> <span class="n">radius</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Finds radius neighbors from the candidates obtained.</span>
+
+<span class="sd">        Their distances from query are smaller than radius.</span>
+<span class="sd">        Returns radius neighbors and distances.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ratio_within_radius</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">threshold</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">radius_cutoff_ratio</span>
+        <span class="n">total_candidates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">total_neighbors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">total_distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+        <span class="k">while</span> <span class="p">(</span><span class="n">max_depth</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_hash_match</span> <span class="ow">and</span>
+               <span class="n">ratio_within_radius</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">):</span>
+            <span class="n">left_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_left_mask</span><span class="p">[</span><span class="n">max_depth</span><span class="p">]</span>
+            <span class="n">right_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_mask</span><span class="p">[</span><span class="n">max_depth</span><span class="p">]</span>
+            <span class="n">candidates</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_estimators</span><span class="p">):</span>
+                <span class="n">start</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="n">_find_matching_indices</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trees_</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                                     <span class="n">bin_queries</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                                     <span class="n">left_mask</span><span class="p">,</span> <span class="n">right_mask</span><span class="p">)</span>
+                <span class="n">candidates</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">original_indices_</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+            <span class="n">candidates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">candidates</span><span class="p">,</span> <span class="n">total_candidates</span><span class="p">)</span>
+            <span class="n">total_candidates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">total_candidates</span><span class="p">,</span> <span class="n">candidates</span><span class="p">)</span>
+            <span class="n">ranks</span><span class="p">,</span> <span class="n">distances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_distances</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">candidates</span><span class="p">)</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">distances</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+            <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">total_distances</span><span class="p">,</span> <span class="n">distances</span><span class="p">[:</span><span class="n">m</span><span class="p">])</span>
+            <span class="n">total_neighbors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">total_neighbors</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span>
+                                        <span class="n">candidates</span><span class="p">[</span><span class="n">ranks</span><span class="p">[:</span><span class="n">m</span><span class="p">]])</span>
+            <span class="n">total_distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">total_distances</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span>
+                                        <span class="n">distances</span><span class="p">[:</span><span class="n">m</span><span class="p">])</span>
+            <span class="n">ratio_within_radius</span> <span class="o">=</span> <span class="p">(</span><span class="n">total_neighbors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span>
+                                   <span class="nb">float</span><span class="p">(</span><span class="n">total_candidates</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="n">max_depth</span> <span class="o">=</span> <span class="n">max_depth</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">total_neighbors</span><span class="p">,</span> <span class="n">total_distances</span>
+
+<div class="viewcode-block" id="LSHForest.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_neighbors_lshforest.html#ibex.sklearn.neighbors.LSHForest.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the LSH forest on the data.</span>
+
+<span class="sd">        This creates binary hashes of input data points by getting the</span>
+<span class="sd">        dot product of input points and hash_function then</span>
+<span class="sd">        transforming the projection into a binary string array based</span>
+<span class="sd">        on the sign (positive/negative) of the projection.</span>
+<span class="sd">        A sorted array of binary hashes is created.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array_like or sparse (CSR) matrix, shape (n_samples, n_features)</span>
+<span class="sd">            List of n_features-dimensional data points. Each row</span>
+<span class="sd">            corresponds to a single data point.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : object</span>
+<span class="sd">            Returns self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Creates a g(p,x) for each tree</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hash_functions_</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trees_</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">original_indices_</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">rng</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="n">int_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span><span class="o">.</span><span class="n">max</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_estimators</span><span class="p">):</span>
+            <span class="c1"># This is g(p,x) for a particular tree.</span>
+            <span class="c1"># Builds a single tree. Hashing is done on an array of data points.</span>
+            <span class="c1"># `GaussianRandomProjection` is used for hashing.</span>
+            <span class="c1"># `n_components=hash size and n_features=n_dim.</span>
+            <span class="n">hasher</span> <span class="o">=</span> <span class="n">GaussianRandomProjectionHash</span><span class="p">(</span><span class="n">MAX_HASH_SIZE</span><span class="p">,</span>
+                                                  <span class="n">rng</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">int_max</span><span class="p">))</span>
+            <span class="n">hashes</span> <span class="o">=</span> <span class="n">hasher</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span><span class="p">)[:,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="n">original_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">hashes</span><span class="p">)</span>
+            <span class="n">bin_hashes</span> <span class="o">=</span> <span class="n">hashes</span><span class="p">[</span><span class="n">original_index</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">original_indices_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">original_index</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trees_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bin_hashes</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hash_functions_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hasher</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_generate_masks</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+    <span class="k">def</span> <span class="nf">_query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Performs descending phase to find maximum depth.&quot;&quot;&quot;</span>
+        <span class="c1"># Calculate hashes of shape (n_samples, n_estimators, [hash_size])</span>
+        <span class="n">bin_queries</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">hasher</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X</span><span class="p">)[:,</span> <span class="mi">0</span><span class="p">]</span>
+                                  <span class="k">for</span> <span class="n">hasher</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hash_functions_</span><span class="p">])</span>
+        <span class="n">bin_queries</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rollaxis</span><span class="p">(</span><span class="n">bin_queries</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># descend phase</span>
+        <span class="n">depths</span> <span class="o">=</span> <span class="p">[</span><span class="n">_find_longest_prefix_match</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="n">tree_queries</span><span class="p">,</span> <span class="n">MAX_HASH_SIZE</span><span class="p">,</span>
+                                             <span class="bp">self</span><span class="o">.</span><span class="n">_left_mask</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_mask</span><span class="p">)</span>
+                  <span class="k">for</span> <span class="n">tree</span><span class="p">,</span> <span class="n">tree_queries</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trees_</span><span class="p">,</span>
+                                                <span class="n">np</span><span class="o">.</span><span class="n">rollaxis</span><span class="p">(</span><span class="n">bin_queries</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+
+        <span class="k">return</span> <span class="n">bin_queries</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">depths</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LSHForest.kneighbors"><a class="viewcode-back" href="../../../api_ibex_sklearn_neighbors_lshforest.html#ibex.sklearn.neighbors.LSHForest.kneighbors">[docs]</a>    <span class="k">def</span> <span class="nf">kneighbors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_distance</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns n_neighbors of approximate nearest neighbors.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array_like or sparse (CSR) matrix, shape (n_samples, n_features)</span>
+<span class="sd">            List of n_features-dimensional data points.  Each row</span>
+<span class="sd">            corresponds to a single query.</span>
+
+<span class="sd">        n_neighbors : int, optional (default = None)</span>
+<span class="sd">            Number of neighbors required. If not provided, this will</span>
+<span class="sd">            return the number specified at the initialization.</span>
+
+<span class="sd">        return_distance : boolean, optional (default = True)</span>
+<span class="sd">            Returns the distances of neighbors if set to True.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dist : array, shape (n_samples, n_neighbors)</span>
+<span class="sd">            Array representing the cosine distances to each point,</span>
+<span class="sd">            only present if return_distance=True.</span>
+
+<span class="sd">        ind : array, shape (n_samples, n_neighbors)</span>
+<span class="sd">            Indices of the approximate nearest points in the population</span>
+<span class="sd">            matrix.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;hash_functions_&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;estimator should be fitted.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">n_neighbors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">n_neighbors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">)</span>
+
+        <span class="n">neighbors</span><span class="p">,</span> <span class="n">distances</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+        <span class="n">bin_queries</span><span class="p">,</span> <span class="n">max_depth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_query</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+
+            <span class="n">neighs</span><span class="p">,</span> <span class="n">dists</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_candidates</span><span class="p">(</span><span class="n">X</span><span class="p">[[</span><span class="n">i</span><span class="p">]],</span> <span class="n">max_depth</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                                 <span class="n">bin_queries</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                                 <span class="n">n_neighbors</span><span class="p">)</span>
+            <span class="n">neighbors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">neighs</span><span class="p">)</span>
+            <span class="n">distances</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dists</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">return_distance</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">distances</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">neighbors</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">neighbors</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LSHForest.radius_neighbors"><a class="viewcode-back" href="../../../api_ibex_sklearn_neighbors_lshforest.html#ibex.sklearn.neighbors.LSHForest.radius_neighbors">[docs]</a>    <span class="k">def</span> <span class="nf">radius_neighbors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_distance</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Finds the neighbors within a given radius of a point or points.</span>
+
+<span class="sd">        Return the indices and distances of some points from the dataset</span>
+<span class="sd">        lying in a ball with size ``radius`` around the points of the query</span>
+<span class="sd">        array. Points lying on the boundary are included in the results.</span>
+
+<span class="sd">        The result points are *not* necessarily sorted by distance to their</span>
+<span class="sd">        query point.</span>
+
+<span class="sd">        LSH Forest being an approximate method, some true neighbors from the</span>
+<span class="sd">        indexed dataset might be missing from the results.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array_like or sparse (CSR) matrix, shape (n_samples, n_features)</span>
+<span class="sd">            List of n_features-dimensional data points. Each row</span>
+<span class="sd">            corresponds to a single query.</span>
+
+<span class="sd">        radius : float</span>
+<span class="sd">            Limiting distance of neighbors to return.</span>
+<span class="sd">            (default is the value passed to the constructor).</span>
+
+<span class="sd">        return_distance : boolean, optional (default = False)</span>
+<span class="sd">            Returns the distances of neighbors if set to True.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dist : array, shape (n_samples,) of arrays</span>
+<span class="sd">            Each element is an array representing the cosine distances</span>
+<span class="sd">            to some points found within ``radius`` of the respective query.</span>
+<span class="sd">            Only present if ``return_distance=True``.</span>
+
+<span class="sd">        ind : array, shape (n_samples,) of arrays</span>
+<span class="sd">            Each element is an array of indices for neighbors within ``radius``</span>
+<span class="sd">            of the respective query.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;hash_functions_&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;estimator should be fitted.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">radius</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">radius</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">radius</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">)</span>
+
+        <span class="n">neighbors</span><span class="p">,</span> <span class="n">distances</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+        <span class="n">bin_queries</span><span class="p">,</span> <span class="n">max_depth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_query</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+
+            <span class="n">neighs</span><span class="p">,</span> <span class="n">dists</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_radius_neighbors</span><span class="p">(</span><span class="n">X</span><span class="p">[[</span><span class="n">i</span><span class="p">]],</span> <span class="n">max_depth</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                                       <span class="n">bin_queries</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">radius</span><span class="p">)</span>
+            <span class="n">neighbors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">neighs</span><span class="p">)</span>
+            <span class="n">distances</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dists</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">return_distance</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_array_of_arrays</span><span class="p">(</span><span class="n">distances</span><span class="p">),</span> <span class="n">_array_of_arrays</span><span class="p">(</span><span class="n">neighbors</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_array_of_arrays</span><span class="p">(</span><span class="n">neighbors</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LSHForest.partial_fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_neighbors_lshforest.html#ibex.sklearn.neighbors.LSHForest.partial_fit">[docs]</a>    <span class="k">def</span> <span class="nf">partial_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Inserts new data into the already fitted LSH Forest.</span>
+<span class="sd">        Cost is proportional to new total size, so additions</span>
+<span class="sd">        should be batched.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array_like or sparse (CSR) matrix, shape (n_samples, n_features)</span>
+<span class="sd">            New data point to be inserted into the LSH Forest.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;hash_functions_&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Number of features in X and&quot;</span>
+                             <span class="s2">&quot; fitted array does not match.&quot;</span><span class="p">)</span>
+        <span class="n">n_samples</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">n_indexed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_estimators</span><span class="p">):</span>
+            <span class="n">bin_X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hash_functions_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X</span><span class="p">)[:,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="c1"># gets the position to be added in the tree.</span>
+            <span class="n">positions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trees_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">bin_X</span><span class="p">)</span>
+            <span class="c1"># adds the hashed value into the tree.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trees_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trees_</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                       <span class="n">positions</span><span class="p">,</span> <span class="n">bin_X</span><span class="p">)</span>
+            <span class="c1"># add the entry into the original_indices_.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">original_indices_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">original_indices_</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                                  <span class="n">positions</span><span class="p">,</span>
+                                                  <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_indexed</span><span class="p">,</span>
+                                                            <span class="n">n_indexed</span> <span class="o">+</span>
+                                                            <span class="n">n_samples</span><span class="p">))</span>
+
+        <span class="c1"># adds the entry into the input_array.</span>
+        <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="ow">or</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span><span class="p">,</span> <span class="n">X</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">row_stack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span><span class="p">,</span> <span class="n">X</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

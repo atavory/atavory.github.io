@@ -1,0 +1,636 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.semi_supervised.label_propagation &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.semi_supervised.label_propagation</h1><div class="highlight"><pre>
+<span></span><span class="c1"># coding=utf8</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Label propagation in the context of this module refers to a set of</span>
+<span class="sd">semi-supervised classification algorithms. At a high level, these algorithms</span>
+<span class="sd">work by forming a fully-connected graph between all points given and solving</span>
+<span class="sd">for the steady-state distribution of labels at each point.</span>
+
+<span class="sd">These algorithms perform very well in practice. The cost of running can be very</span>
+<span class="sd">expensive, at approximately O(N^3) where N is the number of (labeled and</span>
+<span class="sd">unlabeled) points. The theory (why they perform so well) is motivated by</span>
+<span class="sd">intuitions from random walk algorithms and geometric relationships in the data.</span>
+<span class="sd">For more information see the references below.</span>
+
+<span class="sd">Model Features</span>
+<span class="sd">--------------</span>
+<span class="sd">Label clamping:</span>
+<span class="sd">  The algorithm tries to learn distributions of labels over the dataset given</span>
+<span class="sd">  label assignments over an initial subset. In one variant, the algorithm does</span>
+<span class="sd">  not allow for any errors in the initial assignment (hard-clamping) while</span>
+<span class="sd">  in another variant, the algorithm allows for some wiggle room for the initial</span>
+<span class="sd">  assignments, allowing them to change by a fraction alpha in each iteration</span>
+<span class="sd">  (soft-clamping).</span>
+
+<span class="sd">Kernel:</span>
+<span class="sd">  A function which projects a vector into some higher dimensional space. This</span>
+<span class="sd">  implementation supports RBF and KNN kernels. Using the RBF kernel generates</span>
+<span class="sd">  a dense matrix of size O(N^2). KNN kernel will generate a sparse matrix of</span>
+<span class="sd">  size O(k*N) which will run much faster. See the documentation for SVMs for</span>
+<span class="sd">  more info on kernels.</span>
+
+<span class="sd">Examples</span>
+<span class="sd">--------</span>
+<span class="sd">&gt;&gt;&gt; from sklearn import datasets</span>
+<span class="sd">&gt;&gt;&gt; from sklearn.semi_supervised import LabelPropagation</span>
+<span class="sd">&gt;&gt;&gt; label_prop_model = LabelPropagation()</span>
+<span class="sd">&gt;&gt;&gt; iris = datasets.load_iris()</span>
+<span class="sd">&gt;&gt;&gt; rng = np.random.RandomState(42)</span>
+<span class="sd">&gt;&gt;&gt; random_unlabeled_points = rng.rand(len(iris.target)) &lt; 0.3</span>
+<span class="sd">&gt;&gt;&gt; labels = np.copy(iris.target)</span>
+<span class="sd">&gt;&gt;&gt; labels[random_unlabeled_points] = -1</span>
+<span class="sd">&gt;&gt;&gt; label_prop_model.fit(iris.data, labels)</span>
+<span class="sd">... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS</span>
+<span class="sd">LabelPropagation(...)</span>
+
+<span class="sd">Notes</span>
+<span class="sd">-----</span>
+<span class="sd">References:</span>
+<span class="sd">[1] Yoshua Bengio, Olivier Delalleau, Nicolas Le Roux. In Semi-Supervised</span>
+<span class="sd">Learning (2006), pp. 193-216</span>
+
+<span class="sd">[2] Olivier Delalleau, Yoshua Bengio, Nicolas Le Roux. Efficient</span>
+<span class="sd">Non-Parametric Function Induction in Semi-Supervised Learning. AISTAT 2005</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Authors: Clay Woolam &lt;clay@woolam.org&gt;</span>
+<span class="c1">#          Utkarsh Upadhyay &lt;mail@musicallyut.in&gt;</span>
+<span class="c1"># License: BSD</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">sparse</span>
+
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClassifierMixin</span>
+<span class="kn">from</span> <span class="nn">..externals</span> <span class="k">import</span> <span class="n">six</span>
+<span class="kn">from</span> <span class="nn">..metrics.pairwise</span> <span class="k">import</span> <span class="n">rbf_kernel</span>
+<span class="kn">from</span> <span class="nn">..neighbors.unsupervised</span> <span class="k">import</span> <span class="n">NearestNeighbors</span>
+<span class="kn">from</span> <span class="nn">..utils.extmath</span> <span class="k">import</span> <span class="n">safe_sparse_dot</span>
+<span class="kn">from</span> <span class="nn">..utils.multiclass</span> <span class="k">import</span> <span class="n">check_classification_targets</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_X_y</span><span class="p">,</span> <span class="n">check_is_fitted</span><span class="p">,</span> <span class="n">check_array</span>
+<span class="kn">from</span> <span class="nn">..exceptions</span> <span class="k">import</span> <span class="n">ConvergenceWarning</span>
+
+
+<span class="k">class</span> <span class="nc">BaseLabelPropagation</span><span class="p">(</span><span class="n">six</span><span class="o">.</span><span class="n">with_metaclass</span><span class="p">(</span><span class="n">ABCMeta</span><span class="p">,</span> <span class="n">BaseEstimator</span><span class="p">,</span>
+                                              <span class="n">ClassifierMixin</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Base class for label propagation module.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    kernel : {&#39;knn&#39;, &#39;rbf&#39;, callable}</span>
+<span class="sd">        String identifier for kernel function to use or the kernel function</span>
+<span class="sd">        itself. Only &#39;rbf&#39; and &#39;knn&#39; strings are valid inputs. The function</span>
+<span class="sd">        passed should take two inputs, each of shape [n_samples, n_features],</span>
+<span class="sd">        and return a [n_samples, n_samples] shaped weight matrix</span>
+
+<span class="sd">    gamma : float</span>
+<span class="sd">        Parameter for rbf kernel</span>
+
+<span class="sd">    n_neighbors : integer &gt; 0</span>
+<span class="sd">        Parameter for knn kernel</span>
+
+<span class="sd">    alpha : float</span>
+<span class="sd">        Clamping factor</span>
+
+<span class="sd">    max_iter : integer</span>
+<span class="sd">        Change maximum number of iterations allowed</span>
+
+<span class="sd">    tol : float</span>
+<span class="sd">        Convergence tolerance: threshold to consider the system at steady</span>
+<span class="sd">        state</span>
+
+<span class="sd">    n_jobs : int, optional (default = 1)</span>
+<span class="sd">        The number of parallel jobs to run.</span>
+<span class="sd">        If ``-1``, then the number of jobs is set to the number of CPU cores.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="s1">&#39;rbf&#39;</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span>
+                 <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+
+        <span class="c1"># kernel parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">=</span> <span class="n">kernel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">gamma</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span> <span class="o">=</span> <span class="n">n_neighbors</span>
+
+        <span class="c1"># clamping factor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
+
+    <span class="k">def</span> <span class="nf">_get_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">==</span> <span class="s2">&quot;rbf&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">rbf_kernel</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">rbf_kernel</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">==</span> <span class="s2">&quot;knn&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nn_fit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">nn_fit</span> <span class="o">=</span> <span class="n">NearestNeighbors</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span><span class="p">,</span>
+                                               <span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nn_fit</span><span class="o">.</span><span class="n">kneighbors_graph</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nn_fit</span><span class="o">.</span><span class="n">_fit_X</span><span class="p">,</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span><span class="p">,</span>
+                                                    <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;connectivity&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nn_fit</span><span class="o">.</span><span class="n">kneighbors</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">return_distance</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> is not a valid kernel. Only rbf and knn&quot;</span>
+                             <span class="s2">&quot; or an explicit function &quot;</span>
+                             <span class="s2">&quot; are supported at this time.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">)</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_build_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Graph construction must be implemented&quot;</span>
+                                  <span class="s2">&quot; to fit a label propagation model.&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Performs inductive inference across the model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array_like, shape = [n_samples, n_features]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y : array_like, shape = [n_samples]</span>
+<span class="sd">            Predictions for input data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">probas</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">probas</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Predict probability for each possible outcome.</span>
+
+<span class="sd">        Compute the probability estimates for each single sample in X</span>
+<span class="sd">        and each possible outcome seen during training (categorical</span>
+<span class="sd">        distribution).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array_like, shape = [n_samples, n_features]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        probabilities : array, shape = [n_samples, n_classes]</span>
+<span class="sd">            Normalized probability distributions across</span>
+<span class="sd">            class labels</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;X_&#39;</span><span class="p">)</span>
+
+        <span class="n">X_2d</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;csc&#39;</span><span class="p">,</span> <span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="s1">&#39;coo&#39;</span><span class="p">,</span> <span class="s1">&#39;dok&#39;</span><span class="p">,</span>
+                                             <span class="s1">&#39;bsr&#39;</span><span class="p">,</span> <span class="s1">&#39;lil&#39;</span><span class="p">,</span> <span class="s1">&#39;dia&#39;</span><span class="p">])</span>
+        <span class="n">weight_matrices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_kernel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_</span><span class="p">,</span> <span class="n">X_2d</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">==</span> <span class="s1">&#39;knn&#39;</span><span class="p">:</span>
+            <span class="n">probabilities</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">weight_matrix</span> <span class="ow">in</span> <span class="n">weight_matrices</span><span class="p">:</span>
+                <span class="n">ine</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span><span class="p">[</span><span class="n">weight_matrix</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">probabilities</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ine</span><span class="p">)</span>
+            <span class="n">probabilities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">probabilities</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">weight_matrices</span> <span class="o">=</span> <span class="n">weight_matrices</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">probabilities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">weight_matrices</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span><span class="p">)</span>
+        <span class="n">normalizer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">probabilities</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">probabilities</span> <span class="o">/=</span> <span class="n">normalizer</span>
+        <span class="k">return</span> <span class="n">probabilities</span>
+
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit a semi-supervised label propagation model based</span>
+
+<span class="sd">        All the input data is provided matrix X (labeled and unlabeled)</span>
+<span class="sd">        and corresponding label matrix y with a dedicated marker value for</span>
+<span class="sd">        unlabeled samples.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+<span class="sd">            A {n_samples by n_samples} size matrix will be created from this</span>
+
+<span class="sd">        y : array_like, shape = [n_samples]</span>
+<span class="sd">            n_labeled_samples (unlabeled points are marked as -1)</span>
+<span class="sd">            All unlabeled samples will be transductively assigned labels</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : returns an instance of self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">X_</span> <span class="o">=</span> <span class="n">X</span>
+        <span class="n">check_classification_targets</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+        <span class="c1"># actual graph construction (implementations should override this)</span>
+        <span class="n">graph_matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_graph</span><span class="p">()</span>
+
+        <span class="c1"># label construction</span>
+        <span class="c1"># construct a categorical distribution for classification only</span>
+        <span class="n">classes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">classes</span> <span class="o">=</span> <span class="p">(</span><span class="n">classes</span><span class="p">[</span><span class="n">classes</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span> <span class="o">=</span> <span class="n">classes</span>
+
+        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_classes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">classes</span><span class="p">)</span>
+
+        <span class="n">alpha</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variant</span> <span class="o">==</span> <span class="s1">&#39;spreading&#39;</span> <span class="ow">and</span> \
+                <span class="p">(</span><span class="n">alpha</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">alpha</span> <span class="o">&lt;=</span> <span class="mf">0.0</span> <span class="ow">or</span> <span class="n">alpha</span> <span class="o">&gt;=</span> <span class="mf">1.0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;alpha=</span><span class="si">%s</span><span class="s1"> is invalid: it must be inside &#39;</span>
+                             <span class="s1">&#39;the open interval (0, 1)&#39;</span> <span class="o">%</span> <span class="n">alpha</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">unlabeled</span> <span class="o">=</span> <span class="n">y</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="c1"># initialize distributions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">classes</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span><span class="p">[</span><span class="n">y</span> <span class="o">==</span> <span class="n">label</span><span class="p">,</span> <span class="n">classes</span> <span class="o">==</span> <span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="n">y_static</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variant</span> <span class="o">==</span> <span class="s1">&#39;propagation&#39;</span><span class="p">:</span>
+            <span class="c1"># LabelPropagation</span>
+            <span class="n">y_static</span><span class="p">[</span><span class="n">unlabeled</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># LabelSpreading</span>
+            <span class="n">y_static</span> <span class="o">*=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">alpha</span>
+
+        <span class="n">l_previous</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">X_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">n_classes</span><span class="p">))</span>
+
+        <span class="n">unlabeled</span> <span class="o">=</span> <span class="n">unlabeled</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">isspmatrix</span><span class="p">(</span><span class="n">graph_matrix</span><span class="p">):</span>
+            <span class="n">graph_matrix</span> <span class="o">=</span> <span class="n">graph_matrix</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span> <span class="o">-</span> <span class="n">l_previous</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">:</span>
+                <span class="k">break</span>
+
+            <span class="n">l_previous</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span> <span class="o">=</span> <span class="n">safe_sparse_dot</span><span class="p">(</span>
+                <span class="n">graph_matrix</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variant</span> <span class="o">==</span> <span class="s1">&#39;propagation&#39;</span><span class="p">:</span>
+                <span class="n">normalizer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span> <span class="o">/=</span> <span class="n">normalizer</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">unlabeled</span><span class="p">,</span>
+                                                     <span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span><span class="p">,</span>
+                                                     <span class="n">y_static</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># clamp</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
+                    <span class="n">alpha</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span><span class="p">)</span> <span class="o">+</span> <span class="n">y_static</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s1">&#39;max_iter=</span><span class="si">%d</span><span class="s1"> was reached without convergence.&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span>
+                <span class="n">category</span><span class="o">=</span><span class="n">ConvergenceWarning</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">normalizer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span> <span class="o">/=</span> <span class="n">normalizer</span>
+
+        <span class="c1"># set the transduction item</span>
+        <span class="n">transduction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">label_distributions_</span><span class="p">,</span>
+                                               <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transduction_</span> <span class="o">=</span> <span class="n">transduction</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+
+<span class="k">class</span> <span class="nc">LabelPropagation</span><span class="p">(</span><span class="n">BaseLabelPropagation</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Label Propagation classifier</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;label_propagation&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    kernel : {&#39;knn&#39;, &#39;rbf&#39;, callable}</span>
+<span class="sd">        String identifier for kernel function to use or the kernel function</span>
+<span class="sd">        itself. Only &#39;rbf&#39; and &#39;knn&#39; strings are valid inputs. The function</span>
+<span class="sd">        passed should take two inputs, each of shape [n_samples, n_features],</span>
+<span class="sd">        and return a [n_samples, n_samples] shaped weight matrix.</span>
+
+<span class="sd">    gamma : float</span>
+<span class="sd">        Parameter for rbf kernel</span>
+
+<span class="sd">    n_neighbors : integer &gt; 0</span>
+<span class="sd">        Parameter for knn kernel</span>
+
+<span class="sd">    alpha : float</span>
+<span class="sd">        Clamping factor.</span>
+
+<span class="sd">        .. deprecated:: 0.19</span>
+<span class="sd">            This parameter will be removed in 0.21.</span>
+<span class="sd">            &#39;alpha&#39; is fixed to zero in &#39;LabelPropagation&#39;.</span>
+
+<span class="sd">    max_iter : integer</span>
+<span class="sd">        Change maximum number of iterations allowed</span>
+
+<span class="sd">    tol : float</span>
+<span class="sd">        Convergence tolerance: threshold to consider the system at steady</span>
+<span class="sd">        state</span>
+
+<span class="sd">    n_jobs : int, optional (default = 1)</span>
+<span class="sd">        The number of parallel jobs to run.</span>
+<span class="sd">        If ``-1``, then the number of jobs is set to the number of CPU cores.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X_ : array, shape = [n_samples, n_features]</span>
+<span class="sd">        Input array.</span>
+
+<span class="sd">    classes_ : array, shape = [n_classes]</span>
+<span class="sd">        The distinct labels used in classifying instances.</span>
+
+<span class="sd">    label_distributions_ : array, shape = [n_samples, n_classes]</span>
+<span class="sd">        Categorical distribution for each item.</span>
+
+<span class="sd">    transduction_ : array, shape = [n_samples]</span>
+<span class="sd">        Label assigned to each item via the transduction.</span>
+
+<span class="sd">    n_iter_ : int</span>
+<span class="sd">        Number of iterations run.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn import datasets</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.semi_supervised import LabelPropagation</span>
+<span class="sd">    &gt;&gt;&gt; label_prop_model = LabelPropagation()</span>
+<span class="sd">    &gt;&gt;&gt; iris = datasets.load_iris()</span>
+<span class="sd">    &gt;&gt;&gt; rng = np.random.RandomState(42)</span>
+<span class="sd">    &gt;&gt;&gt; random_unlabeled_points = rng.rand(len(iris.target)) &lt; 0.3</span>
+<span class="sd">    &gt;&gt;&gt; labels = np.copy(iris.target)</span>
+<span class="sd">    &gt;&gt;&gt; labels[random_unlabeled_points] = -1</span>
+<span class="sd">    &gt;&gt;&gt; label_prop_model.fit(iris.data, labels)</span>
+<span class="sd">    ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS</span>
+<span class="sd">    LabelPropagation(...)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Xiaojin Zhu and Zoubin Ghahramani. Learning from labeled and unlabeled data</span>
+<span class="sd">    with label propagation. Technical Report CMU-CALD-02-107, Carnegie Mellon</span>
+<span class="sd">    University, 2002 http://pages.cs.wisc.edu/~jerryzhu/pub/CMU-CALD-02-107.pdf</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    LabelSpreading : Alternate label propagation strategy more robust to noise</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_variant</span> <span class="o">=</span> <span class="s1">&#39;propagation&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="s1">&#39;rbf&#39;</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span>
+                 <span class="n">alpha</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LabelPropagation</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">kernel</span><span class="o">=</span><span class="n">kernel</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="n">gamma</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="n">n_neighbors</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span>
+            <span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_build_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Matrix representing a fully connected graph between each sample</span>
+
+<span class="sd">        This basic implementation creates a non-stochastic affinity matrix, so</span>
+<span class="sd">        class distributions will exceed 1 (normalization may be desired).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">==</span> <span class="s1">&#39;knn&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nn_fit</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">affinity_matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_kernel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_</span><span class="p">)</span>
+        <span class="n">normalizer</span> <span class="o">=</span> <span class="n">affinity_matrix</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">isspmatrix</span><span class="p">(</span><span class="n">affinity_matrix</span><span class="p">):</span>
+            <span class="n">affinity_matrix</span><span class="o">.</span><span class="n">data</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">normalizer</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">affinity_matrix</span> <span class="o">/=</span> <span class="n">normalizer</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">affinity_matrix</span>
+
+<div class="viewcode-block" id="LabelPropagation.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_semi_supervised_labelpropagation.html#ibex.sklearn.semi_supervised.LabelPropagation.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;alpha is deprecated since 0.19 and will be removed in 0.21.&quot;</span><span class="p">,</span>
+                <span class="ne">DeprecationWarning</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">LabelPropagation</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">LabelSpreading</span><span class="p">(</span><span class="n">BaseLabelPropagation</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;LabelSpreading model for semi-supervised learning</span>
+
+<span class="sd">    This model is similar to the basic Label Propagation algorithm,</span>
+<span class="sd">    but uses affinity matrix based on the normalized graph Laplacian</span>
+<span class="sd">    and soft clamping across the labels.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;label_propagation&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    kernel : {&#39;knn&#39;, &#39;rbf&#39;, callable}</span>
+<span class="sd">        String identifier for kernel function to use or the kernel function</span>
+<span class="sd">        itself. Only &#39;rbf&#39; and &#39;knn&#39; strings are valid inputs. The function</span>
+<span class="sd">        passed should take two inputs, each of shape [n_samples, n_features],</span>
+<span class="sd">        and return a [n_samples, n_samples] shaped weight matrix</span>
+
+<span class="sd">    gamma : float</span>
+<span class="sd">      parameter for rbf kernel</span>
+
+<span class="sd">    n_neighbors : integer &gt; 0</span>
+<span class="sd">      parameter for knn kernel</span>
+
+<span class="sd">    alpha : float</span>
+<span class="sd">      Clamping factor. A value in [0, 1] that specifies the relative amount</span>
+<span class="sd">      that an instance should adopt the information from its neighbors as</span>
+<span class="sd">      opposed to its initial label.</span>
+<span class="sd">      alpha=0 means keeping the initial label information; alpha=1 means</span>
+<span class="sd">      replacing all initial information.</span>
+
+<span class="sd">    max_iter : integer</span>
+<span class="sd">      maximum number of iterations allowed</span>
+
+<span class="sd">    tol : float</span>
+<span class="sd">      Convergence tolerance: threshold to consider the system at steady</span>
+<span class="sd">      state</span>
+
+<span class="sd">    n_jobs : int, optional (default = 1)</span>
+<span class="sd">        The number of parallel jobs to run.</span>
+<span class="sd">        If ``-1``, then the number of jobs is set to the number of CPU cores.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X_ : array, shape = [n_samples, n_features]</span>
+<span class="sd">        Input array.</span>
+
+<span class="sd">    classes_ : array, shape = [n_classes]</span>
+<span class="sd">        The distinct labels used in classifying instances.</span>
+
+<span class="sd">    label_distributions_ : array, shape = [n_samples, n_classes]</span>
+<span class="sd">        Categorical distribution for each item.</span>
+
+<span class="sd">    transduction_ : array, shape = [n_samples]</span>
+<span class="sd">        Label assigned to each item via the transduction.</span>
+
+<span class="sd">    n_iter_ : int</span>
+<span class="sd">        Number of iterations run.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn import datasets</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.semi_supervised import LabelSpreading</span>
+<span class="sd">    &gt;&gt;&gt; label_prop_model = LabelSpreading()</span>
+<span class="sd">    &gt;&gt;&gt; iris = datasets.load_iris()</span>
+<span class="sd">    &gt;&gt;&gt; rng = np.random.RandomState(42)</span>
+<span class="sd">    &gt;&gt;&gt; random_unlabeled_points = rng.rand(len(iris.target)) &lt; 0.3</span>
+<span class="sd">    &gt;&gt;&gt; labels = np.copy(iris.target)</span>
+<span class="sd">    &gt;&gt;&gt; labels[random_unlabeled_points] = -1</span>
+<span class="sd">    &gt;&gt;&gt; label_prop_model.fit(iris.data, labels)</span>
+<span class="sd">    ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS</span>
+<span class="sd">    LabelSpreading(...)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Dengyong Zhou, Olivier Bousquet, Thomas Navin Lal, Jason Weston,</span>
+<span class="sd">    Bernhard Schoelkopf. Learning with local and global consistency (2004)</span>
+<span class="sd">    http://citeseer.ist.psu.edu/viewdoc/summary?doi=10.1.1.115.3219</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    LabelPropagation : Unregularized graph based semi-supervised learning</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_variant</span> <span class="o">=</span> <span class="s1">&#39;spreading&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="s1">&#39;rbf&#39;</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+                 <span class="n">max_iter</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+
+        <span class="c1"># this one has different base parameters</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LabelSpreading</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">kernel</span><span class="o">=</span><span class="n">kernel</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="n">gamma</span><span class="p">,</span>
+                                             <span class="n">n_neighbors</span><span class="o">=</span><span class="n">n_neighbors</span><span class="p">,</span>
+                                             <span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span>
+                                             <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span>
+                                             <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_build_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Graph matrix for Label Spreading computes the graph laplacian&quot;&quot;&quot;</span>
+        <span class="c1"># compute affinity matrix (or gram matrix)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">==</span> <span class="s1">&#39;knn&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nn_fit</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">n_samples</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">affinity_matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_kernel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_</span><span class="p">)</span>
+        <span class="n">laplacian</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csgraph</span><span class="o">.</span><span class="n">laplacian</span><span class="p">(</span><span class="n">affinity_matrix</span><span class="p">,</span> <span class="n">normed</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">laplacian</span> <span class="o">=</span> <span class="o">-</span><span class="n">laplacian</span>
+        <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">isspmatrix</span><span class="p">(</span><span class="n">laplacian</span><span class="p">):</span>
+            <span class="n">diag_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">laplacian</span><span class="o">.</span><span class="n">row</span> <span class="o">==</span> <span class="n">laplacian</span><span class="o">.</span><span class="n">col</span><span class="p">)</span>
+            <span class="n">laplacian</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">diag_mask</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">laplacian</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span><span class="n">n_samples</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>  <span class="c1"># set diag to 0.0</span>
+        <span class="k">return</span> <span class="n">laplacian</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,1480 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.linear_model.ridge &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.linear_model.ridge</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Ridge regression</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Author: Mathieu Blondel &lt;mathieu@mblondel.org&gt;</span>
+<span class="c1">#         Reuben Fletcher-Costin &lt;reuben.fletchercostin@gmail.com&gt;</span>
+<span class="c1">#         Fabian Pedregosa &lt;fabian@fseoane.net&gt;</span>
+<span class="c1">#         Michael Eickenberg &lt;michael.eickenberg@nsup.org&gt;</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+
+<span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">linalg</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">sparse</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">linalg</span> <span class="k">as</span> <span class="n">sp_linalg</span>
+
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">LinearClassifierMixin</span><span class="p">,</span> <span class="n">LinearModel</span><span class="p">,</span> <span class="n">_rescale_data</span>
+<span class="kn">from</span> <span class="nn">.sag</span> <span class="k">import</span> <span class="n">sag_solver</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">RegressorMixin</span>
+<span class="kn">from</span> <span class="nn">..utils.extmath</span> <span class="k">import</span> <span class="n">safe_sparse_dot</span>
+<span class="kn">from</span> <span class="nn">..utils.extmath</span> <span class="k">import</span> <span class="n">row_norms</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_X_y</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_array</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_consistent_length</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">compute_sample_weight</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">column_or_1d</span>
+<span class="kn">from</span> <span class="nn">..preprocessing</span> <span class="k">import</span> <span class="n">LabelBinarizer</span>
+<span class="kn">from</span> <span class="nn">..model_selection</span> <span class="k">import</span> <span class="n">GridSearchCV</span>
+<span class="kn">from</span> <span class="nn">..externals</span> <span class="k">import</span> <span class="n">six</span>
+<span class="kn">from</span> <span class="nn">..metrics.scorer</span> <span class="k">import</span> <span class="n">check_scoring</span>
+
+
+<span class="k">def</span> <span class="nf">_solve_sparse_cg</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">X1</span> <span class="o">=</span> <span class="n">sp_linalg</span><span class="o">.</span><span class="n">aslinearoperator</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="n">coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">n_features</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">n_features</span> <span class="o">&gt;</span> <span class="n">n_samples</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">create_mv</span><span class="p">(</span><span class="n">curr_alpha</span><span class="p">):</span>
+            <span class="k">def</span> <span class="nf">_mv</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">X1</span><span class="o">.</span><span class="n">matvec</span><span class="p">(</span><span class="n">X1</span><span class="o">.</span><span class="n">rmatvec</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="o">+</span> <span class="n">curr_alpha</span> <span class="o">*</span> <span class="n">x</span>
+            <span class="k">return</span> <span class="n">_mv</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">create_mv</span><span class="p">(</span><span class="n">curr_alpha</span><span class="p">):</span>
+            <span class="k">def</span> <span class="nf">_mv</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">X1</span><span class="o">.</span><span class="n">rmatvec</span><span class="p">(</span><span class="n">X1</span><span class="o">.</span><span class="n">matvec</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="o">+</span> <span class="n">curr_alpha</span> <span class="o">*</span> <span class="n">x</span>
+            <span class="k">return</span> <span class="n">_mv</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="n">y_column</span> <span class="o">=</span> <span class="n">y</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span>
+
+        <span class="n">mv</span> <span class="o">=</span> <span class="n">create_mv</span><span class="p">(</span><span class="n">alpha</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">n_features</span> <span class="o">&gt;</span> <span class="n">n_samples</span><span class="p">:</span>
+            <span class="c1"># kernel ridge</span>
+            <span class="c1"># w = X.T * inv(X X^t + alpha*Id) y</span>
+            <span class="n">C</span> <span class="o">=</span> <span class="n">sp_linalg</span><span class="o">.</span><span class="n">LinearOperator</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">),</span> <span class="n">matvec</span><span class="o">=</span><span class="n">mv</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">coef</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">sp_linalg</span><span class="o">.</span><span class="n">cg</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">y_column</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">)</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">X1</span><span class="o">.</span><span class="n">rmatvec</span><span class="p">(</span><span class="n">coef</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># linear ridge</span>
+            <span class="c1"># w = inv(X^t X + alpha*Id) * X.T y</span>
+            <span class="n">y_column</span> <span class="o">=</span> <span class="n">X1</span><span class="o">.</span><span class="n">rmatvec</span><span class="p">(</span><span class="n">y_column</span><span class="p">)</span>
+            <span class="n">C</span> <span class="o">=</span> <span class="n">sp_linalg</span><span class="o">.</span><span class="n">LinearOperator</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">n_features</span><span class="p">,</span> <span class="n">n_features</span><span class="p">),</span> <span class="n">matvec</span><span class="o">=</span><span class="n">mv</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">info</span> <span class="o">=</span> <span class="n">sp_linalg</span><span class="o">.</span><span class="n">cg</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">y_column</span><span class="p">,</span> <span class="n">maxiter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span>
+                                          <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">info</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Failed with error code </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">info</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">max_iter</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">info</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;sparse_cg did not converge after </span><span class="si">%d</span><span class="s2"> iterations.&quot;</span> <span class="o">%</span>
+                          <span class="n">info</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">coefs</span>
+
+
+<span class="k">def</span> <span class="nf">_solve_lsqr</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">):</span>
+    <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">n_features</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">n_iter</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+    <span class="c1"># According to the lsqr documentation, alpha = damp^2.</span>
+    <span class="n">sqrt_alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="n">y_column</span> <span class="o">=</span> <span class="n">y</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="n">sp_linalg</span><span class="o">.</span><span class="n">lsqr</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y_column</span><span class="p">,</span> <span class="n">damp</span><span class="o">=</span><span class="n">sqrt_alpha</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                              <span class="n">atol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">btol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">iter_lim</span><span class="o">=</span><span class="n">max_iter</span><span class="p">)</span>
+        <span class="n">coefs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">n_iter</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">coefs</span><span class="p">,</span> <span class="n">n_iter</span>
+
+
+<span class="k">def</span> <span class="nf">_solve_cholesky</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
+    <span class="c1"># w = inv(X^t X + alpha*Id) * X.T y</span>
+    <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">n_targets</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">A</span> <span class="o">=</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">dense_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">Xy</span> <span class="o">=</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dense_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">one_alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span> <span class="o">*</span> <span class="p">[</span><span class="n">alpha</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+
+    <span class="k">if</span> <span class="n">one_alpha</span><span class="p">:</span>
+        <span class="n">A</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span><span class="n">n_features</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">alpha</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">Xy</span><span class="p">,</span> <span class="n">sym_pos</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                            <span class="n">overwrite_a</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">n_targets</span><span class="p">,</span> <span class="n">n_features</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">coef</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">current_alpha</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">coefs</span><span class="p">,</span> <span class="n">Xy</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
+            <span class="n">A</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span><span class="n">n_features</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">current_alpha</span>
+            <span class="n">coef</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">sym_pos</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                   <span class="n">overwrite_a</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+            <span class="n">A</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span><span class="n">n_features</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="n">current_alpha</span>
+        <span class="k">return</span> <span class="n">coefs</span>
+
+
+<span class="k">def</span> <span class="nf">_solve_cholesky_kernel</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="c1"># dual_coef = inv(X X^t + alpha*Id) y</span>
+    <span class="n">n_samples</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">n_targets</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">copy</span><span class="p">:</span>
+        <span class="n">K</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>
+    <span class="n">one_alpha</span> <span class="o">=</span> <span class="p">(</span><span class="n">alpha</span> <span class="o">==</span> <span class="n">alpha</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">has_sw</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> \
+        <span class="ow">or</span> <span class="n">sample_weight</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">has_sw</span><span class="p">:</span>
+        <span class="c1"># Unlike other solvers, we need to support sample_weight directly</span>
+        <span class="c1"># because K might be a pre-computed kernel.</span>
+        <span class="n">sw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">))</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">y</span> <span class="o">*</span> <span class="n">sw</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="n">K</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">sw</span><span class="p">,</span> <span class="n">sw</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">one_alpha</span><span class="p">:</span>
+        <span class="c1"># Only one penalty, we can solve multi-target problems in one time.</span>
+        <span class="n">K</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span><span class="n">n_samples</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">alpha</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Note: we must use overwrite_a=False in order to be able to</span>
+            <span class="c1">#       use the fall-back solution below in case a LinAlgError</span>
+            <span class="c1">#       is raised</span>
+            <span class="n">dual_coef</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sym_pos</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                     <span class="n">overwrite_a</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Singular matrix in solving dual problem. Using &quot;</span>
+                          <span class="s2">&quot;least-squares solution instead.&quot;</span><span class="p">)</span>
+            <span class="n">dual_coef</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">y</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># K is expensive to compute and store in memory so change it back in</span>
+        <span class="c1"># case it was user-given.</span>
+        <span class="n">K</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span><span class="n">n_samples</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="n">alpha</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">has_sw</span><span class="p">:</span>
+            <span class="n">dual_coef</span> <span class="o">*=</span> <span class="n">sw</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">dual_coef</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># One penalty per target. We need to solve each target separately.</span>
+        <span class="n">dual_coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">n_targets</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">],</span> <span class="n">K</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">dual_coef</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">current_alpha</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">dual_coefs</span><span class="p">,</span> <span class="n">y</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
+            <span class="n">K</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span><span class="n">n_samples</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">current_alpha</span>
+
+            <span class="n">dual_coef</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">sym_pos</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                        <span class="n">overwrite_a</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+            <span class="n">K</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span><span class="n">n_samples</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="n">current_alpha</span>
+
+        <span class="k">if</span> <span class="n">has_sw</span><span class="p">:</span>
+            <span class="n">dual_coefs</span> <span class="o">*=</span> <span class="n">sw</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="k">return</span> <span class="n">dual_coefs</span><span class="o">.</span><span class="n">T</span>
+
+
+<span class="k">def</span> <span class="nf">_solve_svd</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
+    <span class="n">U</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">Vt</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="mf">1e-15</span>  <span class="c1"># same default value as scipy.linalg.pinv</span>
+    <span class="n">s_nnz</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="n">idx</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+    <span class="n">UTy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">U</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">s</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">alpha</span><span class="o">.</span><span class="n">size</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">d</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">s_nnz</span> <span class="o">/</span> <span class="p">(</span><span class="n">s_nnz</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">alpha</span><span class="p">)</span>
+    <span class="n">d_UT_y</span> <span class="o">=</span> <span class="n">d</span> <span class="o">*</span> <span class="n">UTy</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Vt</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">d_UT_y</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+
+<span class="k">def</span> <span class="nf">ridge_regression</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span>
+                     <span class="n">max_iter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                     <span class="n">return_n_iter</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">return_intercept</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Solve the ridge equation by the method of normal equations.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;ridge_regression&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : {array-like, sparse matrix, LinearOperator},</span>
+<span class="sd">        shape = [n_samples, n_features]</span>
+<span class="sd">        Training data</span>
+
+<span class="sd">    y : array-like, shape = [n_samples] or [n_samples, n_targets]</span>
+<span class="sd">        Target values</span>
+
+<span class="sd">    alpha : {float, array-like},</span>
+<span class="sd">        shape = [n_targets] if array-like</span>
+<span class="sd">        Regularization strength; must be a positive float. Regularization</span>
+<span class="sd">        improves the conditioning of the problem and reduces the variance of</span>
+<span class="sd">        the estimates. Larger values specify stronger regularization.</span>
+<span class="sd">        Alpha corresponds to ``C^-1`` in other linear models such as</span>
+<span class="sd">        LogisticRegression or LinearSVC. If an array is passed, penalties are</span>
+<span class="sd">        assumed to be specific to the targets. Hence they must correspond in</span>
+<span class="sd">        number.</span>
+
+<span class="sd">    sample_weight : float or numpy array of shape [n_samples]</span>
+<span class="sd">        Individual weights for each sample. If sample_weight is not None and</span>
+<span class="sd">        solver=&#39;auto&#39;, the solver will be set to &#39;cholesky&#39;.</span>
+
+<span class="sd">        .. versionadded:: 0.17</span>
+
+<span class="sd">    solver : {&#39;auto&#39;, &#39;svd&#39;, &#39;cholesky&#39;, &#39;lsqr&#39;, &#39;sparse_cg&#39;, &#39;sag&#39;, &#39;saga&#39;}</span>
+<span class="sd">        Solver to use in the computational routines:</span>
+
+<span class="sd">        - &#39;auto&#39; chooses the solver automatically based on the type of data.</span>
+
+<span class="sd">        - &#39;svd&#39; uses a Singular Value Decomposition of X to compute the Ridge</span>
+<span class="sd">          coefficients. More stable for singular matrices than</span>
+<span class="sd">          &#39;cholesky&#39;.</span>
+
+<span class="sd">        - &#39;cholesky&#39; uses the standard scipy.linalg.solve function to</span>
+<span class="sd">          obtain a closed-form solution via a Cholesky decomposition of</span>
+<span class="sd">          dot(X.T, X)</span>
+
+<span class="sd">        - &#39;sparse_cg&#39; uses the conjugate gradient solver as found in</span>
+<span class="sd">          scipy.sparse.linalg.cg. As an iterative algorithm, this solver is</span>
+<span class="sd">          more appropriate than &#39;cholesky&#39; for large-scale data</span>
+<span class="sd">          (possibility to set `tol` and `max_iter`).</span>
+
+<span class="sd">        - &#39;lsqr&#39; uses the dedicated regularized least-squares routine</span>
+<span class="sd">          scipy.sparse.linalg.lsqr. It is the fastest but may not be available</span>
+<span class="sd">          in old scipy versions. It also uses an iterative procedure.</span>
+
+<span class="sd">        - &#39;sag&#39; uses a Stochastic Average Gradient descent, and &#39;saga&#39; uses</span>
+<span class="sd">          its improved, unbiased version named SAGA. Both methods also use an</span>
+<span class="sd">          iterative procedure, and are often faster than other solvers when</span>
+<span class="sd">          both n_samples and n_features are large. Note that &#39;sag&#39; and</span>
+<span class="sd">          &#39;saga&#39; fast convergence is only guaranteed on features with</span>
+<span class="sd">          approximately the same scale. You can preprocess the data with a</span>
+<span class="sd">          scaler from sklearn.preprocessing.</span>
+
+
+<span class="sd">        All last five solvers support both dense and sparse data. However, only</span>
+<span class="sd">        &#39;sag&#39; and &#39;saga&#39; supports sparse input when`fit_intercept` is True.</span>
+
+<span class="sd">        .. versionadded:: 0.17</span>
+<span class="sd">           Stochastic Average Gradient descent solver.</span>
+<span class="sd">        .. versionadded:: 0.19</span>
+<span class="sd">           SAGA solver.</span>
+
+<span class="sd">    max_iter : int, optional</span>
+<span class="sd">        Maximum number of iterations for conjugate gradient solver.</span>
+<span class="sd">        For the &#39;sparse_cg&#39; and &#39;lsqr&#39; solvers, the default value is determined</span>
+<span class="sd">        by scipy.sparse.linalg. For &#39;sag&#39; and saga solver, the default value is</span>
+<span class="sd">        1000.</span>
+
+<span class="sd">    tol : float</span>
+<span class="sd">        Precision of the solution.</span>
+
+<span class="sd">    verbose : int</span>
+<span class="sd">        Verbosity level. Setting verbose &gt; 0 will display additional</span>
+<span class="sd">        information depending on the solver used.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional, default None</span>
+<span class="sd">        The seed of the pseudo random number generator to use when shuffling</span>
+<span class="sd">        the data.  If int, random_state is the seed used by the random number</span>
+<span class="sd">        generator; If RandomState instance, random_state is the random number</span>
+<span class="sd">        generator; If None, the random number generator is the RandomState</span>
+<span class="sd">        instance used by `np.random`. Used when ``solver`` == &#39;sag&#39;.</span>
+
+<span class="sd">    return_n_iter : boolean, default False</span>
+<span class="sd">        If True, the method also returns `n_iter`, the actual number of</span>
+<span class="sd">        iteration performed by the solver.</span>
+
+<span class="sd">        .. versionadded:: 0.17</span>
+
+<span class="sd">    return_intercept : boolean, default False</span>
+<span class="sd">        If True and if X is sparse, the method also returns the intercept,</span>
+<span class="sd">        and the solver is automatically changed to &#39;sag&#39;. This is only a</span>
+<span class="sd">        temporary fix for fitting the intercept with sparse data. For dense</span>
+<span class="sd">        data, use sklearn.linear_model._preprocess_data before your regression.</span>
+
+<span class="sd">        .. versionadded:: 0.17</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    coef : array, shape = [n_features] or [n_targets, n_features]</span>
+<span class="sd">        Weight vector(s).</span>
+
+<span class="sd">    n_iter : int, optional</span>
+<span class="sd">        The actual number of iteration performed by the solver.</span>
+<span class="sd">        Only returned if `return_n_iter` is True.</span>
+
+<span class="sd">    intercept : float or array, shape = [n_targets]</span>
+<span class="sd">        The intercept of the model. Only returned if `return_intercept`</span>
+<span class="sd">        is True and if X is a scipy sparse array.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function won&#39;t compute the intercept.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">return_intercept</span> <span class="ow">and</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="ow">and</span> <span class="n">solver</span> <span class="o">!=</span> <span class="s1">&#39;sag&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">solver</span> <span class="o">!=</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;In Ridge, only &#39;sag&#39; solver can currently fit the &quot;</span>
+                          <span class="s2">&quot;intercept when X is sparse. Solver has been &quot;</span>
+                          <span class="s2">&quot;automatically changed into &#39;sag&#39;.&quot;</span><span class="p">)</span>
+        <span class="n">solver</span> <span class="o">=</span> <span class="s1">&#39;sag&#39;</span>
+
+    <span class="n">_dtype</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">]</span>
+
+    <span class="c1"># SAG needs X and y columns to be C-contiguous and np.float64</span>
+    <span class="k">if</span> <span class="n">solver</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;sag&#39;</span><span class="p">,</span> <span class="s1">&#39;saga&#39;</span><span class="p">]:</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;csr&#39;</span><span class="p">],</span>
+                        <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">ensure_2d</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;F&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="s1">&#39;csc&#39;</span><span class="p">,</span> <span class="s1">&#39;coo&#39;</span><span class="p">],</span>
+                        <span class="n">dtype</span><span class="o">=</span><span class="n">_dtype</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">ensure_2d</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">check_consistent_length</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+    <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="k">if</span> <span class="n">y</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Target y has the wrong shape </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+
+    <span class="n">ravel</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">y</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">ravel</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="n">n_samples_</span><span class="p">,</span> <span class="n">n_targets</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="k">if</span> <span class="n">n_samples</span> <span class="o">!=</span> <span class="n">n_samples_</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Number of samples in X and y does not correspond:&quot;</span>
+                         <span class="s2">&quot; </span><span class="si">%d</span><span class="s2"> != </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_samples_</span><span class="p">))</span>
+
+    <span class="n">has_sw</span> <span class="o">=</span> <span class="n">sample_weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+        <span class="c1"># cholesky if it&#39;s a dense array and cg in any other case</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="ow">or</span> <span class="n">has_sw</span><span class="p">:</span>
+            <span class="n">solver</span> <span class="o">=</span> <span class="s1">&#39;cholesky&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">solver</span> <span class="o">=</span> <span class="s1">&#39;sparse_cg&#39;</span>
+
+    <span class="k">elif</span> <span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;lsqr&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sp_linalg</span><span class="p">,</span> <span class="s1">&#39;lsqr&#39;</span><span class="p">):</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;lsqr not available on this machine, falling back</span>
+<span class="s2">                      to sparse_cg.&quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">solver</span> <span class="o">=</span> <span class="s1">&#39;sparse_cg&#39;</span>
+
+    <span class="k">if</span> <span class="n">has_sw</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">)</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Sample weights must be 1D array or scalar&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">solver</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;sag&#39;</span><span class="p">,</span> <span class="s1">&#39;saga&#39;</span><span class="p">]:</span>
+            <span class="c1"># SAG supports sample_weight directly. For other solvers,</span>
+            <span class="c1"># we implement sample_weight via a simple rescaling.</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">_rescale_data</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">)</span>
+
+    <span class="c1"># There should be either 1 or n_targets penalties</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">alpha</span><span class="o">.</span><span class="n">size</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_targets</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Number of targets and number of penalties &quot;</span>
+                         <span class="s2">&quot;do not correspond: </span><span class="si">%d</span><span class="s2"> != </span><span class="si">%d</span><span class="s2">&quot;</span>
+                         <span class="o">%</span> <span class="p">(</span><span class="n">alpha</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">n_targets</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">alpha</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">n_targets</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">n_targets</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">solver</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;sparse_cg&#39;</span><span class="p">,</span> <span class="s1">&#39;cholesky&#39;</span><span class="p">,</span> <span class="s1">&#39;svd&#39;</span><span class="p">,</span> <span class="s1">&#39;lsqr&#39;</span><span class="p">,</span> <span class="s1">&#39;sag&#39;</span><span class="p">,</span> <span class="s1">&#39;saga&#39;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Solver </span><span class="si">%s</span><span class="s1"> not understood&#39;</span> <span class="o">%</span> <span class="n">solver</span><span class="p">)</span>
+
+    <span class="n">n_iter</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;sparse_cg&#39;</span><span class="p">:</span>
+        <span class="n">coef</span> <span class="o">=</span> <span class="n">_solve_sparse_cg</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">max_iter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;lsqr&#39;</span><span class="p">:</span>
+        <span class="n">coef</span><span class="p">,</span> <span class="n">n_iter</span> <span class="o">=</span> <span class="n">_solve_lsqr</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">max_iter</span><span class="p">,</span> <span class="n">tol</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;cholesky&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">n_features</span> <span class="o">&gt;</span> <span class="n">n_samples</span><span class="p">:</span>
+            <span class="n">K</span> <span class="o">=</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">dense_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">dual_coef</span> <span class="o">=</span> <span class="n">_solve_cholesky_kernel</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+
+                <span class="n">coef</span> <span class="o">=</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">dual_coef</span><span class="p">,</span> <span class="n">dense_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+            <span class="k">except</span> <span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+                <span class="c1"># use SVD solver if matrix is singular</span>
+                <span class="n">solver</span> <span class="o">=</span> <span class="s1">&#39;svd&#39;</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">coef</span> <span class="o">=</span> <span class="n">_solve_cholesky</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+                <span class="c1"># use SVD solver if matrix is singular</span>
+                <span class="n">solver</span> <span class="o">=</span> <span class="s1">&#39;svd&#39;</span>
+
+    <span class="k">elif</span> <span class="n">solver</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;sag&#39;</span><span class="p">,</span> <span class="s1">&#39;saga&#39;</span><span class="p">]:</span>
+        <span class="c1"># precompute max_squared_sum for all targets</span>
+        <span class="n">max_squared_sum</span> <span class="o">=</span> <span class="n">row_norms</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">squared</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+
+        <span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">n_features</span><span class="p">))</span>
+        <span class="n">n_iter</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">intercept</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">alpha_i</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">y</span><span class="o">.</span><span class="n">T</span><span class="p">)):</span>
+            <span class="n">init</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;coef&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_features</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="n">return_intercept</span><span class="p">),</span> <span class="mi">1</span><span class="p">))}</span>
+            <span class="n">coef_</span><span class="p">,</span> <span class="n">n_iter_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">sag_solver</span><span class="p">(</span>
+                <span class="n">X</span><span class="p">,</span> <span class="n">target</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">sample_weight</span><span class="p">,</span> <span class="s1">&#39;squared&#39;</span><span class="p">,</span> <span class="n">alpha_i</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="n">max_iter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">random_state</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="n">max_squared_sum</span><span class="p">,</span>
+                <span class="n">init</span><span class="p">,</span>
+                <span class="n">is_saga</span><span class="o">=</span><span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;saga&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">return_intercept</span><span class="p">:</span>
+                <span class="n">coef</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">coef_</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">intercept</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">coef_</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">coef</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">coef_</span>
+            <span class="n">n_iter</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">n_iter_</span>
+
+        <span class="k">if</span> <span class="n">intercept</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">intercept</span> <span class="o">=</span> <span class="n">intercept</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">coef</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;svd&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;SVD solver does not support sparse&#39;</span>
+                            <span class="s1">&#39; inputs currently&#39;</span><span class="p">)</span>
+        <span class="n">coef</span> <span class="o">=</span> <span class="n">_solve_svd</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ravel</span><span class="p">:</span>
+        <span class="c1"># When y was passed as a 1d-array, we flatten the coefficients.</span>
+        <span class="n">coef</span> <span class="o">=</span> <span class="n">coef</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">return_n_iter</span> <span class="ow">and</span> <span class="n">return_intercept</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">coef</span><span class="p">,</span> <span class="n">n_iter</span><span class="p">,</span> <span class="n">intercept</span>
+    <span class="k">elif</span> <span class="n">return_intercept</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">coef</span><span class="p">,</span> <span class="n">intercept</span>
+    <span class="k">elif</span> <span class="n">return_n_iter</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">coef</span><span class="p">,</span> <span class="n">n_iter</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">coef</span>
+
+
+<span class="k">class</span> <span class="nc">_BaseRidge</span><span class="p">(</span><span class="n">six</span><span class="o">.</span><span class="n">with_metaclass</span><span class="p">(</span><span class="n">ABCMeta</span><span class="p">,</span> <span class="n">LinearModel</span><span class="p">)):</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">copy_X</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+                 <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span> <span class="o">=</span> <span class="n">fit_intercept</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span> <span class="o">=</span> <span class="n">normalize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">copy_X</span> <span class="o">=</span> <span class="n">copy_X</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">=</span> <span class="n">solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;sag&#39;</span><span class="p">,</span> <span class="s1">&#39;saga&#39;</span><span class="p">):</span>
+            <span class="n">_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># all other solvers work at both float precision levels</span>
+            <span class="n">_dtype</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">]</span>
+
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="s1">&#39;csc&#39;</span><span class="p">,</span> <span class="s1">&#39;coo&#39;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">_dtype</span><span class="p">,</span>
+                         <span class="n">multi_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">y_numeric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">((</span><span class="n">sample_weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">)</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Sample weights must be 1D array or scalar&quot;</span><span class="p">)</span>
+
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X_offset</span><span class="p">,</span> <span class="n">y_offset</span><span class="p">,</span> <span class="n">X_scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preprocess_data</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy_X</span><span class="p">,</span>
+            <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span>
+
+        <span class="c1"># temporary fix for fitting the intercept with sparse data using &#39;sag&#39;</span>
+        <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">=</span> <span class="n">ridge_regression</span><span class="p">(</span>
+                <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">,</span>
+                <span class="n">max_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">solver</span><span class="p">,</span>
+                <span class="n">random_state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">,</span> <span class="n">return_n_iter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">return_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">+=</span> <span class="n">y_offset</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">=</span> <span class="n">ridge_regression</span><span class="p">(</span>
+                <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">,</span>
+                <span class="n">max_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">solver</span><span class="p">,</span>
+                <span class="n">random_state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">,</span> <span class="n">return_n_iter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">return_intercept</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_intercept</span><span class="p">(</span><span class="n">X_offset</span><span class="p">,</span> <span class="n">y_offset</span><span class="p">,</span> <span class="n">X_scale</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span>
+
+
+<span class="k">class</span> <span class="nc">Ridge</span><span class="p">(</span><span class="n">_BaseRidge</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Linear least squares with l2 regularization.</span>
+
+<span class="sd">    This model solves a regression model where the loss function is</span>
+<span class="sd">    the linear least squares function and regularization is given by</span>
+<span class="sd">    the l2-norm. Also known as Ridge Regression or Tikhonov regularization.</span>
+<span class="sd">    This estimator has built-in support for multi-variate regression</span>
+<span class="sd">    (i.e., when y is a 2d-array of shape [n_samples, n_targets]).</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;ridge_regression&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    alpha : {float, array-like}, shape (n_targets)</span>
+<span class="sd">        Regularization strength; must be a positive float. Regularization</span>
+<span class="sd">        improves the conditioning of the problem and reduces the variance of</span>
+<span class="sd">        the estimates. Larger values specify stronger regularization.</span>
+<span class="sd">        Alpha corresponds to ``C^-1`` in other linear models such as</span>
+<span class="sd">        LogisticRegression or LinearSVC. If an array is passed, penalties are</span>
+<span class="sd">        assumed to be specific to the targets. Hence they must correspond in</span>
+<span class="sd">        number.</span>
+
+<span class="sd">    fit_intercept : boolean</span>
+<span class="sd">        Whether to calculate the intercept for this model. If set</span>
+<span class="sd">        to false, no intercept will be used in calculations</span>
+<span class="sd">        (e.g. data is expected to be already centered).</span>
+
+<span class="sd">    normalize : boolean, optional, default False</span>
+<span class="sd">        This parameter is ignored when ``fit_intercept`` is set to False.</span>
+<span class="sd">        If True, the regressors X will be normalized before regression by</span>
+<span class="sd">        subtracting the mean and dividing by the l2-norm.</span>
+<span class="sd">        If you wish to standardize, please use</span>
+<span class="sd">        :class:`sklearn.preprocessing.StandardScaler` before calling ``fit``</span>
+<span class="sd">        on an estimator with ``normalize=False``.</span>
+
+<span class="sd">    copy_X : boolean, optional, default True</span>
+<span class="sd">        If True, X will be copied; else, it may be overwritten.</span>
+
+<span class="sd">    max_iter : int, optional</span>
+<span class="sd">        Maximum number of iterations for conjugate gradient solver.</span>
+<span class="sd">        For &#39;sparse_cg&#39; and &#39;lsqr&#39; solvers, the default value is determined</span>
+<span class="sd">        by scipy.sparse.linalg. For &#39;sag&#39; solver, the default value is 1000.</span>
+
+<span class="sd">    tol : float</span>
+<span class="sd">        Precision of the solution.</span>
+
+<span class="sd">    solver : {&#39;auto&#39;, &#39;svd&#39;, &#39;cholesky&#39;, &#39;lsqr&#39;, &#39;sparse_cg&#39;, &#39;sag&#39;, &#39;saga&#39;}</span>
+<span class="sd">        Solver to use in the computational routines:</span>
+
+<span class="sd">        - &#39;auto&#39; chooses the solver automatically based on the type of data.</span>
+
+<span class="sd">        - &#39;svd&#39; uses a Singular Value Decomposition of X to compute the Ridge</span>
+<span class="sd">          coefficients. More stable for singular matrices than</span>
+<span class="sd">          &#39;cholesky&#39;.</span>
+
+<span class="sd">        - &#39;cholesky&#39; uses the standard scipy.linalg.solve function to</span>
+<span class="sd">          obtain a closed-form solution.</span>
+
+<span class="sd">        - &#39;sparse_cg&#39; uses the conjugate gradient solver as found in</span>
+<span class="sd">          scipy.sparse.linalg.cg. As an iterative algorithm, this solver is</span>
+<span class="sd">          more appropriate than &#39;cholesky&#39; for large-scale data</span>
+<span class="sd">          (possibility to set `tol` and `max_iter`).</span>
+
+<span class="sd">        - &#39;lsqr&#39; uses the dedicated regularized least-squares routine</span>
+<span class="sd">          scipy.sparse.linalg.lsqr. It is the fastest but may not be available</span>
+<span class="sd">          in old scipy versions. It also uses an iterative procedure.</span>
+
+<span class="sd">        - &#39;sag&#39; uses a Stochastic Average Gradient descent, and &#39;saga&#39; uses</span>
+<span class="sd">          its improved, unbiased version named SAGA. Both methods also use an</span>
+<span class="sd">          iterative procedure, and are often faster than other solvers when</span>
+<span class="sd">          both n_samples and n_features are large. Note that &#39;sag&#39; and</span>
+<span class="sd">          &#39;saga&#39; fast convergence is only guaranteed on features with</span>
+<span class="sd">          approximately the same scale. You can preprocess the data with a</span>
+<span class="sd">          scaler from sklearn.preprocessing.</span>
+
+<span class="sd">        All last five solvers support both dense and sparse data. However,</span>
+<span class="sd">        only &#39;sag&#39; and &#39;saga&#39; supports sparse input when `fit_intercept` is</span>
+<span class="sd">        True.</span>
+
+<span class="sd">        .. versionadded:: 0.17</span>
+<span class="sd">           Stochastic Average Gradient descent solver.</span>
+<span class="sd">        .. versionadded:: 0.19</span>
+<span class="sd">           SAGA solver.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional, default None</span>
+<span class="sd">        The seed of the pseudo random number generator to use when shuffling</span>
+<span class="sd">        the data.  If int, random_state is the seed used by the random number</span>
+<span class="sd">        generator; If RandomState instance, random_state is the random number</span>
+<span class="sd">        generator; If None, the random number generator is the RandomState</span>
+<span class="sd">        instance used by `np.random`. Used when ``solver`` == &#39;sag&#39;.</span>
+
+<span class="sd">        .. versionadded:: 0.17</span>
+<span class="sd">           *random_state* to support Stochastic Average Gradient.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coef_ : array, shape (n_features,) or (n_targets, n_features)</span>
+<span class="sd">        Weight vector(s).</span>
+
+<span class="sd">    intercept_ : float | array, shape = (n_targets,)</span>
+<span class="sd">        Independent term in decision function. Set to 0.0 if</span>
+<span class="sd">        ``fit_intercept = False``.</span>
+
+<span class="sd">    n_iter_ : array or None, shape (n_targets,)</span>
+<span class="sd">        Actual number of iterations for each target. Available only for</span>
+<span class="sd">        sag and lsqr solvers. Other solvers will return None.</span>
+
+<span class="sd">        .. versionadded:: 0.17</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    RidgeClassifier, RidgeCV, :class:`sklearn.kernel_ridge.KernelRidge`</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.linear_model import Ridge</span>
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; n_samples, n_features = 10, 5</span>
+<span class="sd">    &gt;&gt;&gt; np.random.seed(0)</span>
+<span class="sd">    &gt;&gt;&gt; y = np.random.randn(n_samples)</span>
+<span class="sd">    &gt;&gt;&gt; X = np.random.randn(n_samples, n_features)</span>
+<span class="sd">    &gt;&gt;&gt; clf = Ridge(alpha=1.0)</span>
+<span class="sd">    &gt;&gt;&gt; clf.fit(X, y) # doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    Ridge(alpha=1.0, copy_X=True, fit_intercept=True, max_iter=None,</span>
+<span class="sd">          normalize=False, random_state=None, solver=&#39;auto&#39;, tol=0.001)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">copy_X</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+                 <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Ridge</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="o">=</span><span class="n">fit_intercept</span><span class="p">,</span>
+                                    <span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">,</span> <span class="n">copy_X</span><span class="o">=</span><span class="n">copy_X</span><span class="p">,</span>
+                                    <span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="n">solver</span><span class="p">,</span>
+                                    <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Ridge.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ridge.html#ibex.sklearn.linear_model.Ridge.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit Ridge regression model</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape = [n_samples, n_features]</span>
+<span class="sd">            Training data</span>
+
+<span class="sd">        y : array-like, shape = [n_samples] or [n_samples, n_targets]</span>
+<span class="sd">            Target values</span>
+
+<span class="sd">        sample_weight : float or numpy array of shape [n_samples]</span>
+<span class="sd">            Individual weights for each sample</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : returns an instance of self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">Ridge</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">RidgeClassifier</span><span class="p">(</span><span class="n">LinearClassifierMixin</span><span class="p">,</span> <span class="n">_BaseRidge</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Classifier using Ridge regression.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;ridge_regression&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    alpha : float</span>
+<span class="sd">        Regularization strength; must be a positive float. Regularization</span>
+<span class="sd">        improves the conditioning of the problem and reduces the variance of</span>
+<span class="sd">        the estimates. Larger values specify stronger regularization.</span>
+<span class="sd">        Alpha corresponds to ``C^-1`` in other linear models such as</span>
+<span class="sd">        LogisticRegression or LinearSVC.</span>
+
+<span class="sd">    fit_intercept : boolean</span>
+<span class="sd">        Whether to calculate the intercept for this model. If set to false, no</span>
+<span class="sd">        intercept will be used in calculations (e.g. data is expected to be</span>
+<span class="sd">        already centered).</span>
+
+<span class="sd">    normalize : boolean, optional, default False</span>
+<span class="sd">        This parameter is ignored when ``fit_intercept`` is set to False.</span>
+<span class="sd">        If True, the regressors X will be normalized before regression by</span>
+<span class="sd">        subtracting the mean and dividing by the l2-norm.</span>
+<span class="sd">        If you wish to standardize, please use</span>
+<span class="sd">        :class:`sklearn.preprocessing.StandardScaler` before calling ``fit``</span>
+<span class="sd">        on an estimator with ``normalize=False``.</span>
+
+<span class="sd">    copy_X : boolean, optional, default True</span>
+<span class="sd">        If True, X will be copied; else, it may be overwritten.</span>
+
+<span class="sd">    max_iter : int, optional</span>
+<span class="sd">        Maximum number of iterations for conjugate gradient solver.</span>
+<span class="sd">        The default value is determined by scipy.sparse.linalg.</span>
+
+<span class="sd">    tol : float</span>
+<span class="sd">        Precision of the solution.</span>
+
+<span class="sd">    class_weight : dict or &#39;balanced&#39;, optional</span>
+<span class="sd">        Weights associated with classes in the form ``{class_label: weight}``.</span>
+<span class="sd">        If not given, all classes are supposed to have weight one.</span>
+
+<span class="sd">        The &quot;balanced&quot; mode uses the values of y to automatically adjust</span>
+<span class="sd">        weights inversely proportional to class frequencies in the input data</span>
+<span class="sd">        as ``n_samples / (n_classes * np.bincount(y))``</span>
+
+<span class="sd">    solver : {&#39;auto&#39;, &#39;svd&#39;, &#39;cholesky&#39;, &#39;lsqr&#39;, &#39;sparse_cg&#39;, &#39;sag&#39;, &#39;saga&#39;}</span>
+<span class="sd">        Solver to use in the computational routines:</span>
+
+<span class="sd">        - &#39;auto&#39; chooses the solver automatically based on the type of data.</span>
+
+<span class="sd">        - &#39;svd&#39; uses a Singular Value Decomposition of X to compute the Ridge</span>
+<span class="sd">          coefficients. More stable for singular matrices than</span>
+<span class="sd">          &#39;cholesky&#39;.</span>
+
+<span class="sd">        - &#39;cholesky&#39; uses the standard scipy.linalg.solve function to</span>
+<span class="sd">          obtain a closed-form solution.</span>
+
+<span class="sd">        - &#39;sparse_cg&#39; uses the conjugate gradient solver as found in</span>
+<span class="sd">          scipy.sparse.linalg.cg. As an iterative algorithm, this solver is</span>
+<span class="sd">          more appropriate than &#39;cholesky&#39; for large-scale data</span>
+<span class="sd">          (possibility to set `tol` and `max_iter`).</span>
+
+<span class="sd">        - &#39;lsqr&#39; uses the dedicated regularized least-squares routine</span>
+<span class="sd">          scipy.sparse.linalg.lsqr. It is the fastest but may not be available</span>
+<span class="sd">          in old scipy versions. It also uses an iterative procedure.</span>
+
+<span class="sd">        - &#39;sag&#39; uses a Stochastic Average Gradient descent, and &#39;saga&#39; uses</span>
+<span class="sd">          its unbiased and more flexible version named SAGA. Both methods</span>
+<span class="sd">          use an iterative procedure, and are often faster than other solvers</span>
+<span class="sd">          when both n_samples and n_features are large. Note that &#39;sag&#39; and</span>
+<span class="sd">          &#39;saga&#39; fast convergence is only guaranteed on features with</span>
+<span class="sd">          approximately the same scale. You can preprocess the data with a</span>
+<span class="sd">          scaler from sklearn.preprocessing.</span>
+
+<span class="sd">          .. versionadded:: 0.17</span>
+<span class="sd">             Stochastic Average Gradient descent solver.</span>
+<span class="sd">          .. versionadded:: 0.19</span>
+<span class="sd">           SAGA solver.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional, default None</span>
+<span class="sd">        The seed of the pseudo random number generator to use when shuffling</span>
+<span class="sd">        the data.  If int, random_state is the seed used by the random number</span>
+<span class="sd">        generator; If RandomState instance, random_state is the random number</span>
+<span class="sd">        generator; If None, the random number generator is the RandomState</span>
+<span class="sd">        instance used by `np.random`. Used when ``solver`` == &#39;sag&#39;.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coef_ : array, shape (n_features,) or (n_classes, n_features)</span>
+<span class="sd">        Weight vector(s).</span>
+
+<span class="sd">    intercept_ : float | array, shape = (n_targets,)</span>
+<span class="sd">        Independent term in decision function. Set to 0.0 if</span>
+<span class="sd">        ``fit_intercept = False``.</span>
+
+<span class="sd">    n_iter_ : array or None, shape (n_targets,)</span>
+<span class="sd">        Actual number of iterations for each target. Available only for</span>
+<span class="sd">        sag and lsqr solvers. Other solvers will return None.</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    Ridge, RidgeClassifierCV</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    For multi-class classification, n_class classifiers are trained in</span>
+<span class="sd">    a one-versus-all approach. Concretely, this is implemented by taking</span>
+<span class="sd">    advantage of the multi-variate response support in Ridge.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">copy_X</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">class_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">solver</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RidgeClassifier</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="o">=</span><span class="n">fit_intercept</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">,</span>
+            <span class="n">copy_X</span><span class="o">=</span><span class="n">copy_X</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="n">solver</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">class_weight</span> <span class="o">=</span> <span class="n">class_weight</span>
+
+<div class="viewcode-block" id="RidgeClassifier.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ridgeclassifier.html#ibex.sklearn.linear_model.RidgeClassifier.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit Ridge regression model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape = [n_samples,n_features]</span>
+<span class="sd">            Training data</span>
+
+<span class="sd">        y : array-like, shape = [n_samples]</span>
+<span class="sd">            Target values</span>
+
+<span class="sd">        sample_weight : float or numpy array of shape (n_samples,)</span>
+<span class="sd">            Sample weight.</span>
+
+<span class="sd">            .. versionadded:: 0.17</span>
+<span class="sd">               *sample_weight* support to Classifier.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : returns an instance of self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span> <span class="o">=</span> <span class="n">LabelBinarizer</span><span class="p">(</span><span class="n">pos_label</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">neg_label</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">y_type_</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;multilabel&#39;</span><span class="p">):</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">column_or_1d</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># we don&#39;t (yet) support multi-label classification in Ridge</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> doesn&#39;t support multi-label classification&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_weight</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">sample_weight</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">sample_weight</span> <span class="o">=</span> <span class="mf">1.</span>
+            <span class="c1"># modify the sample weights with the corresponding class weight</span>
+            <span class="n">sample_weight</span> <span class="o">=</span> <span class="p">(</span><span class="n">sample_weight</span> <span class="o">*</span>
+                             <span class="n">compute_sample_weight</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">class_weight</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">RidgeClassifier</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">classes_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">classes_</span>
+
+
+<span class="k">class</span> <span class="nc">_RidgeGCV</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Ridge regression with built-in Generalized Cross-Validation</span>
+
+<span class="sd">    It allows efficient Leave-One-Out cross-validation.</span>
+
+<span class="sd">    This class is not intended to be used directly. Use RidgeCV instead.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+
+<span class="sd">    We want to solve (K + alpha*Id)c = y,</span>
+<span class="sd">    where K = X X^T is the kernel matrix.</span>
+
+<span class="sd">    Let G = (K + alpha*Id)^-1.</span>
+
+<span class="sd">    Dual solution: c = Gy</span>
+<span class="sd">    Primal solution: w = X^T c</span>
+
+<span class="sd">    Compute eigendecomposition K = Q V Q^T.</span>
+<span class="sd">    Then G = Q (V + alpha*Id)^-1 Q^T,</span>
+<span class="sd">    where (V + alpha*Id) is diagonal.</span>
+<span class="sd">    It is thus inexpensive to inverse for many alphas.</span>
+
+<span class="sd">    Let loov be the vector of prediction values for each example</span>
+<span class="sd">    when the model was fitted with all examples but this example.</span>
+
+<span class="sd">    loov = (KGY - diag(KG)Y) / diag(I-KG)</span>
+
+<span class="sd">    Let looe be the vector of prediction errors for each example</span>
+<span class="sd">    when the model was fitted with all examples but this example.</span>
+
+<span class="sd">    looe = y - loov = c / diag(G)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    http://cbcl.mit.edu/projects/cbcl/publications/ps/MIT-CSAIL-TR-2007-025.pdf</span>
+<span class="sd">    http://www.mit.edu/~9.520/spring07/Classes/rlsslides.pdf</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alphas</span><span class="o">=</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">),</span>
+                 <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">scoring</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">copy_X</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">gcv_mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">store_cv_values</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alphas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">alphas</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span> <span class="o">=</span> <span class="n">fit_intercept</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span> <span class="o">=</span> <span class="n">normalize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scoring</span> <span class="o">=</span> <span class="n">scoring</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">copy_X</span> <span class="o">=</span> <span class="n">copy_X</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gcv_mode</span> <span class="o">=</span> <span class="n">gcv_mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">store_cv_values</span> <span class="o">=</span> <span class="n">store_cv_values</span>
+
+    <span class="k">def</span> <span class="nf">_pre_compute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">centered_kernel</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="c1"># even if X is very sparse, K is usually very dense</span>
+        <span class="n">K</span> <span class="o">=</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">dense_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># the following emulates an additional constant regressor</span>
+        <span class="c1"># corresponding to fit_intercept=True</span>
+        <span class="c1"># but this is done only when the features have been centered</span>
+        <span class="k">if</span> <span class="n">centered_kernel</span><span class="p">:</span>
+            <span class="n">K</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">K</span><span class="p">)</span>
+        <span class="n">v</span><span class="p">,</span> <span class="n">Q</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">K</span><span class="p">)</span>
+        <span class="n">QT_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">v</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">QT_y</span>
+
+    <span class="k">def</span> <span class="nf">_decomp_diag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v_prime</span><span class="p">,</span> <span class="n">Q</span><span class="p">):</span>
+        <span class="c1"># compute diagonal of the matrix: dot(Q, dot(diag(v_prime), Q^T))</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">v_prime</span> <span class="o">*</span> <span class="n">Q</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_diag_dot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="n">B</span><span class="p">):</span>
+        <span class="c1"># compute dot(diag(D), B)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># handle case where B is &gt; 1-d</span>
+            <span class="n">D</span> <span class="o">=</span> <span class="n">D</span><span class="p">[(</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">D</span> <span class="o">*</span> <span class="n">B</span>
+
+    <span class="k">def</span> <span class="nf">_errors_and_values_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">QT_y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Helper function to avoid code duplication between self._errors and</span>
+<span class="sd">        self._values.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        We don&#39;t construct matrix G, instead compute action on y &amp; diagonal.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">v</span> <span class="o">+</span> <span class="n">alpha</span><span class="p">)</span>
+        <span class="n">constant_column</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1.e-12</span>
+        <span class="c1"># detect constant columns</span>
+        <span class="n">w</span><span class="p">[</span><span class="n">constant_column</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># cancel the regularization for the intercept</span>
+
+        <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_diag_dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">QT_y</span><span class="p">))</span>
+        <span class="n">G_diag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decomp_diag</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">Q</span><span class="p">)</span>
+        <span class="c1"># handle case where y is 2-d</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">G_diag</span> <span class="o">=</span> <span class="n">G_diag</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">G_diag</span><span class="p">,</span> <span class="n">c</span>
+
+    <span class="k">def</span> <span class="nf">_errors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">QT_y</span><span class="p">):</span>
+        <span class="n">G_diag</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_errors_and_values_helper</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">QT_y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">c</span> <span class="o">/</span> <span class="n">G_diag</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">c</span>
+
+    <span class="k">def</span> <span class="nf">_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">QT_y</span><span class="p">):</span>
+        <span class="n">G_diag</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_errors_and_values_helper</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">QT_y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">y</span> <span class="o">-</span> <span class="p">(</span><span class="n">c</span> <span class="o">/</span> <span class="n">G_diag</span><span class="p">),</span> <span class="n">c</span>
+
+    <span class="k">def</span> <span class="nf">_pre_compute_svd</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">centered_kernel</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;SVD not supported for sparse matrices&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">centered_kernel</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">X</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))))</span>
+        <span class="c1"># to emulate fit_intercept=True situation, add a column on ones</span>
+        <span class="c1"># Note that by centering, the other columns are orthogonal to that one</span>
+        <span class="n">U</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">s</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">UT_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">U</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">v</span><span class="p">,</span> <span class="n">U</span><span class="p">,</span> <span class="n">UT_y</span>
+
+    <span class="k">def</span> <span class="nf">_errors_and_values_svd_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">U</span><span class="p">,</span> <span class="n">UT_y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Helper function to avoid code duplication between self._errors_svd</span>
+<span class="sd">        and self._values_svd.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">constant_column</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1.e-12</span>
+        <span class="c1"># detect columns colinear to ones</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="p">((</span><span class="n">v</span> <span class="o">+</span> <span class="n">alpha</span><span class="p">)</span> <span class="o">**</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">alpha</span> <span class="o">**</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">w</span><span class="p">[</span><span class="n">constant_column</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span> <span class="p">(</span><span class="n">alpha</span> <span class="o">**</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># cancel the regularization for the intercept</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_diag_dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">UT_y</span><span class="p">))</span> <span class="o">+</span> <span class="p">(</span><span class="n">alpha</span> <span class="o">**</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">y</span>
+        <span class="n">G_diag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decomp_diag</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">U</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">alpha</span> <span class="o">**</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># handle case where y is 2-d</span>
+            <span class="n">G_diag</span> <span class="o">=</span> <span class="n">G_diag</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">G_diag</span><span class="p">,</span> <span class="n">c</span>
+
+    <span class="k">def</span> <span class="nf">_errors_svd</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">U</span><span class="p">,</span> <span class="n">UT_y</span><span class="p">):</span>
+        <span class="n">G_diag</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_errors_and_values_svd_helper</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">U</span><span class="p">,</span> <span class="n">UT_y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">c</span> <span class="o">/</span> <span class="n">G_diag</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">c</span>
+
+    <span class="k">def</span> <span class="nf">_values_svd</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">U</span><span class="p">,</span> <span class="n">UT_y</span><span class="p">):</span>
+        <span class="n">G_diag</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_errors_and_values_svd_helper</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">U</span><span class="p">,</span> <span class="n">UT_y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">y</span> <span class="o">-</span> <span class="p">(</span><span class="n">c</span> <span class="o">/</span> <span class="n">G_diag</span><span class="p">),</span> <span class="n">c</span>
+
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit Ridge regression model</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape = [n_samples, n_features]</span>
+<span class="sd">            Training data</span>
+
+<span class="sd">        y : array-like, shape = [n_samples] or [n_samples, n_targets]</span>
+<span class="sd">            Target values. Will be cast to X&#39;s dtype if necessary</span>
+
+<span class="sd">        sample_weight : float or array-like of shape [n_samples]</span>
+<span class="sd">            Sample weight</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : Returns self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="s1">&#39;csc&#39;</span><span class="p">,</span> <span class="s1">&#39;coo&#39;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+                         <span class="n">multi_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">y_numeric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sample_weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="n">sample_weight</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">,</span> <span class="n">ensure_2d</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X_offset</span><span class="p">,</span> <span class="n">y_offset</span><span class="p">,</span> <span class="n">X_scale</span> <span class="o">=</span> <span class="n">LinearModel</span><span class="o">.</span><span class="n">_preprocess_data</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy_X</span><span class="p">,</span>
+            <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span>
+
+        <span class="n">gcv_mode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gcv_mode</span>
+        <span class="n">with_sw</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">gcv_mode</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">gcv_mode</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="ow">or</span> <span class="n">n_features</span> <span class="o">&gt;</span> <span class="n">n_samples</span> <span class="ow">or</span> <span class="n">with_sw</span><span class="p">:</span>
+                <span class="n">gcv_mode</span> <span class="o">=</span> <span class="s1">&#39;eigen&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">gcv_mode</span> <span class="o">=</span> <span class="s1">&#39;svd&#39;</span>
+        <span class="k">elif</span> <span class="n">gcv_mode</span> <span class="o">==</span> <span class="s2">&quot;svd&quot;</span> <span class="ow">and</span> <span class="n">with_sw</span><span class="p">:</span>
+            <span class="c1"># FIXME non-uniform sample weights not yet supported</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;non-uniform sample weights unsupported for svd, &quot;</span>
+                          <span class="s2">&quot;forcing usage of eigen&quot;</span><span class="p">)</span>
+            <span class="n">gcv_mode</span> <span class="o">=</span> <span class="s1">&#39;eigen&#39;</span>
+
+        <span class="k">if</span> <span class="n">gcv_mode</span> <span class="o">==</span> <span class="s1">&#39;eigen&#39;</span><span class="p">:</span>
+            <span class="n">_pre_compute</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pre_compute</span>
+            <span class="n">_errors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_errors</span>
+            <span class="n">_values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span>
+        <span class="k">elif</span> <span class="n">gcv_mode</span> <span class="o">==</span> <span class="s1">&#39;svd&#39;</span><span class="p">:</span>
+            <span class="c1"># assert n_samples &gt;= n_features</span>
+            <span class="n">_pre_compute</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pre_compute_svd</span>
+            <span class="n">_errors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_errors_svd</span>
+            <span class="n">_values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values_svd</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;bad gcv_mode &quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="n">gcv_mode</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">sample_weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">_rescale_data</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">)</span>
+
+        <span class="n">centered_kernel</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span>
+
+        <span class="n">v</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">QT_y</span> <span class="o">=</span> <span class="n">_pre_compute</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">centered_kernel</span><span class="p">)</span>
+        <span class="n">n_y</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">cv_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_samples</span> <span class="o">*</span> <span class="n">n_y</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alphas</span><span class="p">)))</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">scorer</span> <span class="o">=</span> <span class="n">check_scoring</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scoring</span><span class="p">,</span> <span class="n">allow_none</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="n">scorer</span> <span class="ow">is</span> <span class="kc">None</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">alpha</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alphas</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
+                <span class="n">out</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">_errors</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">QT_y</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">out</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">_values</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">QT_y</span><span class="p">)</span>
+            <span class="n">cv_values</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+            <span class="n">C</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
+            <span class="n">best</span> <span class="o">=</span> <span class="n">cv_values</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">argmin</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># The scorer want an object that will make the predictions but</span>
+            <span class="c1"># they are already computed efficiently by _RidgeGCV. This</span>
+            <span class="c1"># identity_estimator will just return them</span>
+            <span class="k">def</span> <span class="nf">identity_estimator</span><span class="p">():</span>
+                <span class="k">pass</span>
+            <span class="n">identity_estimator</span><span class="o">.</span><span class="n">decision_function</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">y_predict</span><span class="p">:</span> <span class="n">y_predict</span>
+            <span class="n">identity_estimator</span><span class="o">.</span><span class="n">predict</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">y_predict</span><span class="p">:</span> <span class="n">y_predict</span>
+
+            <span class="n">out</span> <span class="o">=</span> <span class="p">[</span><span class="n">scorer</span><span class="p">(</span><span class="n">identity_estimator</span><span class="p">,</span> <span class="n">y</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">cv_values</span><span class="p">[:,</span> <span class="n">i</span><span class="p">])</span>
+                   <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alphas</span><span class="p">))]</span>
+            <span class="n">best</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alphas</span><span class="p">[</span><span class="n">best</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dual_coef_</span> <span class="o">=</span> <span class="n">C</span><span class="p">[</span><span class="n">best</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_coef_</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_intercept</span><span class="p">(</span><span class="n">X_offset</span><span class="p">,</span> <span class="n">y_offset</span><span class="p">,</span> <span class="n">X_scale</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_cv_values</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">cv_values_shape</span> <span class="o">=</span> <span class="n">n_samples</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alphas</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cv_values_shape</span> <span class="o">=</span> <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_y</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alphas</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cv_values_</span> <span class="o">=</span> <span class="n">cv_values</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">cv_values_shape</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span>
+
+
+<span class="k">class</span> <span class="nc">_BaseRidgeCV</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alphas</span><span class="o">=</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">),</span>
+                 <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">cv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gcv_mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">store_cv_values</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alphas</span> <span class="o">=</span> <span class="n">alphas</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span> <span class="o">=</span> <span class="n">fit_intercept</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span> <span class="o">=</span> <span class="n">normalize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scoring</span> <span class="o">=</span> <span class="n">scoring</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cv</span> <span class="o">=</span> <span class="n">cv</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gcv_mode</span> <span class="o">=</span> <span class="n">gcv_mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">store_cv_values</span> <span class="o">=</span> <span class="n">store_cv_values</span>
+
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit Ridge regression model</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+<span class="sd">            Training data</span>
+
+<span class="sd">        y : array-like, shape = [n_samples] or [n_samples, n_targets]</span>
+<span class="sd">            Target values. Will be cast to X&#39;s dtype if necessary</span>
+
+<span class="sd">        sample_weight : float or array-like of shape [n_samples]</span>
+<span class="sd">            Sample weight</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : Returns self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">estimator</span> <span class="o">=</span> <span class="n">_RidgeGCV</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alphas</span><span class="p">,</span>
+                                  <span class="n">fit_intercept</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">,</span>
+                                  <span class="n">normalize</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">,</span>
+                                  <span class="n">scoring</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scoring</span><span class="p">,</span>
+                                  <span class="n">gcv_mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gcv_mode</span><span class="p">,</span>
+                                  <span class="n">store_cv_values</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">store_cv_values</span><span class="p">)</span>
+            <span class="n">estimator</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">alpha_</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_cv_values</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cv_values_</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">cv_values_</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_cv_values</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cv!=None and store_cv_values=True &quot;</span>
+                                 <span class="s2">&quot; are incompatible&quot;</span><span class="p">)</span>
+            <span class="n">parameters</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;alpha&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">alphas</span><span class="p">}</span>
+            <span class="n">gs</span> <span class="o">=</span> <span class="n">GridSearchCV</span><span class="p">(</span><span class="n">Ridge</span><span class="p">(</span><span class="n">fit_intercept</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">,</span>
+                                    <span class="n">normalize</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">),</span>
+                              <span class="n">parameters</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cv</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scoring</span><span class="p">)</span>
+            <span class="n">gs</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span>
+            <span class="n">estimator</span> <span class="o">=</span> <span class="n">gs</span><span class="o">.</span><span class="n">best_estimator_</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span> <span class="o">=</span> <span class="n">gs</span><span class="o">.</span><span class="n">best_estimator_</span><span class="o">.</span><span class="n">alpha</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">coef_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">intercept_</span>
+
+        <span class="k">return</span> <span class="bp">self</span>
+
+
+<span class="k">class</span> <span class="nc">RidgeCV</span><span class="p">(</span><span class="n">_BaseRidgeCV</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Ridge regression with built-in cross-validation.</span>
+
+<span class="sd">    By default, it performs Generalized Cross-Validation, which is a form of</span>
+<span class="sd">    efficient Leave-One-Out cross-validation.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;ridge_regression&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    alphas : numpy array of shape [n_alphas]</span>
+<span class="sd">        Array of alpha values to try.</span>
+<span class="sd">        Regularization strength; must be a positive float. Regularization</span>
+<span class="sd">        improves the conditioning of the problem and reduces the variance of</span>
+<span class="sd">        the estimates. Larger values specify stronger regularization.</span>
+<span class="sd">        Alpha corresponds to ``C^-1`` in other linear models such as</span>
+<span class="sd">        LogisticRegression or LinearSVC.</span>
+
+<span class="sd">    fit_intercept : boolean</span>
+<span class="sd">        Whether to calculate the intercept for this model. If set</span>
+<span class="sd">        to false, no intercept will be used in calculations</span>
+<span class="sd">        (e.g. data is expected to be already centered).</span>
+
+<span class="sd">    normalize : boolean, optional, default False</span>
+<span class="sd">        This parameter is ignored when ``fit_intercept`` is set to False.</span>
+<span class="sd">        If True, the regressors X will be normalized before regression by</span>
+<span class="sd">        subtracting the mean and dividing by the l2-norm.</span>
+<span class="sd">        If you wish to standardize, please use</span>
+<span class="sd">        :class:`sklearn.preprocessing.StandardScaler` before calling ``fit``</span>
+<span class="sd">        on an estimator with ``normalize=False``.</span>
+
+<span class="sd">    scoring : string, callable or None, optional, default: None</span>
+<span class="sd">        A string (see model evaluation documentation) or</span>
+<span class="sd">        a scorer callable object / function with signature</span>
+<span class="sd">        ``scorer(estimator, X, y)``.</span>
+
+<span class="sd">    cv : int, cross-validation generator or an iterable, optional</span>
+<span class="sd">        Determines the cross-validation splitting strategy.</span>
+<span class="sd">        Possible inputs for cv are:</span>
+
+<span class="sd">        - None, to use the efficient Leave-One-Out cross-validation</span>
+<span class="sd">        - integer, to specify the number of folds.</span>
+<span class="sd">        - An object to be used as a cross-validation generator.</span>
+<span class="sd">        - An iterable yielding train/test splits.</span>
+
+<span class="sd">        For integer/None inputs, if ``y`` is binary or multiclass,</span>
+<span class="sd">        :class:`sklearn.model_selection.StratifiedKFold` is used, else,</span>
+<span class="sd">        :class:`sklearn.model_selection.KFold` is used.</span>
+
+<span class="sd">        Refer :ref:`User Guide &lt;cross_validation&gt;` for the various</span>
+<span class="sd">        cross-validation strategies that can be used here.</span>
+
+<span class="sd">    gcv_mode : {None, &#39;auto&#39;, &#39;svd&#39;, eigen&#39;}, optional</span>
+<span class="sd">        Flag indicating which strategy to use when performing</span>
+<span class="sd">        Generalized Cross-Validation. Options are::</span>
+
+<span class="sd">            &#39;auto&#39; : use svd if n_samples &gt; n_features or when X is a sparse</span>
+<span class="sd">                     matrix, otherwise use eigen</span>
+<span class="sd">            &#39;svd&#39; : force computation via singular value decomposition of X</span>
+<span class="sd">                    (does not work for sparse matrices)</span>
+<span class="sd">            &#39;eigen&#39; : force computation via eigendecomposition of X^T X</span>
+
+<span class="sd">        The &#39;auto&#39; mode is the default and is intended to pick the cheaper</span>
+<span class="sd">        option of the two depending upon the shape and format of the training</span>
+<span class="sd">        data.</span>
+
+<span class="sd">    store_cv_values : boolean, default=False</span>
+<span class="sd">        Flag indicating if the cross-validation values corresponding to</span>
+<span class="sd">        each alpha should be stored in the `cv_values_` attribute (see</span>
+<span class="sd">        below). This flag is only compatible with `cv=None` (i.e. using</span>
+<span class="sd">        Generalized Cross-Validation).</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cv_values_ : array, shape = [n_samples, n_alphas] or \</span>
+<span class="sd">        shape = [n_samples, n_targets, n_alphas], optional</span>
+<span class="sd">        Cross-validation values for each alpha (if `store_cv_values=True` and \</span>
+<span class="sd">        `cv=None`). After `fit()` has been called, this attribute will \</span>
+<span class="sd">        contain the mean squared errors (by default) or the values of the \</span>
+<span class="sd">        `{loss,score}_func` function (if provided in the constructor).</span>
+
+<span class="sd">    coef_ : array, shape = [n_features] or [n_targets, n_features]</span>
+<span class="sd">        Weight vector(s).</span>
+
+<span class="sd">    intercept_ : float | array, shape = (n_targets,)</span>
+<span class="sd">        Independent term in decision function. Set to 0.0 if</span>
+<span class="sd">        ``fit_intercept = False``.</span>
+
+<span class="sd">    alpha_ : float</span>
+<span class="sd">        Estimated regularization parameter.</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    Ridge: Ridge regression</span>
+<span class="sd">    RidgeClassifier: Ridge classifier</span>
+<span class="sd">    RidgeClassifierCV: Ridge classifier with built-in cross validation</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+
+
+<span class="k">class</span> <span class="nc">RidgeClassifierCV</span><span class="p">(</span><span class="n">LinearClassifierMixin</span><span class="p">,</span> <span class="n">_BaseRidgeCV</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Ridge classifier with built-in cross-validation.</span>
+
+<span class="sd">    By default, it performs Generalized Cross-Validation, which is a form of</span>
+<span class="sd">    efficient Leave-One-Out cross-validation. Currently, only the n_features &gt;</span>
+<span class="sd">    n_samples case is handled efficiently.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;ridge_regression&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    alphas : numpy array of shape [n_alphas]</span>
+<span class="sd">        Array of alpha values to try.</span>
+<span class="sd">        Regularization strength; must be a positive float. Regularization</span>
+<span class="sd">        improves the conditioning of the problem and reduces the variance of</span>
+<span class="sd">        the estimates. Larger values specify stronger regularization.</span>
+<span class="sd">        Alpha corresponds to ``C^-1`` in other linear models such as</span>
+<span class="sd">        LogisticRegression or LinearSVC.</span>
+
+<span class="sd">    fit_intercept : boolean</span>
+<span class="sd">        Whether to calculate the intercept for this model. If set</span>
+<span class="sd">        to false, no intercept will be used in calculations</span>
+<span class="sd">        (e.g. data is expected to be already centered).</span>
+
+<span class="sd">    normalize : boolean, optional, default False</span>
+<span class="sd">        This parameter is ignored when ``fit_intercept`` is set to False.</span>
+<span class="sd">        If True, the regressors X will be normalized before regression by</span>
+<span class="sd">        subtracting the mean and dividing by the l2-norm.</span>
+<span class="sd">        If you wish to standardize, please use</span>
+<span class="sd">        :class:`sklearn.preprocessing.StandardScaler` before calling ``fit``</span>
+<span class="sd">        on an estimator with ``normalize=False``.</span>
+
+<span class="sd">    scoring : string, callable or None, optional, default: None</span>
+<span class="sd">        A string (see model evaluation documentation) or</span>
+<span class="sd">        a scorer callable object / function with signature</span>
+<span class="sd">        ``scorer(estimator, X, y)``.</span>
+
+<span class="sd">    cv : int, cross-validation generator or an iterable, optional</span>
+<span class="sd">        Determines the cross-validation splitting strategy.</span>
+<span class="sd">        Possible inputs for cv are:</span>
+
+<span class="sd">        - None, to use the efficient Leave-One-Out cross-validation</span>
+<span class="sd">        - integer, to specify the number of folds.</span>
+<span class="sd">        - An object to be used as a cross-validation generator.</span>
+<span class="sd">        - An iterable yielding train/test splits.</span>
+
+<span class="sd">        Refer :ref:`User Guide &lt;cross_validation&gt;` for the various</span>
+<span class="sd">        cross-validation strategies that can be used here.</span>
+
+<span class="sd">    class_weight : dict or &#39;balanced&#39;, optional</span>
+<span class="sd">        Weights associated with classes in the form ``{class_label: weight}``.</span>
+<span class="sd">        If not given, all classes are supposed to have weight one.</span>
+
+<span class="sd">        The &quot;balanced&quot; mode uses the values of y to automatically adjust</span>
+<span class="sd">        weights inversely proportional to class frequencies in the input data</span>
+<span class="sd">        as ``n_samples / (n_classes * np.bincount(y))``</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cv_values_ : array, shape = [n_samples, n_alphas] or \</span>
+<span class="sd">    shape = [n_samples, n_responses, n_alphas], optional</span>
+<span class="sd">        Cross-validation values for each alpha (if `store_cv_values=True` and</span>
+<span class="sd">    `cv=None`). After `fit()` has been called, this attribute will contain \</span>
+<span class="sd">    the mean squared errors (by default) or the values of the \</span>
+<span class="sd">    `{loss,score}_func` function (if provided in the constructor).</span>
+
+<span class="sd">    coef_ : array, shape = [n_features] or [n_targets, n_features]</span>
+<span class="sd">        Weight vector(s).</span>
+
+<span class="sd">    intercept_ : float | array, shape = (n_targets,)</span>
+<span class="sd">        Independent term in decision function. Set to 0.0 if</span>
+<span class="sd">        ``fit_intercept = False``.</span>
+
+<span class="sd">    alpha_ : float</span>
+<span class="sd">        Estimated regularization parameter</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    Ridge: Ridge regression</span>
+<span class="sd">    RidgeClassifier: Ridge classifier</span>
+<span class="sd">    RidgeCV: Ridge regression with built-in cross validation</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    For multi-class classification, n_class classifiers are trained in</span>
+<span class="sd">    a one-versus-all approach. Concretely, this is implemented by taking</span>
+<span class="sd">    advantage of the multi-variate response support in Ridge.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alphas</span><span class="o">=</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">),</span> <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">class_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RidgeClassifierCV</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">alphas</span><span class="o">=</span><span class="n">alphas</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="o">=</span><span class="n">fit_intercept</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">,</span>
+            <span class="n">scoring</span><span class="o">=</span><span class="n">scoring</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="n">cv</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">class_weight</span> <span class="o">=</span> <span class="n">class_weight</span>
+
+<div class="viewcode-block" id="RidgeClassifierCV.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ridgeclassifiercv.html#ibex.sklearn.linear_model.RidgeClassifierCV.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the ridge classifier.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training vectors, where n_samples is the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+
+<span class="sd">        y : array-like, shape (n_samples,)</span>
+<span class="sd">            Target values. Will be cast to X&#39;s dtype if necessary</span>
+
+<span class="sd">        sample_weight : float or numpy array of shape (n_samples,)</span>
+<span class="sd">            Sample weight.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : object</span>
+<span class="sd">            Returns self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span> <span class="o">=</span> <span class="n">LabelBinarizer</span><span class="p">(</span><span class="n">pos_label</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">neg_label</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">y_type_</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;multilabel&#39;</span><span class="p">):</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">column_or_1d</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_weight</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">sample_weight</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">sample_weight</span> <span class="o">=</span> <span class="mf">1.</span>
+            <span class="c1"># modify the sample weights with the corresponding class weight</span>
+            <span class="n">sample_weight</span> <span class="o">=</span> <span class="p">(</span><span class="n">sample_weight</span> <span class="o">*</span>
+                             <span class="n">compute_sample_weight</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">class_weight</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+
+        <span class="n">_BaseRidgeCV</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">classes_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">classes_</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

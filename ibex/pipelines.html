@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Pipelining &#8212; ibex 0.1.1 documentation</title>
+    <title>Pipelining &#8212; ibex latest documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1.1',
+        VERSION:     'latest',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -68,7 +68,7 @@
 </div>
 <div class="section" id="sklearn-alternative">
 <h2><code class="docutils literal"><span class="pre">sklearn</span></code> Alternative<a class="headerlink" href="#sklearn-alternative" title="Permalink to this headline">¶</a></h2>
-<p>Using <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="(in scikit-learn v0.19.0)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.pipeline.Pipeline</span></code></a>, we can create a pipeline of steps:</p>
+<p>Using <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.pipeline.Pipeline</span></code></a>, we can create a pipeline of steps:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.pipeline</span> <span class="k">import</span> <span class="n">Pipeline</span>
 <span class="go">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([(</span><span class="s1">&#39;pca&#39;</span><span class="p">,</span> <span class="n">PdPCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">2</span><span class="p">)),</span> <span class="p">(</span><span class="s1">&#39;svm&#39;</span><span class="p">,</span> <span class="n">PdSVC</span><span class="p">(</span><span class="n">kernel</span><span class="o">=</span><span class="s2">&quot;linear&quot;</span><span class="p">))])</span>
@@ -86,7 +86,7 @@
 <div class="admonition tip">
 <p class="first admonition-title">Tip</p>
 <p class="last">Steps’ names are important, as they are <a class="reference external" href="http://scikit-learn.org/stable/modules/pipeline.html">used by</a>
-<a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline.set_params" title="(in scikit-learn v0.19.0)"><code class="xref py py-meth docutils literal"><span class="pre">sklearn.pipeline.Pipeline.set_params()</span></code></a> and <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline.get_params" title="(in scikit-learn v0.19.0)"><code class="xref py py-meth docutils literal"><span class="pre">sklearn.pipeline.Pipeline.get_params()</span></code></a>.</p>
+<a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline.set_params" title="(in scikit-learn v0.19.1)"><code class="xref py py-meth docutils literal"><span class="pre">sklearn.pipeline.Pipeline.set_params()</span></code></a> and <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline.get_params" title="(in scikit-learn v0.19.1)"><code class="xref py py-meth docutils literal"><span class="pre">sklearn.pipeline.Pipeline.get_params()</span></code></a>.</p>
 </div>
 </div>
 <div class="section" id="pipeline-syntax-alternative">
@@ -109,7 +109,7 @@
 <span class="go">&#39;svc&#39;</span>
 </pre></div>
 </div>
-<p>In fact, this is exactly the behavior of <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.make_pipeline.html#sklearn.pipeline.make_pipeline" title="(in scikit-learn v0.19.0)"><code class="xref py py-func docutils literal"><span class="pre">sklearn.pipeline.make_pipeline()</span></code></a>. The <code class="docutils literal"><span class="pre">make_pipeline</span></code> function, however, does not allow using same-class objects, as the names would be duplicated. Ibex allows this by detecting this, and numbering same-class steps:</p>
+<p>In fact, this is exactly the behavior of <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.make_pipeline.html#sklearn.pipeline.make_pipeline" title="(in scikit-learn v0.19.1)"><code class="xref py py-func docutils literal"><span class="pre">sklearn.pipeline.make_pipeline()</span></code></a>. The <code class="docutils literal"><span class="pre">make_pipeline</span></code> function, however, does not allow using same-class objects, as the names would be duplicated. Ibex allows this by detecting this, and numbering same-class steps:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex</span> <span class="k">import</span> <span class="n">trans</span>
 <span class="go">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">trans</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">)</span> <span class="o">|</span> <span class="n">trans</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">))</span><span class="o">.</span> <span class="n">steps</span>

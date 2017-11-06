@@ -1,0 +1,323 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>IsolationForest &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="isolationforest">
+<h1><code class="docutils literal"><span class="pre">IsolationForest</span></code><a class="headerlink" href="#isolationforest" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="ibex.sklearn.ensemble.IsolationForest">
+<em class="property">class </em><code class="descclassname">ibex.sklearn.ensemble.</code><code class="descname">IsolationForest</code><span class="sig-paren">(</span><em>n_estimators=100</em>, <em>max_samples='auto'</em>, <em>contamination=0.1</em>, <em>max_features=1.0</em>, <em>bootstrap=False</em>, <em>n_jobs=1</em>, <em>random_state=None</em>, <em>verbose=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.ensemble.IsolationForest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.ensemble.iforest.IsolationForest</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Isolation Forest Algorithm</p>
+<blockquote>
+<div><p>Return the anomaly score of each sample using the IsolationForest algorithm</p>
+<p>The IsolationForest ‘isolates’ observations by randomly selecting a feature
+and then randomly selecting a split value between the maximum and minimum
+values of the selected feature.</p>
+<p>Since recursive partitioning can be represented by a tree structure, the
+number of splittings required to isolate a sample is equivalent to the path
+length from the root node to the terminating node.</p>
+<p>This path length, averaged over a forest of such random trees, is a
+measure of normality and our decision function.</p>
+<p>Random partitioning produces noticeably shorter paths for anomalies.
+Hence, when a forest of random trees collectively produce shorter path
+lengths for particular samples, they are highly likely to be anomalies.</p>
+<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/outlier_detection.html#isolation-forest" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 0.18.</span></p>
+</div>
+<dl class="docutils">
+<dt>n_estimators <span class="classifier-delimiter">:</span> <span class="classifier">int, optional (default=100)</span></dt>
+<dd>The number of base estimators in the ensemble.</dd>
+<dt>max_samples <span class="classifier-delimiter">:</span> <span class="classifier">int or float, optional (default=”auto”)</span></dt>
+<dd><dl class="first docutils">
+<dt>The number of samples to draw from X to train each base estimator.</dt>
+<dd><ul class="first last simple">
+<li>If int, then draw <cite>max_samples</cite> samples.</li>
+<li>If float, then draw <cite>max_samples * X.shape[0]</cite> samples.</li>
+<li>If “auto”, then <cite>max_samples=min(256, n_samples)</cite>.</li>
+</ul>
+</dd>
+</dl>
+<p class="last">If max_samples is larger than the number of samples provided,
+all samples will be used for all trees (no sampling).</p>
+</dd>
+<dt>contamination <span class="classifier-delimiter">:</span> <span class="classifier">float in (0., 0.5), optional (default=0.1)</span></dt>
+<dd>The amount of contamination of the data set, i.e. the proportion
+of outliers in the data set. Used when fitting to define the threshold
+on the decision function.</dd>
+<dt>max_features <span class="classifier-delimiter">:</span> <span class="classifier">int or float, optional (default=1.0)</span></dt>
+<dd><p class="first">The number of features to draw from X to train each base estimator.</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>If int, then draw <cite>max_features</cite> features.</li>
+<li>If float, then draw <cite>max_features * X.shape[1]</cite> features.</li>
+</ul>
+</div></blockquote>
+</dd>
+<dt>bootstrap <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional (default=False)</span></dt>
+<dd>If True, individual trees are fit on random subsets of the training
+data sampled with replacement. If False, sampling without replacement
+is performed.</dd>
+<dt>n_jobs <span class="classifier-delimiter">:</span> <span class="classifier">integer, optional (default=1)</span></dt>
+<dd>The number of jobs to run in parallel for both <cite>fit</cite> and <cite>predict</cite>.
+If -1, then the number of jobs is set to the number of cores.</dd>
+<dt>random_state <span class="classifier-delimiter">:</span> <span class="classifier">int, RandomState instance or None, optional (default=None)</span></dt>
+<dd>If int, random_state is the seed used by the random number generator;
+If RandomState instance, random_state is the random number generator;
+If None, the random number generator is the RandomState instance used
+by <cite>np.random</cite>.</dd>
+<dt>verbose <span class="classifier-delimiter">:</span> <span class="classifier">int, optional (default=0)</span></dt>
+<dd>Controls the verbosity of the tree building process.</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id3"><span class="problematic" id="id4">estimators_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">list of DecisionTreeClassifier</span></dt>
+<dd>The collection of fitted sub-estimators.</dd>
+<dt><a href="#id5"><span class="problematic" id="id6">estimators_samples_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">list of arrays</span></dt>
+<dd>The subset of drawn samples (i.e., the in-bag samples) for each base
+estimator.</dd>
+<dt><a href="#id7"><span class="problematic" id="id8">max_samples_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">integer</span></dt>
+<dd>The actual number of samples</dd>
+</dl>
+<table class="docutils footnote" frame="void" id="id1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[1]</td><td>Liu, Fei Tony, Ting, Kai Ming and Zhou, Zhi-Hua. “Isolation forest.”
+Data Mining, 2008. ICDM‘08. Eighth IEEE International Conference on.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="id2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[2]</td><td>Liu, Fei Tony, Ting, Kai Ming and Zhou, Zhi-Hua. “Isolation-based
+anomaly detection.” ACM Transactions on Knowledge Discovery from
+Data (TKDD) 6.1 (2012): 3.</td></tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="method">
+<dt id="ibex.sklearn.ensemble.IsolationForest.decision_function">
+<code class="descname">decision_function</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/ensemble/iforest.html#IsolationForest.decision_function"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.ensemble.IsolationForest.decision_function" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Average anomaly score of X of the base classifiers.</p>
+<blockquote>
+<div><p>The anomaly score of an input sample is computed as
+the mean anomaly score of the trees in the forest.</p>
+<p>The measure of normality of an observation given a tree is the depth
+of the leaf containing this observation, which is equivalent to
+the number of splittings required to isolate this point. In case of
+several observations n_left in the leaf, the average path length of
+a n_left samples isolation tree is added.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape (n_samples, n_features)</span></dt>
+<dd>The training input samples. Sparse matrices are accepted only if
+they are supported by the base estimator.</dd>
+</dl>
+<dl class="docutils">
+<dt>scores <span class="classifier-delimiter">:</span> <span class="classifier">array of shape (n_samples,)</span></dt>
+<dd>The anomaly score of the input samples.
+The lower, the more abnormal.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.ensemble.IsolationForest.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em>, <em>sample_weight=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/ensemble/iforest.html#IsolationForest.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.ensemble.IsolationForest.fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit estimator.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like or sparse matrix, shape (n_samples, n_features)</span></dt>
+<dd>The input samples. Use <code class="docutils literal"><span class="pre">dtype=np.float32</span></code> for maximum
+efficiency. Sparse matrices are also supported, use sparse
+<code class="docutils literal"><span class="pre">csc_matrix</span></code> for maximum efficiency.</dd>
+<dt>sample_weight <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = [n_samples] or None</span></dt>
+<dd>Sample weights. If None, then samples are equally weighted.</dd>
+</dl>
+<dl class="docutils">
+<dt>self <span class="classifier-delimiter">:</span> <span class="classifier">object</span></dt>
+<dd>Returns self.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.ensemble.IsolationForest.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/ensemble/iforest.html#IsolationForest.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.ensemble.IsolationForest.predict" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Predict if a particular sample is an outlier or not.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like or sparse matrix, shape (n_samples, n_features)</span></dt>
+<dd>The input samples. Internally, it will be converted to
+<code class="docutils literal"><span class="pre">dtype=np.float32</span></code> and if a sparse matrix is provided
+to a sparse <code class="docutils literal"><span class="pre">csr_matrix</span></code>.</dd>
+</dl>
+<dl class="docutils">
+<dt>is_inlier <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_samples,)</span></dt>
+<dd>For each observations, tells whether or not (+1 or -1) it should
+be considered as an inlier according to the fitted model.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex_sklearn_ensemble_isolationforest.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex_sklearn_ensemble_isolationforest.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

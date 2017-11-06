@@ -1,0 +1,970 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.cluster.hierarchical &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.cluster.hierarchical</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Hierarchical Agglomerative Clustering</span>
+
+<span class="sd">These routines perform some hierarchical agglomerative clustering of some</span>
+<span class="sd">input data.</span>
+
+<span class="sd">Authors : Vincent Michel, Bertrand Thirion, Alexandre Gramfort,</span>
+<span class="sd">          Gael Varoquaux</span>
+<span class="sd">License: BSD 3 clause</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">heapq</span> <span class="k">import</span> <span class="n">heapify</span><span class="p">,</span> <span class="n">heappop</span><span class="p">,</span> <span class="n">heappush</span><span class="p">,</span> <span class="n">heappushpop</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">sparse</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse.csgraph</span> <span class="k">import</span> <span class="n">connected_components</span>
+
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClusterMixin</span>
+<span class="kn">from</span> <span class="nn">..externals.joblib</span> <span class="k">import</span> <span class="n">Memory</span>
+<span class="kn">from</span> <span class="nn">..externals</span> <span class="k">import</span> <span class="n">six</span>
+<span class="kn">from</span> <span class="nn">..metrics.pairwise</span> <span class="k">import</span> <span class="n">paired_distances</span><span class="p">,</span> <span class="n">pairwise_distances</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_array</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">_hierarchical</span>
+<span class="kn">from</span> <span class="nn">._feature_agglomeration</span> <span class="k">import</span> <span class="n">AgglomerationTransform</span>
+<span class="kn">from</span> <span class="nn">..utils.fast_dict</span> <span class="k">import</span> <span class="n">IntFloatDict</span>
+
+<span class="kn">from</span> <span class="nn">..externals.six.moves</span> <span class="k">import</span> <span class="n">xrange</span>
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># For non fully-connected graphs</span>
+
+
+<span class="k">def</span> <span class="nf">_fix_connectivity</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">connectivity</span><span class="p">,</span> <span class="n">affinity</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fixes the connectivity matrix</span>
+
+<span class="sd">        - copies it</span>
+<span class="sd">        - makes it symmetric</span>
+<span class="sd">        - converts it to LIL if necessary</span>
+<span class="sd">        - completes it if necessary</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n_samples</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">connectivity</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">n_samples</span> <span class="ow">or</span>
+            <span class="n">connectivity</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">n_samples</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Wrong shape for connectivity matrix: </span><span class="si">%s</span><span class="s1"> &#39;</span>
+                         <span class="s1">&#39;when X is </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">connectivity</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+
+    <span class="c1"># Make the connectivity matrix symmetric:</span>
+    <span class="n">connectivity</span> <span class="o">=</span> <span class="n">connectivity</span> <span class="o">+</span> <span class="n">connectivity</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="c1"># Convert connectivity matrix to LIL</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">sparse</span><span class="o">.</span><span class="n">isspmatrix_lil</span><span class="p">(</span><span class="n">connectivity</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">sparse</span><span class="o">.</span><span class="n">isspmatrix</span><span class="p">(</span><span class="n">connectivity</span><span class="p">):</span>
+            <span class="n">connectivity</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">lil_matrix</span><span class="p">(</span><span class="n">connectivity</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">connectivity</span> <span class="o">=</span> <span class="n">connectivity</span><span class="o">.</span><span class="n">tolil</span><span class="p">()</span>
+
+    <span class="c1"># Compute the number of nodes</span>
+    <span class="n">n_components</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">connected_components</span><span class="p">(</span><span class="n">connectivity</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">n_components</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;the number of connected components of the &quot;</span>
+                      <span class="s2">&quot;connectivity matrix is </span><span class="si">%d</span><span class="s2"> &gt; 1. Completing it to avoid &quot;</span>
+                      <span class="s2">&quot;stopping the tree early.&quot;</span> <span class="o">%</span> <span class="n">n_components</span><span class="p">,</span>
+                      <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="c1"># XXX: Can we do without completing the matrix?</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">xrange</span><span class="p">(</span><span class="n">n_components</span><span class="p">):</span>
+            <span class="n">idx_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">labels</span> <span class="o">==</span> <span class="n">i</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">Xi</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">idx_i</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">xrange</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+                <span class="n">idx_j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">labels</span> <span class="o">==</span> <span class="n">j</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">Xj</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">idx_j</span><span class="p">]</span>
+                <span class="n">D</span> <span class="o">=</span> <span class="n">pairwise_distances</span><span class="p">(</span><span class="n">Xi</span><span class="p">,</span> <span class="n">Xj</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="n">affinity</span><span class="p">)</span>
+                <span class="n">ii</span><span class="p">,</span> <span class="n">jj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">D</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">D</span><span class="p">))</span>
+                <span class="n">ii</span> <span class="o">=</span> <span class="n">ii</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">jj</span> <span class="o">=</span> <span class="n">jj</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">connectivity</span><span class="p">[</span><span class="n">idx_i</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">idx_j</span><span class="p">[</span><span class="n">jj</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">connectivity</span><span class="p">[</span><span class="n">idx_j</span><span class="p">[</span><span class="n">jj</span><span class="p">],</span> <span class="n">idx_i</span><span class="p">[</span><span class="n">ii</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">return</span> <span class="n">connectivity</span><span class="p">,</span> <span class="n">n_components</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Hierarchical tree building functions</span>
+
+<span class="k">def</span> <span class="nf">ward_tree</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">connectivity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_clusters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_distance</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Ward clustering based on a Feature matrix.</span>
+
+<span class="sd">    Recursively merges the pair of clusters that minimally increases</span>
+<span class="sd">    within-cluster variance.</span>
+
+<span class="sd">    The inertia matrix uses a Heapq-based representation.</span>
+
+<span class="sd">    This is the structured version, that takes into account some topological</span>
+<span class="sd">    structure between samples.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;hierarchical_clustering&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array, shape (n_samples, n_features)</span>
+<span class="sd">        feature matrix  representing n_samples samples to be clustered</span>
+
+<span class="sd">    connectivity : sparse matrix (optional).</span>
+<span class="sd">        connectivity matrix. Defines for each sample the neighboring samples</span>
+<span class="sd">        following a given structure of the data. The matrix is assumed to</span>
+<span class="sd">        be symmetric and only the upper triangular half is used.</span>
+<span class="sd">        Default is None, i.e, the Ward algorithm is unstructured.</span>
+
+<span class="sd">    n_clusters : int (optional)</span>
+<span class="sd">        Stop early the construction of the tree at n_clusters. This is</span>
+<span class="sd">        useful to decrease computation time if the number of clusters is</span>
+<span class="sd">        not small compared to the number of samples. In this case, the</span>
+<span class="sd">        complete tree is not computed, thus the &#39;children&#39; output is of</span>
+<span class="sd">        limited use, and the &#39;parents&#39; output should rather be used.</span>
+<span class="sd">        This option is valid only when specifying a connectivity matrix.</span>
+
+<span class="sd">    return_distance : bool (optional)</span>
+<span class="sd">        If True, return the distance between the clusters.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    children : 2D array, shape (n_nodes-1, 2)</span>
+<span class="sd">        The children of each non-leaf node. Values less than `n_samples`</span>
+<span class="sd">        correspond to leaves of the tree which are the original samples.</span>
+<span class="sd">        A node `i` greater than or equal to `n_samples` is a non-leaf</span>
+<span class="sd">        node and has children `children_[i - n_samples]`. Alternatively</span>
+<span class="sd">        at the i-th iteration, children[i][0] and children[i][1]</span>
+<span class="sd">        are merged to form node `n_samples + i`</span>
+
+<span class="sd">    n_components : int</span>
+<span class="sd">        The number of connected components in the graph.</span>
+
+<span class="sd">    n_leaves : int</span>
+<span class="sd">        The number of leaves in the tree</span>
+
+<span class="sd">    parents : 1D array, shape (n_nodes, ) or None</span>
+<span class="sd">        The parent of each node. Only returned when a connectivity matrix</span>
+<span class="sd">        is specified, elsewhere &#39;None&#39; is returned.</span>
+
+<span class="sd">    distances : 1D array, shape (n_nodes-1, )</span>
+<span class="sd">        Only returned if return_distance is set to True (for compatibility).</span>
+<span class="sd">        The distances between the centers of the nodes. `distances[i]`</span>
+<span class="sd">        corresponds to a weighted euclidean distance between</span>
+<span class="sd">        the nodes `children[i, 1]` and `children[i, 2]`. If the nodes refer to</span>
+<span class="sd">        leaves of the tree, then `distances[i]` is their unweighted euclidean</span>
+<span class="sd">        distance. Distances are updated in the following way</span>
+<span class="sd">        (from scipy.hierarchy.linkage):</span>
+
+<span class="sd">        The new entry :math:`d(u,v)` is computed as follows,</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">           d(u,v) = \\sqrt{\\frac{|v|+|s|}</span>
+<span class="sd">                               {T}d(v,s)^2</span>
+<span class="sd">                        + \\frac{|v|+|t|}</span>
+<span class="sd">                               {T}d(v,t)^2</span>
+<span class="sd">                        - \\frac{|v|}</span>
+<span class="sd">                               {T}d(s,t)^2}</span>
+
+<span class="sd">        where :math:`u` is the newly joined cluster consisting of</span>
+<span class="sd">        clusters :math:`s` and :math:`t`, :math:`v` is an unused</span>
+<span class="sd">        cluster in the forest, :math:`T=|v|+|s|+|t|`, and</span>
+<span class="sd">        :math:`|*|` is the cardinality of its argument. This is also</span>
+<span class="sd">        known as the incremental algorithm.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="k">if</span> <span class="n">connectivity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">scipy.cluster</span> <span class="k">import</span> <span class="n">hierarchy</span>     <span class="c1"># imports PIL</span>
+
+        <span class="k">if</span> <span class="n">n_clusters</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Partial build of the tree is implemented &#39;</span>
+                          <span class="s1">&#39;only for structured clustering (i.e. with &#39;</span>
+                          <span class="s1">&#39;explicit connectivity). The algorithm &#39;</span>
+                          <span class="s1">&#39;will build the full tree and only &#39;</span>
+                          <span class="s1">&#39;retain the lower branches required &#39;</span>
+                          <span class="s1">&#39;for the specified number of clusters&#39;</span><span class="p">,</span>
+                          <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">ward</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">children_</span> <span class="o">=</span> <span class="n">out</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">return_distance</span><span class="p">:</span>
+            <span class="n">distances</span> <span class="o">=</span> <span class="n">out</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">children_</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">distances</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">children_</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="n">connectivity</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">=</span> <span class="n">_fix_connectivity</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">connectivity</span><span class="p">,</span>
+                                                   <span class="n">affinity</span><span class="o">=</span><span class="s1">&#39;euclidean&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_clusters</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">n_nodes</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">n_samples</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">n_clusters</span> <span class="o">&gt;</span> <span class="n">n_samples</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot provide more clusters than samples. &#39;</span>
+                             <span class="s1">&#39;</span><span class="si">%i</span><span class="s1"> n_clusters was asked, and there are </span><span class="si">%i</span><span class="s1"> samples.&#39;</span>
+                             <span class="o">%</span> <span class="p">(</span><span class="n">n_clusters</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">))</span>
+        <span class="n">n_nodes</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">n_samples</span> <span class="o">-</span> <span class="n">n_clusters</span>
+
+    <span class="c1"># create inertia matrix</span>
+    <span class="n">coord_row</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">coord_col</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">connectivity</span><span class="o">.</span><span class="n">rows</span><span class="p">):</span>
+        <span class="n">A</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+        <span class="c1"># We keep only the upper triangular for the moments</span>
+        <span class="c1"># Generator expressions are faster than arrays on the following</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">row</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">ind</span><span class="p">]</span>
+        <span class="n">coord_row</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">*</span> <span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="p">])</span>
+        <span class="n">coord_col</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+    <span class="n">coord_row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">coord_row</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+    <span class="n">coord_col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">coord_col</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+
+    <span class="c1"># build moments as a list</span>
+    <span class="n">moments_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_nodes</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+    <span class="n">moments_1</span><span class="p">[:</span><span class="n">n_samples</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">moments_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_nodes</span><span class="p">,</span> <span class="n">n_features</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+    <span class="n">moments_2</span><span class="p">[:</span><span class="n">n_samples</span><span class="p">]</span> <span class="o">=</span> <span class="n">X</span>
+    <span class="n">inertia</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coord_row</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+    <span class="n">_hierarchical</span><span class="o">.</span><span class="n">compute_ward_dist</span><span class="p">(</span><span class="n">moments_1</span><span class="p">,</span> <span class="n">moments_2</span><span class="p">,</span> <span class="n">coord_row</span><span class="p">,</span> <span class="n">coord_col</span><span class="p">,</span>
+                                    <span class="n">inertia</span><span class="p">)</span>
+    <span class="n">inertia</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">six</span><span class="o">.</span><span class="n">moves</span><span class="o">.</span><span class="n">zip</span><span class="p">(</span><span class="n">inertia</span><span class="p">,</span> <span class="n">coord_row</span><span class="p">,</span> <span class="n">coord_col</span><span class="p">))</span>
+    <span class="n">heapify</span><span class="p">(</span><span class="n">inertia</span><span class="p">)</span>
+
+    <span class="c1"># prepare the main fields</span>
+    <span class="n">parent</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_nodes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">)</span>
+    <span class="n">used_node</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_nodes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">children</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">return_distance</span><span class="p">:</span>
+        <span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">n_nodes</span> <span class="o">-</span> <span class="n">n_samples</span><span class="p">)</span>
+
+    <span class="n">not_visited</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">n_nodes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+
+    <span class="c1"># recursive merge loop</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_nodes</span><span class="p">):</span>
+        <span class="c1"># identify the merge</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">inert</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">heappop</span><span class="p">(</span><span class="n">inertia</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">used_node</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">and</span> <span class="n">used_node</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span>
+                <span class="k">break</span>
+        <span class="n">parent</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">parent</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">k</span><span class="p">,</span> <span class="n">k</span>
+        <span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">))</span>
+        <span class="n">used_node</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">used_node</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">return_distance</span><span class="p">:</span>  <span class="c1"># store inertia value</span>
+            <span class="n">distances</span><span class="p">[</span><span class="n">k</span> <span class="o">-</span> <span class="n">n_samples</span><span class="p">]</span> <span class="o">=</span> <span class="n">inert</span>
+
+        <span class="c1"># update the moments</span>
+        <span class="n">moments_1</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">moments_1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">moments_1</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="n">moments_2</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">moments_2</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">moments_2</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+
+        <span class="c1"># update the structure matrix A and the inertia matrix</span>
+        <span class="n">coord_col</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">not_visited</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">not_visited</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">_hierarchical</span><span class="o">.</span><span class="n">_get_parents</span><span class="p">(</span><span class="n">A</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">coord_col</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">not_visited</span><span class="p">)</span>
+        <span class="n">_hierarchical</span><span class="o">.</span><span class="n">_get_parents</span><span class="p">(</span><span class="n">A</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">coord_col</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">not_visited</span><span class="p">)</span>
+        <span class="c1"># List comprehension is faster than a for loop</span>
+        <span class="p">[</span><span class="n">A</span><span class="p">[</span><span class="n">l</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">coord_col</span><span class="p">]</span>
+        <span class="n">A</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coord_col</span><span class="p">)</span>
+        <span class="n">coord_col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">coord_col</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+        <span class="n">coord_row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">coord_col</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+        <span class="n">coord_row</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">n_additions</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">coord_row</span><span class="p">)</span>
+        <span class="n">ini</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">n_additions</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+
+        <span class="n">_hierarchical</span><span class="o">.</span><span class="n">compute_ward_dist</span><span class="p">(</span><span class="n">moments_1</span><span class="p">,</span> <span class="n">moments_2</span><span class="p">,</span>
+                                        <span class="n">coord_row</span><span class="p">,</span> <span class="n">coord_col</span><span class="p">,</span> <span class="n">ini</span><span class="p">)</span>
+
+        <span class="c1"># List comprehension is faster than a for loop</span>
+        <span class="p">[</span><span class="n">heappush</span><span class="p">(</span><span class="n">inertia</span><span class="p">,</span> <span class="p">(</span><span class="n">ini</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">k</span><span class="p">,</span> <span class="n">coord_col</span><span class="p">[</span><span class="n">idx</span><span class="p">]))</span>
+            <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_additions</span><span class="p">)]</span>
+
+    <span class="c1"># Separate leaves in children (empty lists up to now)</span>
+    <span class="n">n_leaves</span> <span class="o">=</span> <span class="n">n_samples</span>
+    <span class="c1"># sort children to get consistent output with unstructured version</span>
+    <span class="n">children</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">children</span><span class="p">]</span>
+    <span class="n">children</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">children</span><span class="p">)</span>  <span class="c1"># return numpy array for efficient caching</span>
+
+    <span class="k">if</span> <span class="n">return_distance</span><span class="p">:</span>
+        <span class="c1"># 2 is scaling factor to compare w/ unstructured version</span>
+        <span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">distances</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">children</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span> <span class="n">n_leaves</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">distances</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">children</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span> <span class="n">n_leaves</span><span class="p">,</span> <span class="n">parent</span>
+
+
+<span class="c1"># average and complete linkage</span>
+<span class="k">def</span> <span class="nf">linkage_tree</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">connectivity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="s1">&#39;deprecated&#39;</span><span class="p">,</span>
+                 <span class="n">n_clusters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">linkage</span><span class="o">=</span><span class="s1">&#39;complete&#39;</span><span class="p">,</span> <span class="n">affinity</span><span class="o">=</span><span class="s2">&quot;euclidean&quot;</span><span class="p">,</span>
+                 <span class="n">return_distance</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Linkage agglomerative clustering based on a Feature matrix.</span>
+
+<span class="sd">    The inertia matrix uses a Heapq-based representation.</span>
+
+<span class="sd">    This is the structured version, that takes into account some topological</span>
+<span class="sd">    structure between samples.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;hierarchical_clustering&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array, shape (n_samples, n_features)</span>
+<span class="sd">        feature matrix representing n_samples samples to be clustered</span>
+
+<span class="sd">    connectivity : sparse matrix (optional).</span>
+<span class="sd">        connectivity matrix. Defines for each sample the neighboring samples</span>
+<span class="sd">        following a given structure of the data. The matrix is assumed to</span>
+<span class="sd">        be symmetric and only the upper triangular half is used.</span>
+<span class="sd">        Default is None, i.e, the Ward algorithm is unstructured.</span>
+
+<span class="sd">    n_components : int (optional)</span>
+<span class="sd">        The number of connected components in the graph.</span>
+
+<span class="sd">    n_clusters : int (optional)</span>
+<span class="sd">        Stop early the construction of the tree at n_clusters. This is</span>
+<span class="sd">        useful to decrease computation time if the number of clusters is</span>
+<span class="sd">        not small compared to the number of samples. In this case, the</span>
+<span class="sd">        complete tree is not computed, thus the &#39;children&#39; output is of</span>
+<span class="sd">        limited use, and the &#39;parents&#39; output should rather be used.</span>
+<span class="sd">        This option is valid only when specifying a connectivity matrix.</span>
+
+<span class="sd">    linkage : {&quot;average&quot;, &quot;complete&quot;}, optional, default: &quot;complete&quot;</span>
+<span class="sd">        Which linkage criteria to use. The linkage criterion determines which</span>
+<span class="sd">        distance to use between sets of observation.</span>
+<span class="sd">            - average uses the average of the distances of each observation of</span>
+<span class="sd">              the two sets</span>
+<span class="sd">            - complete or maximum linkage uses the maximum distances between</span>
+<span class="sd">              all observations of the two sets.</span>
+
+<span class="sd">    affinity : string or callable, optional, default: &quot;euclidean&quot;.</span>
+<span class="sd">        which metric to use. Can be &quot;euclidean&quot;, &quot;manhattan&quot;, or any</span>
+<span class="sd">        distance know to paired distance (see metric.pairwise)</span>
+
+<span class="sd">    return_distance : bool, default False</span>
+<span class="sd">        whether or not to return the distances between the clusters.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    children : 2D array, shape (n_nodes-1, 2)</span>
+<span class="sd">        The children of each non-leaf node. Values less than `n_samples`</span>
+<span class="sd">        correspond to leaves of the tree which are the original samples.</span>
+<span class="sd">        A node `i` greater than or equal to `n_samples` is a non-leaf</span>
+<span class="sd">        node and has children `children_[i - n_samples]`. Alternatively</span>
+<span class="sd">        at the i-th iteration, children[i][0] and children[i][1]</span>
+<span class="sd">        are merged to form node `n_samples + i`</span>
+
+<span class="sd">    n_components : int</span>
+<span class="sd">        The number of connected components in the graph.</span>
+
+<span class="sd">    n_leaves : int</span>
+<span class="sd">        The number of leaves in the tree.</span>
+
+<span class="sd">    parents : 1D array, shape (n_nodes, ) or None</span>
+<span class="sd">        The parent of each node. Only returned when a connectivity matrix</span>
+<span class="sd">        is specified, elsewhere &#39;None&#39; is returned.</span>
+
+<span class="sd">    distances : ndarray, shape (n_nodes-1,)</span>
+<span class="sd">        Returned when return_distance is set to True.</span>
+
+<span class="sd">        distances[i] refers to the distance between children[i][0] and</span>
+<span class="sd">        children[i][1] when they are merged.</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    ward_tree : hierarchical clustering with ward linkage</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">n_components</span> <span class="o">!=</span> <span class="s1">&#39;deprecated&#39;</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;n_components was deprecated in 0.19&quot;</span>
+                      <span class="s2">&quot;will be removed in 0.21&quot;</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
+
+    <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="n">linkage_choices</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;complete&#39;</span><span class="p">:</span> <span class="n">_hierarchical</span><span class="o">.</span><span class="n">max_merge</span><span class="p">,</span>
+                       <span class="s1">&#39;average&#39;</span><span class="p">:</span> <span class="n">_hierarchical</span><span class="o">.</span><span class="n">average_merge</span><span class="p">}</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">join_func</span> <span class="o">=</span> <span class="n">linkage_choices</span><span class="p">[</span><span class="n">linkage</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s1">&#39;Unknown linkage option, linkage should be one &#39;</span>
+            <span class="s1">&#39;of </span><span class="si">%s</span><span class="s1">, but </span><span class="si">%s</span><span class="s1"> was given&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">linkage_choices</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">linkage</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">connectivity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">scipy.cluster</span> <span class="k">import</span> <span class="n">hierarchy</span>     <span class="c1"># imports PIL</span>
+
+        <span class="k">if</span> <span class="n">n_clusters</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Partial build of the tree is implemented &#39;</span>
+                          <span class="s1">&#39;only for structured clustering (i.e. with &#39;</span>
+                          <span class="s1">&#39;explicit connectivity). The algorithm &#39;</span>
+                          <span class="s1">&#39;will build the full tree and only &#39;</span>
+                          <span class="s1">&#39;retain the lower branches required &#39;</span>
+                          <span class="s1">&#39;for the specified number of clusters&#39;</span><span class="p">,</span>
+                          <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">affinity</span> <span class="o">==</span> <span class="s1">&#39;precomputed&#39;</span><span class="p">:</span>
+            <span class="c1"># for the linkage function of hierarchy to work on precomputed</span>
+            <span class="c1"># data, provide as first argument an ndarray of the shape returned</span>
+            <span class="c1"># by pdist: it is a flat array containing the upper triangular of</span>
+            <span class="c1"># the distance matrix.</span>
+            <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">triu_indices</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">affinity</span> <span class="o">==</span> <span class="s1">&#39;l2&#39;</span><span class="p">:</span>
+            <span class="c1"># Translate to something understood by scipy</span>
+            <span class="n">affinity</span> <span class="o">=</span> <span class="s1">&#39;euclidean&#39;</span>
+        <span class="k">elif</span> <span class="n">affinity</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;l1&#39;</span><span class="p">,</span> <span class="s1">&#39;manhattan&#39;</span><span class="p">):</span>
+            <span class="n">affinity</span> <span class="o">=</span> <span class="s1">&#39;cityblock&#39;</span>
+        <span class="k">elif</span> <span class="n">callable</span><span class="p">(</span><span class="n">affinity</span><span class="p">):</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">affinity</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">triu_indices</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">linkage</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">linkage</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="n">affinity</span><span class="p">)</span>
+        <span class="n">children_</span> <span class="o">=</span> <span class="n">out</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">return_distance</span><span class="p">:</span>
+            <span class="n">distances</span> <span class="o">=</span> <span class="n">out</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">children_</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">distances</span>
+        <span class="k">return</span> <span class="n">children_</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="n">connectivity</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">=</span> <span class="n">_fix_connectivity</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">connectivity</span><span class="p">,</span>
+                                                   <span class="n">affinity</span><span class="o">=</span><span class="n">affinity</span><span class="p">)</span>
+
+    <span class="n">connectivity</span> <span class="o">=</span> <span class="n">connectivity</span><span class="o">.</span><span class="n">tocoo</span><span class="p">()</span>
+    <span class="c1"># Put the diagonal to zero</span>
+    <span class="n">diag_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">connectivity</span><span class="o">.</span><span class="n">row</span> <span class="o">!=</span> <span class="n">connectivity</span><span class="o">.</span><span class="n">col</span><span class="p">)</span>
+    <span class="n">connectivity</span><span class="o">.</span><span class="n">row</span> <span class="o">=</span> <span class="n">connectivity</span><span class="o">.</span><span class="n">row</span><span class="p">[</span><span class="n">diag_mask</span><span class="p">]</span>
+    <span class="n">connectivity</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">connectivity</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">diag_mask</span><span class="p">]</span>
+    <span class="n">connectivity</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">connectivity</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">diag_mask</span><span class="p">]</span>
+    <span class="k">del</span> <span class="n">diag_mask</span>
+
+    <span class="k">if</span> <span class="n">affinity</span> <span class="o">==</span> <span class="s1">&#39;precomputed&#39;</span><span class="p">:</span>
+        <span class="n">distances</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">connectivity</span><span class="o">.</span><span class="n">row</span><span class="p">,</span> <span class="n">connectivity</span><span class="o">.</span><span class="n">col</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># FIXME We compute all the distances, while we could have only computed</span>
+        <span class="c1"># the &quot;interesting&quot; distances</span>
+        <span class="n">distances</span> <span class="o">=</span> <span class="n">paired_distances</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">connectivity</span><span class="o">.</span><span class="n">row</span><span class="p">],</span>
+                                     <span class="n">X</span><span class="p">[</span><span class="n">connectivity</span><span class="o">.</span><span class="n">col</span><span class="p">],</span>
+                                     <span class="n">metric</span><span class="o">=</span><span class="n">affinity</span><span class="p">)</span>
+    <span class="n">connectivity</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">distances</span>
+
+    <span class="k">if</span> <span class="n">n_clusters</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">n_nodes</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">n_samples</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">n_clusters</span> <span class="o">&lt;=</span> <span class="n">n_samples</span>
+        <span class="n">n_nodes</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">n_samples</span> <span class="o">-</span> <span class="n">n_clusters</span>
+
+    <span class="k">if</span> <span class="n">return_distance</span><span class="p">:</span>
+        <span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">n_nodes</span> <span class="o">-</span> <span class="n">n_samples</span><span class="p">)</span>
+    <span class="c1"># create inertia heap and connection matrix</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">n_nodes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>
+    <span class="n">inertia</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+
+    <span class="c1"># LIL seems to the best format to access the rows quickly,</span>
+    <span class="c1"># without the numpy overhead of slicing CSR indices and data.</span>
+    <span class="n">connectivity</span> <span class="o">=</span> <span class="n">connectivity</span><span class="o">.</span><span class="n">tolil</span><span class="p">()</span>
+    <span class="c1"># We are storing the graph in a list of IntFloatDict</span>
+    <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">connectivity</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                                          <span class="n">connectivity</span><span class="o">.</span><span class="n">rows</span><span class="p">)):</span>
+        <span class="n">A</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">IntFloatDict</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">),</span>
+                              <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+        <span class="c1"># We keep only the upper triangular for the heap</span>
+        <span class="c1"># Generator expressions are faster than arrays on the following</span>
+        <span class="n">inertia</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_hierarchical</span><span class="o">.</span><span class="n">WeightedEdge</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">ind</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+                       <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span> <span class="k">if</span> <span class="n">r</span> <span class="o">&lt;</span> <span class="n">ind</span><span class="p">)</span>
+    <span class="k">del</span> <span class="n">connectivity</span>
+
+    <span class="n">heapify</span><span class="p">(</span><span class="n">inertia</span><span class="p">)</span>
+
+    <span class="c1"># prepare the main fields</span>
+    <span class="n">parent</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_nodes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">)</span>
+    <span class="n">used_node</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_nodes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">)</span>
+    <span class="n">children</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># recursive merge loop</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">xrange</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_nodes</span><span class="p">):</span>
+        <span class="c1"># identify the merge</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">edge</span> <span class="o">=</span> <span class="n">heappop</span><span class="p">(</span><span class="n">inertia</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">used_node</span><span class="p">[</span><span class="n">edge</span><span class="o">.</span><span class="n">a</span><span class="p">]</span> <span class="ow">and</span> <span class="n">used_node</span><span class="p">[</span><span class="n">edge</span><span class="o">.</span><span class="n">b</span><span class="p">]:</span>
+                <span class="k">break</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">a</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">b</span>
+
+        <span class="k">if</span> <span class="n">return_distance</span><span class="p">:</span>
+            <span class="c1"># store distances</span>
+            <span class="n">distances</span><span class="p">[</span><span class="n">k</span> <span class="o">-</span> <span class="n">n_samples</span><span class="p">]</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">weight</span>
+
+        <span class="n">parent</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">parent</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">k</span>
+        <span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">))</span>
+        <span class="c1"># Keep track of the number of elements per cluster</span>
+        <span class="n">n_i</span> <span class="o">=</span> <span class="n">used_node</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">n_j</span> <span class="o">=</span> <span class="n">used_node</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="n">used_node</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">n_i</span> <span class="o">+</span> <span class="n">n_j</span>
+        <span class="n">used_node</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">used_node</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># update the structure matrix A and the inertia matrix</span>
+        <span class="c1"># a clever &#39;min&#39;, or &#39;max&#39; operation between A[i] and A[j]</span>
+        <span class="n">coord_col</span> <span class="o">=</span> <span class="n">join_func</span><span class="p">(</span><span class="n">A</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">A</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">used_node</span><span class="p">,</span> <span class="n">n_i</span><span class="p">,</span> <span class="n">n_j</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">l</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">coord_col</span><span class="p">:</span>
+            <span class="n">A</span><span class="p">[</span><span class="n">l</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
+            <span class="c1"># Here we use the information from coord_col (containing the</span>
+            <span class="c1"># distances) to update the heap</span>
+            <span class="n">heappush</span><span class="p">(</span><span class="n">inertia</span><span class="p">,</span> <span class="n">_hierarchical</span><span class="o">.</span><span class="n">WeightedEdge</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">l</span><span class="p">))</span>
+        <span class="n">A</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">coord_col</span>
+        <span class="c1"># Clear A[i] and A[j] to save memory</span>
+        <span class="n">A</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">A</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="c1"># Separate leaves in children (empty lists up to now)</span>
+    <span class="n">n_leaves</span> <span class="o">=</span> <span class="n">n_samples</span>
+
+    <span class="c1"># # return numpy array for efficient caching</span>
+    <span class="n">children</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">children</span><span class="p">)[:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">return_distance</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">children</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span> <span class="n">n_leaves</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">distances</span>
+    <span class="k">return</span> <span class="n">children</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span> <span class="n">n_leaves</span><span class="p">,</span> <span class="n">parent</span>
+
+
+<span class="c1"># Matching names to tree-building strategies</span>
+<span class="k">def</span> <span class="nf">_complete_linkage</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;linkage&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;complete&#39;</span>
+    <span class="k">return</span> <span class="n">linkage_tree</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_average_linkage</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;linkage&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;average&#39;</span>
+    <span class="k">return</span> <span class="n">linkage_tree</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="n">_TREE_BUILDERS</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">ward</span><span class="o">=</span><span class="n">ward_tree</span><span class="p">,</span>
+    <span class="n">complete</span><span class="o">=</span><span class="n">_complete_linkage</span><span class="p">,</span>
+    <span class="n">average</span><span class="o">=</span><span class="n">_average_linkage</span><span class="p">)</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Functions for cutting  hierarchical clustering tree</span>
+
+<span class="k">def</span> <span class="nf">_hc_cut</span><span class="p">(</span><span class="n">n_clusters</span><span class="p">,</span> <span class="n">children</span><span class="p">,</span> <span class="n">n_leaves</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Function cutting the ward tree for a given number of clusters.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_clusters : int or ndarray</span>
+<span class="sd">        The number of clusters to form.</span>
+
+<span class="sd">    children : 2D array, shape (n_nodes-1, 2)</span>
+<span class="sd">        The children of each non-leaf node. Values less than `n_samples`</span>
+<span class="sd">        correspond to leaves of the tree which are the original samples.</span>
+<span class="sd">        A node `i` greater than or equal to `n_samples` is a non-leaf</span>
+<span class="sd">        node and has children `children_[i - n_samples]`. Alternatively</span>
+<span class="sd">        at the i-th iteration, children[i][0] and children[i][1]</span>
+<span class="sd">        are merged to form node `n_samples + i`</span>
+
+<span class="sd">    n_leaves : int</span>
+<span class="sd">        Number of leaves of the tree.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    labels : array [n_samples]</span>
+<span class="sd">        cluster labels for each point</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">n_clusters</span> <span class="o">&gt;</span> <span class="n">n_leaves</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot extract more clusters than samples: &#39;</span>
+                         <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> clusters where given for a tree with </span><span class="si">%s</span><span class="s1"> leaves.&#39;</span>
+                         <span class="o">%</span> <span class="p">(</span><span class="n">n_clusters</span><span class="p">,</span> <span class="n">n_leaves</span><span class="p">))</span>
+    <span class="c1"># In this function, we store nodes as a heap to avoid recomputing</span>
+    <span class="c1"># the max of the nodes: the first element is always the smallest</span>
+    <span class="c1"># We use negated indices as heaps work on smallest elements, and we</span>
+    <span class="c1"># are interested in largest elements</span>
+    <span class="c1"># children[-1] is the root of the tree</span>
+    <span class="n">nodes</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">children</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">xrange</span><span class="p">(</span><span class="n">n_clusters</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="c1"># As we have a heap, nodes[0] is the smallest element</span>
+        <span class="n">these_children</span> <span class="o">=</span> <span class="n">children</span><span class="p">[</span><span class="o">-</span><span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">n_leaves</span><span class="p">]</span>
+        <span class="c1"># Insert the 2 children and remove the largest node</span>
+        <span class="n">heappush</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="o">-</span><span class="n">these_children</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">heappushpop</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="o">-</span><span class="n">these_children</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_leaves</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">nodes</span><span class="p">):</span>
+        <span class="n">label</span><span class="p">[</span><span class="n">_hierarchical</span><span class="o">.</span><span class="n">_hc_get_descendent</span><span class="p">(</span><span class="o">-</span><span class="n">node</span><span class="p">,</span> <span class="n">children</span><span class="p">,</span> <span class="n">n_leaves</span><span class="p">)]</span> <span class="o">=</span> <span class="n">i</span>
+    <span class="k">return</span> <span class="n">label</span>
+
+
+<span class="c1">###############################################################################</span>
+
+<span class="k">class</span> <span class="nc">AgglomerativeClustering</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClusterMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Agglomerative Clustering</span>
+
+<span class="sd">    Recursively merges the pair of clusters that minimally increases</span>
+<span class="sd">    a given linkage distance.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;hierarchical_clustering&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_clusters : int, default=2</span>
+<span class="sd">        The number of clusters to find.</span>
+
+<span class="sd">    affinity : string or callable, default: &quot;euclidean&quot;</span>
+<span class="sd">        Metric used to compute the linkage. Can be &quot;euclidean&quot;, &quot;l1&quot;, &quot;l2&quot;,</span>
+<span class="sd">        &quot;manhattan&quot;, &quot;cosine&quot;, or &#39;precomputed&#39;.</span>
+<span class="sd">        If linkage is &quot;ward&quot;, only &quot;euclidean&quot; is accepted.</span>
+
+<span class="sd">    memory : Instance of sklearn.externals.joblib.Memory or string, optional \</span>
+<span class="sd">            (default=None)</span>
+<span class="sd">        Used to cache the output of the computation of the tree.</span>
+<span class="sd">        By default, no caching is done. If a string is given, it is the</span>
+<span class="sd">        path to the caching directory.</span>
+
+<span class="sd">    connectivity : array-like or callable, optional</span>
+<span class="sd">        Connectivity matrix. Defines for each sample the neighboring</span>
+<span class="sd">        samples following a given structure of the data.</span>
+<span class="sd">        This can be a connectivity matrix itself or a callable that transforms</span>
+<span class="sd">        the data into a connectivity matrix, such as derived from</span>
+<span class="sd">        kneighbors_graph. Default is None, i.e, the</span>
+<span class="sd">        hierarchical clustering algorithm is unstructured.</span>
+
+<span class="sd">    compute_full_tree : bool or &#39;auto&#39; (optional)</span>
+<span class="sd">        Stop early the construction of the tree at n_clusters. This is</span>
+<span class="sd">        useful to decrease computation time if the number of clusters is</span>
+<span class="sd">        not small compared to the number of samples. This option is</span>
+<span class="sd">        useful only when specifying a connectivity matrix. Note also that</span>
+<span class="sd">        when varying the number of clusters and using caching, it may</span>
+<span class="sd">        be advantageous to compute the full tree.</span>
+
+<span class="sd">    linkage : {&quot;ward&quot;, &quot;complete&quot;, &quot;average&quot;}, optional, default: &quot;ward&quot;</span>
+<span class="sd">        Which linkage criterion to use. The linkage criterion determines which</span>
+<span class="sd">        distance to use between sets of observation. The algorithm will merge</span>
+<span class="sd">        the pairs of cluster that minimize this criterion.</span>
+
+<span class="sd">        - ward minimizes the variance of the clusters being merged.</span>
+<span class="sd">        - average uses the average of the distances of each observation of</span>
+<span class="sd">          the two sets.</span>
+<span class="sd">        - complete or maximum linkage uses the maximum distances between</span>
+<span class="sd">          all observations of the two sets.</span>
+
+<span class="sd">    pooling_func : callable, default=np.mean</span>
+<span class="sd">        This combines the values of agglomerated features into a single</span>
+<span class="sd">        value, and should accept an array of shape [M, N] and the keyword</span>
+<span class="sd">        argument ``axis=1``, and reduce it to an array of size [M].</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    labels_ : array [n_samples]</span>
+<span class="sd">        cluster labels for each point</span>
+
+<span class="sd">    n_leaves_ : int</span>
+<span class="sd">        Number of leaves in the hierarchical tree.</span>
+
+<span class="sd">    n_components_ : int</span>
+<span class="sd">        The estimated number of connected components in the graph.</span>
+
+<span class="sd">    children_ : array-like, shape (n_nodes-1, 2)</span>
+<span class="sd">        The children of each non-leaf node. Values less than `n_samples`</span>
+<span class="sd">        correspond to leaves of the tree which are the original samples.</span>
+<span class="sd">        A node `i` greater than or equal to `n_samples` is a non-leaf</span>
+<span class="sd">        node and has children `children_[i - n_samples]`. Alternatively</span>
+<span class="sd">        at the i-th iteration, children[i][0] and children[i][1]</span>
+<span class="sd">        are merged to form node `n_samples + i`</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_clusters</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">affinity</span><span class="o">=</span><span class="s2">&quot;euclidean&quot;</span><span class="p">,</span>
+                 <span class="n">memory</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">connectivity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compute_full_tree</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span>
+                 <span class="n">linkage</span><span class="o">=</span><span class="s1">&#39;ward&#39;</span><span class="p">,</span> <span class="n">pooling_func</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span> <span class="o">=</span> <span class="n">n_clusters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="n">memory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connectivity</span> <span class="o">=</span> <span class="n">connectivity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compute_full_tree</span> <span class="o">=</span> <span class="n">compute_full_tree</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linkage</span> <span class="o">=</span> <span class="n">linkage</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">affinity</span> <span class="o">=</span> <span class="n">affinity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pooling_func</span> <span class="o">=</span> <span class="n">pooling_func</span>
+
+<div class="viewcode-block" id="AgglomerativeClustering.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_cluster_agglomerativeclustering.html#ibex.sklearn.cluster.AgglomerativeClustering.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the hierarchical clustering on the data</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+<span class="sd">            The samples a.k.a. observations.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">ensure_min_samples</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">estimator</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">memory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">memory</span>
+        <span class="k">if</span> <span class="n">memory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">memory</span> <span class="o">=</span> <span class="n">Memory</span><span class="p">(</span><span class="n">cachedir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span> <span class="n">six</span><span class="o">.</span><span class="n">string_types</span><span class="p">):</span>
+            <span class="n">memory</span> <span class="o">=</span> <span class="n">Memory</span><span class="p">(</span><span class="n">cachedir</span><span class="o">=</span><span class="n">memory</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span> <span class="n">Memory</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;memory&#39; should either be a string or&quot;</span>
+                             <span class="s2">&quot; a sklearn.externals.joblib.Memory&quot;</span>
+                             <span class="s2">&quot; instance, got &#39;memory=</span><span class="si">{!r}</span><span class="s2">&#39; instead.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                 <span class="nb">type</span><span class="p">(</span><span class="n">memory</span><span class="p">)))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;n_clusters should be an integer greater than 0.&quot;</span>
+                             <span class="s2">&quot; </span><span class="si">%s</span><span class="s2"> was provided.&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">linkage</span> <span class="o">==</span> <span class="s2">&quot;ward&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">affinity</span> <span class="o">!=</span> <span class="s2">&quot;euclidean&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> was provided as affinity. Ward can only &quot;</span>
+                             <span class="s2">&quot;work with euclidean distances.&quot;</span> <span class="o">%</span>
+                             <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">affinity</span><span class="p">,</span> <span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">linkage</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_TREE_BUILDERS</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknown linkage type </span><span class="si">%s</span><span class="s2">.&quot;</span>
+                             <span class="s2">&quot;Valid options are </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linkage</span><span class="p">,</span>
+                                                       <span class="n">_TREE_BUILDERS</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+        <span class="n">tree_builder</span> <span class="o">=</span> <span class="n">_TREE_BUILDERS</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">linkage</span><span class="p">]</span>
+
+        <span class="n">connectivity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connectivity</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">connectivity</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">connectivity</span><span class="p">):</span>
+                <span class="n">connectivity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connectivity</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">connectivity</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span>
+                <span class="n">connectivity</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="s1">&#39;coo&#39;</span><span class="p">,</span> <span class="s1">&#39;lil&#39;</span><span class="p">])</span>
+
+        <span class="n">n_samples</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">compute_full_tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_full_tree</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">connectivity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">compute_full_tree</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">compute_full_tree</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+            <span class="c1"># Early stopping is likely to give a speed up only for</span>
+            <span class="c1"># a large number of clusters. The actual threshold</span>
+            <span class="c1"># implemented here is heuristic</span>
+            <span class="n">compute_full_tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span> <span class="o">&lt;</span> <span class="nb">max</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="o">.</span><span class="mi">02</span> <span class="o">*</span> <span class="n">n_samples</span><span class="p">)</span>
+        <span class="n">n_clusters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span>
+        <span class="k">if</span> <span class="n">compute_full_tree</span><span class="p">:</span>
+            <span class="n">n_clusters</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Construct the tree</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">linkage</span> <span class="o">!=</span> <span class="s1">&#39;ward&#39;</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;linkage&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linkage</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;affinity&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">affinity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">children_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_leaves_</span><span class="p">,</span> <span class="n">parents</span> <span class="o">=</span> \
+            <span class="n">memory</span><span class="o">.</span><span class="n">cache</span><span class="p">(</span><span class="n">tree_builder</span><span class="p">)(</span><span class="n">X</span><span class="p">,</span> <span class="n">connectivity</span><span class="p">,</span>
+                                       <span class="n">n_clusters</span><span class="o">=</span><span class="n">n_clusters</span><span class="p">,</span>
+                                       <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="c1"># Cut the tree</span>
+        <span class="k">if</span> <span class="n">compute_full_tree</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">labels_</span> <span class="o">=</span> <span class="n">_hc_cut</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">children_</span><span class="p">,</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">n_leaves_</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="n">_hierarchical</span><span class="o">.</span><span class="n">hc_get_heads</span><span class="p">(</span><span class="n">parents</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="c1"># copy to avoid holding a reference on the original array</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">labels</span><span class="p">[:</span><span class="n">n_samples</span><span class="p">])</span>
+            <span class="c1"># Reassign cluster numbers</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">labels_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">labels</span><span class="p">),</span> <span class="n">labels</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<span class="k">class</span> <span class="nc">FeatureAgglomeration</span><span class="p">(</span><span class="n">AgglomerativeClustering</span><span class="p">,</span> <span class="n">AgglomerationTransform</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Agglomerate features.</span>
+
+<span class="sd">    Similar to AgglomerativeClustering, but recursively merges features</span>
+<span class="sd">    instead of samples.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;hierarchical_clustering&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_clusters : int, default 2</span>
+<span class="sd">        The number of clusters to find.</span>
+
+<span class="sd">    affinity : string or callable, default &quot;euclidean&quot;</span>
+<span class="sd">        Metric used to compute the linkage. Can be &quot;euclidean&quot;, &quot;l1&quot;, &quot;l2&quot;,</span>
+<span class="sd">        &quot;manhattan&quot;, &quot;cosine&quot;, or &#39;precomputed&#39;.</span>
+<span class="sd">        If linkage is &quot;ward&quot;, only &quot;euclidean&quot; is accepted.</span>
+
+<span class="sd">    memory : Instance of sklearn.externals.joblib.Memory or string, optional \</span>
+<span class="sd">            (default=None)</span>
+<span class="sd">        Used to cache the output of the computation of the tree.</span>
+<span class="sd">        By default, no caching is done. If a string is given, it is the</span>
+<span class="sd">        path to the caching directory.</span>
+
+<span class="sd">    connectivity : array-like or callable, optional</span>
+<span class="sd">        Connectivity matrix. Defines for each feature the neighboring</span>
+<span class="sd">        features following a given structure of the data.</span>
+<span class="sd">        This can be a connectivity matrix itself or a callable that transforms</span>
+<span class="sd">        the data into a connectivity matrix, such as derived from</span>
+<span class="sd">        kneighbors_graph. Default is None, i.e, the</span>
+<span class="sd">        hierarchical clustering algorithm is unstructured.</span>
+
+<span class="sd">    compute_full_tree : bool or &#39;auto&#39;, optional, default &quot;auto&quot;</span>
+<span class="sd">        Stop early the construction of the tree at n_clusters. This is</span>
+<span class="sd">        useful to decrease computation time if the number of clusters is</span>
+<span class="sd">        not small compared to the number of features. This option is</span>
+<span class="sd">        useful only when specifying a connectivity matrix. Note also that</span>
+<span class="sd">        when varying the number of clusters and using caching, it may</span>
+<span class="sd">        be advantageous to compute the full tree.</span>
+
+<span class="sd">    linkage : {&quot;ward&quot;, &quot;complete&quot;, &quot;average&quot;}, optional, default &quot;ward&quot;</span>
+<span class="sd">        Which linkage criterion to use. The linkage criterion determines which</span>
+<span class="sd">        distance to use between sets of features. The algorithm will merge</span>
+<span class="sd">        the pairs of cluster that minimize this criterion.</span>
+
+<span class="sd">        - ward minimizes the variance of the clusters being merged.</span>
+<span class="sd">        - average uses the average of the distances of each feature of</span>
+<span class="sd">          the two sets.</span>
+<span class="sd">        - complete or maximum linkage uses the maximum distances between</span>
+<span class="sd">          all features of the two sets.</span>
+
+<span class="sd">    pooling_func : callable, default np.mean</span>
+<span class="sd">        This combines the values of agglomerated features into a single</span>
+<span class="sd">        value, and should accept an array of shape [M, N] and the keyword</span>
+<span class="sd">        argument `axis=1`, and reduce it to an array of size [M].</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    labels_ : array-like, (n_features,)</span>
+<span class="sd">        cluster labels for each feature.</span>
+
+<span class="sd">    n_leaves_ : int</span>
+<span class="sd">        Number of leaves in the hierarchical tree.</span>
+
+<span class="sd">    n_components_ : int</span>
+<span class="sd">        The estimated number of connected components in the graph.</span>
+
+<span class="sd">    children_ : array-like, shape (n_nodes-1, 2)</span>
+<span class="sd">        The children of each non-leaf node. Values less than `n_features`</span>
+<span class="sd">        correspond to leaves of the tree which are the original samples.</span>
+<span class="sd">        A node `i` greater than or equal to `n_features` is a non-leaf</span>
+<span class="sd">        node and has children `children_[i - n_features]`. Alternatively</span>
+<span class="sd">        at the i-th iteration, children[i][0] and children[i][1]</span>
+<span class="sd">        are merged to form node `n_features + i`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="FeatureAgglomeration.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_cluster_featureagglomeration.html#ibex.sklearn.cluster.FeatureAgglomeration.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the hierarchical clustering on the data</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+<span class="sd">            The data</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="s1">&#39;csc&#39;</span><span class="p">,</span> <span class="s1">&#39;coo&#39;</span><span class="p">],</span>
+                        <span class="n">ensure_min_features</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">estimator</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">AgglomerativeClustering</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">AttributeError</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

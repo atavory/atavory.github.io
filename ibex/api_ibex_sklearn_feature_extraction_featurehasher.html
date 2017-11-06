@@ -1,0 +1,283 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>FeatureHasher &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="featurehasher">
+<h1><code class="docutils literal"><span class="pre">FeatureHasher</span></code><a class="headerlink" href="#featurehasher" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="ibex.sklearn.feature_extraction.FeatureHasher">
+<em class="property">class </em><code class="descclassname">ibex.sklearn.feature_extraction.</code><code class="descname">FeatureHasher</code><span class="sig-paren">(</span><em>n_features=1048576</em>, <em>input_type='dict'</em>, <em>dtype=&lt;class 'numpy.float64'&gt;</em>, <em>alternate_sign=True</em>, <em>non_negative=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.feature_extraction.FeatureHasher" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.feature_extraction.hashing.FeatureHasher</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Implements feature hashing, aka the hashing trick.</p>
+<blockquote>
+<div><p>This class turns sequences of symbolic feature names (strings) into
+scipy.sparse matrices, using a hash function to compute the matrix column
+corresponding to a name. The hash function employed is the signed 32-bit
+version of Murmurhash3.</p>
+<p>Feature names of type byte string are used as-is. Unicode strings are
+converted to UTF-8 first, but no Unicode normalization is done.
+Feature values must be (finite) numbers.</p>
+<p>This class is a low-memory alternative to DictVectorizer and
+CountVectorizer, intended for large-scale (online) learning and situations
+where memory is tight, e.g. when running prediction code on embedded
+devices.</p>
+<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/feature_extraction.html#feature-hashing" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
+<dl class="docutils">
+<dt>n_features <span class="classifier-delimiter">:</span> <span class="classifier">integer, optional</span></dt>
+<dd>The number of features (columns) in the output matrices. Small numbers
+of features are likely to cause hash collisions, but large numbers
+will cause larger coefficient dimensions in linear learners.</dd>
+<dt>input_type <span class="classifier-delimiter">:</span> <span class="classifier">string, optional, default “dict”</span></dt>
+<dd>Either “dict” (the default) to accept dictionaries over
+(feature_name, value); “pair” to accept pairs of (feature_name, value);
+or “string” to accept single strings.
+feature_name should be a string, while value should be a number.
+In the case of “string”, a value of 1 is implied.
+The feature_name is hashed to find the appropriate column for the
+feature. The value’s sign might be flipped in the output (but see
+non_negative, below).</dd>
+<dt>dtype <span class="classifier-delimiter">:</span> <span class="classifier">numpy type, optional, default np.float64</span></dt>
+<dd>The type of feature values. Passed to scipy.sparse matrix constructors
+as the dtype argument. Do not set this to bool, np.boolean or any
+unsigned integer type.</dd>
+<dt>alternate_sign <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default True</span></dt>
+<dd>When True, an alternating sign is added to the features as to
+approximately conserve the inner product in the hashed space even for
+small n_features. This approach is similar to sparse random projection.</dd>
+<dt>non_negative <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default False</span></dt>
+<dd><p class="first">When True, an absolute value is applied to the features matrix prior to
+returning it. When used in conjunction with alternate_sign=True, this
+significantly reduces the inner product preservation property.</p>
+<div class="last deprecated">
+<p><span class="versionmodified">Deprecated since version 0.19: </span>This option will be removed in 0.21.</p>
+</div>
+</dd>
+</dl>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.feature_extraction</span> <span class="k">import</span> <span class="n">FeatureHasher</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">h</span> <span class="o">=</span> <span class="n">FeatureHasher</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">D</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;dog&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;cat&#39;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;elephant&#39;</span><span class="p">:</span><span class="mi">4</span><span class="p">},{</span><span class="s1">&#39;dog&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;run&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">}]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">D</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+<span class="go">array([[ 0.,  0., -4., -1.,  0.,  0.,  0.,  0.,  0.,  2.],</span>
+<span class="go">       [ 0.,  0.,  0., -2., -5.,  0.,  0.,  0.,  0.,  0.]])</span>
+</pre></div>
+</div>
+<p>DictVectorizer : vectorizes string-valued features using a hash table.
+sklearn.preprocessing.OneHotEncoder : handles nominal/categorical features</p>
+<blockquote>
+<div>encoded as columns of integers.</div></blockquote>
+</div></blockquote>
+<dl class="method">
+<dt id="ibex.sklearn.feature_extraction.FeatureHasher.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>X=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/feature_extraction/hashing.html#FeatureHasher.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.feature_extraction.FeatureHasher.fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>No-op.</p>
+<blockquote>
+<div><p>This method doesn’t do anything. It exists purely for compatibility
+with the scikit-learn transformer API.</p>
+<p>X : array-like</p>
+<p>self : FeatureHasher</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.feature_extraction.FeatureHasher.fit_transform">
+<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em>, <em>**fit_params</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.feature_extraction.FeatureHasher.fit_transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit to data, then transform it.</p>
+<blockquote>
+<div><p>Fits transformer to X and y with optional parameters fit_params
+and returns a transformed version of X.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_features]</span></dt>
+<dd>Training set.</dd>
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples]</span></dt>
+<dd>Target values.</dd>
+</dl>
+<dl class="docutils">
+<dt>X_new <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_features_new]</span></dt>
+<dd>Transformed array.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.feature_extraction.FeatureHasher.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>raw_X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/feature_extraction/hashing.html#FeatureHasher.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.feature_extraction.FeatureHasher.transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Transform a sequence of instances to a scipy.sparse matrix.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>raw_X <span class="classifier-delimiter">:</span> <span class="classifier">iterable over iterable over raw features, length = n_samples</span></dt>
+<dd>Samples. Each sample must be iterable an (e.g., a list or tuple)
+containing/generating feature names (and optionally values, see
+the input_type constructor argument) which will be hashed.
+raw_X need not support the len function, so it can be the result
+of a generator; n_samples is determined on the fly.</dd>
+</dl>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">scipy.sparse matrix, shape = (n_samples, self.n_features)</span></dt>
+<dd>Feature matrix, for use with estimators or further transformers.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex_sklearn_feature_extraction_featurehasher.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex_sklearn_feature_extraction_featurehasher.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

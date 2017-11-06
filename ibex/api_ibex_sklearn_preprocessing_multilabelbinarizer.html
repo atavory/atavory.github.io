@@ -1,0 +1,291 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>MultiLabelBinarizer &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="multilabelbinarizer">
+<h1><code class="docutils literal"><span class="pre">MultiLabelBinarizer</span></code><a class="headerlink" href="#multilabelbinarizer" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="ibex.sklearn.preprocessing.MultiLabelBinarizer">
+<em class="property">class </em><code class="descclassname">ibex.sklearn.preprocessing.</code><code class="descname">MultiLabelBinarizer</code><span class="sig-paren">(</span><em>classes=None</em>, <em>sparse_output=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.preprocessing.MultiLabelBinarizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.preprocessing.label.MultiLabelBinarizer</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Transform between iterable of iterables and a multilabel format</p>
+<blockquote>
+<div><p>Although a list of sets or tuples is a very intuitive format for multilabel
+data, it is unwieldy to process. This transformer converts between this
+intuitive format and the supported multilabel format: a (samples x classes)
+binary matrix indicating the presence of a class label.</p>
+<dl class="docutils">
+<dt>classes <span class="classifier-delimiter">:</span> <span class="classifier">array-like of shape [n_classes] (optional)</span></dt>
+<dd>Indicates an ordering for the class labels</dd>
+<dt>sparse_output <span class="classifier-delimiter">:</span> <span class="classifier">boolean (default: False),</span></dt>
+<dd>Set to true if output binary array is desired in CSR sparse format</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">classes_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array of labels</span></dt>
+<dd>A copy of the <cite>classes</cite> parameter where provided,
+or otherwise, the sorted set of classes found when fitting.</dd>
+</dl>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="k">import</span> <span class="n">MultiLabelBinarizer</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mlb</span> <span class="o">=</span> <span class="n">MultiLabelBinarizer</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mlb</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">([(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">3</span><span class="p">,)])</span>
+<span class="go">array([[1, 1, 0],</span>
+<span class="go">       [0, 0, 1]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mlb</span><span class="o">.</span><span class="n">classes_</span>
+<span class="go">array([1, 2, 3])</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mlb</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">([</span><span class="nb">set</span><span class="p">([</span><span class="s1">&#39;sci-fi&#39;</span><span class="p">,</span> <span class="s1">&#39;thriller&#39;</span><span class="p">]),</span> <span class="nb">set</span><span class="p">([</span><span class="s1">&#39;comedy&#39;</span><span class="p">])])</span>
+<span class="go">array([[0, 1, 1],</span>
+<span class="go">       [1, 0, 0]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">mlb</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span>
+<span class="go">[&#39;comedy&#39;, &#39;sci-fi&#39;, &#39;thriller&#39;]</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>sklearn.preprocessing.OneHotEncoder <span class="classifier-delimiter">:</span> <span class="classifier">encode categorical integer features</span></dt>
+<dd>using a one-hot aka one-of-K scheme.</dd>
+</dl>
+</div></blockquote>
+<dl class="method">
+<dt id="ibex.sklearn.preprocessing.MultiLabelBinarizer.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/label.html#MultiLabelBinarizer.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.MultiLabelBinarizer.fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit the label sets binarizer, storing <cite>classes_</cite></p>
+<blockquote>
+<div><dl class="docutils">
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">iterable of iterables</span></dt>
+<dd>A set of labels (any orderable and hashable object) for each
+sample. If the <cite>classes</cite> parameter is set, <cite>y</cite> will not be
+iterated.</dd>
+</dl>
+<p>self : returns this MultiLabelBinarizer instance</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.preprocessing.MultiLabelBinarizer.fit_transform">
+<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/label.html#MultiLabelBinarizer.fit_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.MultiLabelBinarizer.fit_transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit the label sets binarizer and transform the given label sets</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">iterable of iterables</span></dt>
+<dd>A set of labels (any orderable and hashable object) for each
+sample. If the <cite>classes</cite> parameter is set, <cite>y</cite> will not be
+iterated.</dd>
+</dl>
+<dl class="docutils">
+<dt>y_indicator <span class="classifier-delimiter">:</span> <span class="classifier">array or CSR matrix, shape (n_samples, n_classes)</span></dt>
+<dd>A matrix such that <cite>y_indicator[i, j] = 1</cite> iff <cite>classes_[j]</cite> is in
+<cite>y[i]</cite>, and 0 otherwise.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.preprocessing.MultiLabelBinarizer.inverse_transform">
+<code class="descname">inverse_transform</code><span class="sig-paren">(</span><em>yt</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/label.html#MultiLabelBinarizer.inverse_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.MultiLabelBinarizer.inverse_transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Transform the given indicator matrix into label sets</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>yt <span class="classifier-delimiter">:</span> <span class="classifier">array or sparse matrix of shape (n_samples, n_classes)</span></dt>
+<dd>A matrix containing only 1s ands 0s.</dd>
+</dl>
+<dl class="docutils">
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">list of tuples</span></dt>
+<dd>The set of labels for each sample such that <cite>y[i]</cite> consists of
+<cite>classes_[j]</cite> for each <cite>yt[i, j] == 1</cite>.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.preprocessing.MultiLabelBinarizer.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/label.html#MultiLabelBinarizer.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.MultiLabelBinarizer.transform" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Transform the given label sets</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">iterable of iterables</span></dt>
+<dd>A set of labels (any orderable and hashable object) for each
+sample. If the <cite>classes</cite> parameter is set, <cite>y</cite> will not be
+iterated.</dd>
+</dl>
+<dl class="docutils">
+<dt>y_indicator <span class="classifier-delimiter">:</span> <span class="classifier">array or CSR matrix, shape (n_samples, n_classes)</span></dt>
+<dd>A matrix such that <cite>y_indicator[i, j] = 1</cite> iff <cite>classes_[j]</cite> is in
+<cite>y[i]</cite>, and 0 otherwise.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex_sklearn_preprocessing_multilabelbinarizer.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex_sklearn_preprocessing_multilabelbinarizer.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

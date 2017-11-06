@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>tensorflow &#8212; ibex 0.1.1 documentation</title>
+    <title>tensorflow &#8212; ibex latest documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1.1',
+        VERSION:     'latest',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -71,7 +71,7 @@
 <span id="tensorflow-diffs"></span><h2>Differences From <code class="xref py py-mod docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn</span></code><a class="headerlink" href="#differences-from-tensorflow-contrib-keras-wrappers-scikit-learn" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference internal" href="api.html#module-ibex.tensorflow.contrib.keras.wrappers.scikit_learn" title="ibex.tensorflow.contrib.keras.wrappers.scikit_learn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code></a> differs from the estimators of <code class="xref py py-mod docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn</span></code>, which it wraps, in three ways:</p>
 <ol class="arabic">
-<li><p class="first">In <a class="reference internal" href="api.html#module-ibex.tensorflow.contrib.keras.wrappers.scikit_learn" title="ibex.tensorflow.contrib.keras.wrappers.scikit_learn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code></a>, <code class="xref py py-class docutils literal"><span class="pre">KerasClassifier</span></code> subclasses <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.ClassifierMixin.html#sklearn.base.ClassifierMixin" title="(in scikit-learn v0.19.0)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.ClassifierMixin</span></code></a>, and <code class="xref py py-class docutils literal"><span class="pre">KerasClassifier</span></code> subclasses <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.ClassifierMixin.html#sklearn.base.ClassifierMixin" title="(in scikit-learn v0.19.0)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.ClassifierMixin</span></code></a>.</p>
+<li><p class="first">In <a class="reference internal" href="api.html#module-ibex.tensorflow.contrib.keras.wrappers.scikit_learn" title="ibex.tensorflow.contrib.keras.wrappers.scikit_learn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code></a>, <code class="xref py py-class docutils literal"><span class="pre">KerasClassifier</span></code> subclasses <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.ClassifierMixin.html#sklearn.base.ClassifierMixin" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.ClassifierMixin</span></code></a>, and <code class="xref py py-class docutils literal"><span class="pre">KerasClassifier</span></code> subclasses <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.ClassifierMixin.html#sklearn.base.ClassifierMixin" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.ClassifierMixin</span></code></a>.</p>
 <blockquote>
 <div><div class="figure" id="id5">
 <p class="plantuml">
@@ -93,7 +93,7 @@ skinparam shadowing false
                 class RegressorMixin
         }" />
 </p>
-<p class="caption"><span class="caption-text"><p>Use and absense of subclassing mixins from <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.base" title="(in scikit-learn v0.19.0)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.base</span></code></a>.</p>
+<p class="caption"><span class="caption-text"><p>Use and absense of subclassing mixins from <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.base" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.base</span></code></a>.</p>
 </span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
 </div>
 </div></blockquote>
@@ -146,7 +146,7 @@ skinparam shadowing false
 <span class="gp">... </span>    <span class="n">build_fn</span><span class="o">=</span><span class="n">build_regressor_nn</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="go">Adapter[KerasRegressor](verbose=0,build_fn=&lt;function build_regressor_nn at ...&gt;)</span>
+<span class="go">Adapter[KerasRegressor](...build_fn=&lt;function build_regressor_nn at ...)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span><span class="o">.</span><span class="n">history_</span>
 <span class="go">&lt;tensorflow.contrib.keras.python.keras.callbacks.History object at ...&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
@@ -173,11 +173,11 @@ skinparam shadowing false
 <p>then <cite>fit</cite> needs to be used on something like</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pd</span><span class="o">.</span><span class="n">get_dummies</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 <span class="go">                    0.0  1.0  2.0</span>
-<span class="go">        0    1    0    0</span>
-<span class="go">        1    1    0    0</span>
-<span class="go">        2    1    0    0</span>
-<span class="go">        3    1    0    0</span>
-<span class="go">        4    1    0    0</span>
+<span class="go">        0    1...   0...    0...</span>
+<span class="go">        1    1...   0...    0...</span>
+<span class="go">        2    1...   0...    0...</span>
+<span class="go">        3    1...   0...    0...</span>
+<span class="go">        4    1...   0...    0...</span>
 </pre></div>
 </div>
 <p>which is nonstandard.</p>

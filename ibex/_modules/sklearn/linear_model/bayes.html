@@ -1,0 +1,647 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.linear_model.bayes &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.linear_model.bayes</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Various bayesian regression</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+
+<span class="c1"># Authors: V. Michel, F. Pedregosa, A. Gramfort</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+<span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">log</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">linalg</span>
+<span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="k">import</span> <span class="n">pinvh</span>
+
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">LinearModel</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">RegressorMixin</span>
+<span class="kn">from</span> <span class="nn">..utils.extmath</span> <span class="k">import</span> <span class="n">fast_logdet</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_X_y</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># BayesianRidge regression</span>
+
+<span class="k">class</span> <span class="nc">BayesianRidge</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Bayesian ridge regression</span>
+
+<span class="sd">    Fit a Bayesian ridge model and optimize the regularization parameters</span>
+<span class="sd">    lambda (precision of the weights) and alpha (precision of the noise).</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;bayesian_regression&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_iter : int, optional</span>
+<span class="sd">        Maximum number of iterations.  Default is 300.</span>
+
+<span class="sd">    tol : float, optional</span>
+<span class="sd">        Stop the algorithm if w has converged. Default is 1.e-3.</span>
+
+<span class="sd">    alpha_1 : float, optional</span>
+<span class="sd">        Hyper-parameter : shape parameter for the Gamma distribution prior</span>
+<span class="sd">        over the alpha parameter. Default is 1.e-6</span>
+
+<span class="sd">    alpha_2 : float, optional</span>
+<span class="sd">        Hyper-parameter : inverse scale parameter (rate parameter) for the</span>
+<span class="sd">        Gamma distribution prior over the alpha parameter.</span>
+<span class="sd">        Default is 1.e-6.</span>
+
+<span class="sd">    lambda_1 : float, optional</span>
+<span class="sd">        Hyper-parameter : shape parameter for the Gamma distribution prior</span>
+<span class="sd">        over the lambda parameter. Default is 1.e-6.</span>
+
+<span class="sd">    lambda_2 : float, optional</span>
+<span class="sd">        Hyper-parameter : inverse scale parameter (rate parameter) for the</span>
+<span class="sd">        Gamma distribution prior over the lambda parameter.</span>
+<span class="sd">        Default is 1.e-6</span>
+
+<span class="sd">    compute_score : boolean, optional</span>
+<span class="sd">        If True, compute the objective function at each step of the model.</span>
+<span class="sd">        Default is False</span>
+
+<span class="sd">    fit_intercept : boolean, optional</span>
+<span class="sd">        whether to calculate the intercept for this model. If set</span>
+<span class="sd">        to false, no intercept will be used in calculations</span>
+<span class="sd">        (e.g. data is expected to be already centered).</span>
+<span class="sd">        Default is True.</span>
+
+<span class="sd">    normalize : boolean, optional, default False</span>
+<span class="sd">        This parameter is ignored when ``fit_intercept`` is set to False.</span>
+<span class="sd">        If True, the regressors X will be normalized before regression by</span>
+<span class="sd">        subtracting the mean and dividing by the l2-norm.</span>
+<span class="sd">        If you wish to standardize, please use</span>
+<span class="sd">        :class:`sklearn.preprocessing.StandardScaler` before calling ``fit``</span>
+<span class="sd">        on an estimator with ``normalize=False``.</span>
+
+<span class="sd">    copy_X : boolean, optional, default True</span>
+<span class="sd">        If True, X will be copied; else, it may be overwritten.</span>
+
+<span class="sd">    verbose : boolean, optional, default False</span>
+<span class="sd">        Verbose mode when fitting the model.</span>
+
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coef_ : array, shape = (n_features)</span>
+<span class="sd">        Coefficients of the regression model (mean of distribution)</span>
+
+<span class="sd">    alpha_ : float</span>
+<span class="sd">       estimated precision of the noise.</span>
+
+<span class="sd">    lambda_ : float</span>
+<span class="sd">       estimated precision of the weights.</span>
+
+<span class="sd">    sigma_ : array, shape = (n_features, n_features)</span>
+<span class="sd">        estimated variance-covariance matrix of the weights</span>
+
+<span class="sd">    scores_ : float</span>
+<span class="sd">        if computed, value of the objective function (to be maximized)</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn import linear_model</span>
+<span class="sd">    &gt;&gt;&gt; clf = linear_model.BayesianRidge()</span>
+<span class="sd">    &gt;&gt;&gt; clf.fit([[0,0], [1, 1], [2, 2]], [0, 1, 2])</span>
+<span class="sd">    ... # doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    BayesianRidge(alpha_1=1e-06, alpha_2=1e-06, compute_score=False,</span>
+<span class="sd">            copy_X=True, fit_intercept=True, lambda_1=1e-06, lambda_2=1e-06,</span>
+<span class="sd">            n_iter=300, normalize=False, tol=0.001, verbose=False)</span>
+<span class="sd">    &gt;&gt;&gt; clf.predict([[1, 1]])</span>
+<span class="sd">    array([ 1.])</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    For an example, see :ref:`examples/linear_model/plot_bayesian_ridge.py</span>
+<span class="sd">    &lt;sphx_glr_auto_examples_linear_model_plot_bayesian_ridge.py&gt;`.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    D. J. C. MacKay, Bayesian Interpolation, Computation and Neural Systems,</span>
+<span class="sd">    Vol. 4, No. 3, 1992.</span>
+
+<span class="sd">    R. Salakhutdinov, Lecture notes on Statistical Machine Learning,</span>
+<span class="sd">    http://www.utstat.toronto.edu/~rsalakhu/sta4273/notes/Lecture2.pdf#page=15</span>
+<span class="sd">    Their beta is our ``self.alpha_``</span>
+<span class="sd">    Their alpha is our ``self.lambda_``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_iter</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1.e-3</span><span class="p">,</span> <span class="n">alpha_1</span><span class="o">=</span><span class="mf">1.e-6</span><span class="p">,</span> <span class="n">alpha_2</span><span class="o">=</span><span class="mf">1.e-6</span><span class="p">,</span>
+                 <span class="n">lambda_1</span><span class="o">=</span><span class="mf">1.e-6</span><span class="p">,</span> <span class="n">lambda_2</span><span class="o">=</span><span class="mf">1.e-6</span><span class="p">,</span> <span class="n">compute_score</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">copy_X</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_iter</span> <span class="o">=</span> <span class="n">n_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha_1</span> <span class="o">=</span> <span class="n">alpha_1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha_2</span> <span class="o">=</span> <span class="n">alpha_2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lambda_1</span> <span class="o">=</span> <span class="n">lambda_1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lambda_2</span> <span class="o">=</span> <span class="n">lambda_2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compute_score</span> <span class="o">=</span> <span class="n">compute_score</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span> <span class="o">=</span> <span class="n">fit_intercept</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span> <span class="o">=</span> <span class="n">normalize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">copy_X</span> <span class="o">=</span> <span class="n">copy_X</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+
+<div class="viewcode-block" id="BayesianRidge.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_bayesianridge.html#ibex.sklearn.linear_model.BayesianRidge.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : numpy array of shape [n_samples,n_features]</span>
+<span class="sd">            Training data</span>
+<span class="sd">        y : numpy array of shape [n_samples]</span>
+<span class="sd">            Target values. Will be cast to X&#39;s dtype if necessary</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : returns an instance of self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">y_numeric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X_offset_</span><span class="p">,</span> <span class="n">y_offset_</span><span class="p">,</span> <span class="n">X_scale_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preprocess_data</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy_X</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">X_offset_</span> <span class="o">=</span> <span class="n">X_offset_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">X_scale_</span> <span class="o">=</span> <span class="n">X_scale_</span>
+        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># Initialization of the values of the parameters</span>
+        <span class="n">alpha_</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">lambda_</span> <span class="o">=</span> <span class="mf">1.</span>
+
+        <span class="n">verbose</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span>
+        <span class="n">lambda_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lambda_1</span>
+        <span class="n">lambda_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lambda_2</span>
+        <span class="n">alpha_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_1</span>
+        <span class="n">alpha_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_2</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">scores_</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="n">coef_old_</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="n">XT_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">Vh</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">eigen_vals_</span> <span class="o">=</span> <span class="n">S</span> <span class="o">**</span> <span class="mi">2</span>
+
+        <span class="c1"># Convergence loop of the bayesian ridge regression</span>
+        <span class="k">for</span> <span class="n">iter_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_iter</span><span class="p">):</span>
+
+            <span class="c1"># Compute mu and sigma</span>
+            <span class="c1"># sigma_ = lambda_ / alpha_ * np.eye(n_features) + np.dot(X.T, X)</span>
+            <span class="c1"># coef_ = sigma_^-1 * XT * y</span>
+            <span class="k">if</span> <span class="n">n_samples</span> <span class="o">&gt;</span> <span class="n">n_features</span><span class="p">:</span>
+                <span class="n">coef_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Vh</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+                               <span class="n">Vh</span> <span class="o">/</span> <span class="p">(</span><span class="n">eigen_vals_</span> <span class="o">+</span>
+                                     <span class="n">lambda_</span> <span class="o">/</span> <span class="n">alpha_</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])</span>
+                <span class="n">coef_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">coef_</span><span class="p">,</span> <span class="n">XT_y</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_score</span><span class="p">:</span>
+                    <span class="n">logdet_sigma_</span> <span class="o">=</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">lambda_</span> <span class="o">+</span> <span class="n">alpha_</span> <span class="o">*</span> <span class="n">eigen_vals_</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">coef_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span>
+                    <span class="n">U</span> <span class="o">/</span> <span class="p">(</span><span class="n">eigen_vals_</span> <span class="o">+</span> <span class="n">lambda_</span> <span class="o">/</span> <span class="n">alpha_</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="n">U</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+                <span class="n">coef_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">coef_</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_score</span><span class="p">:</span>
+                    <span class="n">logdet_sigma_</span> <span class="o">=</span> <span class="n">lambda_</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_features</span><span class="p">)</span>
+                    <span class="n">logdet_sigma_</span><span class="p">[:</span><span class="n">n_samples</span><span class="p">]</span> <span class="o">+=</span> <span class="n">alpha_</span> <span class="o">*</span> <span class="n">eigen_vals_</span>
+                    <span class="n">logdet_sigma_</span> <span class="o">=</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logdet_sigma_</span><span class="p">))</span>
+
+            <span class="c1"># Preserve the alpha and lambda values that were used to</span>
+            <span class="c1"># calculate the final coefficients</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span> <span class="o">=</span> <span class="n">alpha_</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lambda_</span> <span class="o">=</span> <span class="n">lambda_</span>
+
+            <span class="c1"># Update alpha and lambda</span>
+            <span class="n">rmse_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">y</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">coef_</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">gamma_</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">alpha_</span> <span class="o">*</span> <span class="n">eigen_vals_</span><span class="p">)</span> <span class="o">/</span>
+                      <span class="p">(</span><span class="n">lambda_</span> <span class="o">+</span> <span class="n">alpha_</span> <span class="o">*</span> <span class="n">eigen_vals_</span><span class="p">)))</span>
+            <span class="n">lambda_</span> <span class="o">=</span> <span class="p">((</span><span class="n">gamma_</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">lambda_1</span><span class="p">)</span> <span class="o">/</span>
+                       <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">coef_</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">lambda_2</span><span class="p">))</span>
+            <span class="n">alpha_</span> <span class="o">=</span> <span class="p">((</span><span class="n">n_samples</span> <span class="o">-</span> <span class="n">gamma_</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">alpha_1</span><span class="p">)</span> <span class="o">/</span>
+                      <span class="p">(</span><span class="n">rmse_</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">alpha_2</span><span class="p">))</span>
+
+            <span class="c1"># Compute the objective function</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_score</span><span class="p">:</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="n">lambda_1</span> <span class="o">*</span> <span class="n">log</span><span class="p">(</span><span class="n">lambda_</span><span class="p">)</span> <span class="o">-</span> <span class="n">lambda_2</span> <span class="o">*</span> <span class="n">lambda_</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="n">alpha_1</span> <span class="o">*</span> <span class="n">log</span><span class="p">(</span><span class="n">alpha_</span><span class="p">)</span> <span class="o">-</span> <span class="n">alpha_2</span> <span class="o">*</span> <span class="n">alpha_</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">*</span> <span class="n">log</span><span class="p">(</span><span class="n">lambda_</span><span class="p">)</span> <span class="o">+</span>
+                            <span class="n">n_samples</span> <span class="o">*</span> <span class="n">log</span><span class="p">(</span><span class="n">alpha_</span><span class="p">)</span> <span class="o">-</span>
+                            <span class="n">alpha_</span> <span class="o">*</span> <span class="n">rmse_</span> <span class="o">-</span>
+                            <span class="p">(</span><span class="n">lambda_</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">coef_</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">-</span>
+                            <span class="n">logdet_sigma_</span> <span class="o">-</span>
+                            <span class="n">n_samples</span> <span class="o">*</span> <span class="n">log</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scores_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+            <span class="c1"># Check for convergence</span>
+            <span class="k">if</span> <span class="n">iter_</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coef_old_</span> <span class="o">-</span> <span class="n">coef_</span><span class="p">))</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Convergence after &quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">iter_</span><span class="p">),</span> <span class="s2">&quot; iterations&quot;</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="n">coef_old_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">coef_</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">coef_</span>
+        <span class="n">sigma_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Vh</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+                        <span class="n">Vh</span> <span class="o">/</span> <span class="p">(</span><span class="n">eigen_vals_</span> <span class="o">+</span> <span class="n">lambda_</span> <span class="o">/</span> <span class="n">alpha_</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma_</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="n">alpha_</span><span class="p">)</span> <span class="o">*</span> <span class="n">sigma_</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_intercept</span><span class="p">(</span><span class="n">X_offset_</span><span class="p">,</span> <span class="n">y_offset_</span><span class="p">,</span> <span class="n">X_scale_</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="BayesianRidge.predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_bayesianridge.html#ibex.sklearn.linear_model.BayesianRidge.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">return_std</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Predict using the linear model.</span>
+
+<span class="sd">        In addition to the mean of the predictive distribution, also its</span>
+<span class="sd">        standard deviation can be returned.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape = (n_samples, n_features)</span>
+<span class="sd">            Samples.</span>
+
+<span class="sd">        return_std : boolean, optional</span>
+<span class="sd">            Whether to return the standard deviation of posterior prediction.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y_mean : array, shape = (n_samples,)</span>
+<span class="sd">            Mean of predictive distribution of query points.</span>
+
+<span class="sd">        y_std : array, shape = (n_samples,)</span>
+<span class="sd">            Standard deviation of predictive distribution of query points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">y_mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">return_std</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">y_mean</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">:</span>
+                <span class="n">X</span> <span class="o">=</span> <span class="p">(</span><span class="n">X</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_offset_</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_scale_</span>
+            <span class="n">sigmas_squared_data</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_</span><span class="p">)</span> <span class="o">*</span> <span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">y_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">sigmas_squared_data</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">y_mean</span><span class="p">,</span> <span class="n">y_std</span></div>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># ARD (Automatic Relevance Determination) regression</span>
+
+
+<span class="k">class</span> <span class="nc">ARDRegression</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Bayesian ARD regression.</span>
+
+<span class="sd">    Fit the weights of a regression model, using an ARD prior. The weights of</span>
+<span class="sd">    the regression model are assumed to be in Gaussian distributions.</span>
+<span class="sd">    Also estimate the parameters lambda (precisions of the distributions of the</span>
+<span class="sd">    weights) and alpha (precision of the distribution of the noise).</span>
+<span class="sd">    The estimation is done by an iterative procedures (Evidence Maximization)</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;bayesian_regression&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_iter : int, optional</span>
+<span class="sd">        Maximum number of iterations. Default is 300</span>
+
+<span class="sd">    tol : float, optional</span>
+<span class="sd">        Stop the algorithm if w has converged. Default is 1.e-3.</span>
+
+<span class="sd">    alpha_1 : float, optional</span>
+<span class="sd">        Hyper-parameter : shape parameter for the Gamma distribution prior</span>
+<span class="sd">        over the alpha parameter. Default is 1.e-6.</span>
+
+<span class="sd">    alpha_2 : float, optional</span>
+<span class="sd">        Hyper-parameter : inverse scale parameter (rate parameter) for the</span>
+<span class="sd">        Gamma distribution prior over the alpha parameter. Default is 1.e-6.</span>
+
+<span class="sd">    lambda_1 : float, optional</span>
+<span class="sd">        Hyper-parameter : shape parameter for the Gamma distribution prior</span>
+<span class="sd">        over the lambda parameter. Default is 1.e-6.</span>
+
+<span class="sd">    lambda_2 : float, optional</span>
+<span class="sd">        Hyper-parameter : inverse scale parameter (rate parameter) for the</span>
+<span class="sd">        Gamma distribution prior over the lambda parameter. Default is 1.e-6.</span>
+
+<span class="sd">    compute_score : boolean, optional</span>
+<span class="sd">        If True, compute the objective function at each step of the model.</span>
+<span class="sd">        Default is False.</span>
+
+<span class="sd">    threshold_lambda : float, optional</span>
+<span class="sd">        threshold for removing (pruning) weights with high precision from</span>
+<span class="sd">        the computation. Default is 1.e+4.</span>
+
+<span class="sd">    fit_intercept : boolean, optional</span>
+<span class="sd">        whether to calculate the intercept for this model. If set</span>
+<span class="sd">        to false, no intercept will be used in calculations</span>
+<span class="sd">        (e.g. data is expected to be already centered).</span>
+<span class="sd">        Default is True.</span>
+
+<span class="sd">    normalize : boolean, optional, default False</span>
+<span class="sd">        This parameter is ignored when ``fit_intercept`` is set to False.</span>
+<span class="sd">        If True, the regressors X will be normalized before regression by</span>
+<span class="sd">        subtracting the mean and dividing by the l2-norm.</span>
+<span class="sd">        If you wish to standardize, please use</span>
+<span class="sd">        :class:`sklearn.preprocessing.StandardScaler` before calling ``fit``</span>
+<span class="sd">        on an estimator with ``normalize=False``.</span>
+
+<span class="sd">    copy_X : boolean, optional, default True.</span>
+<span class="sd">        If True, X will be copied; else, it may be overwritten.</span>
+
+<span class="sd">    verbose : boolean, optional, default False</span>
+<span class="sd">        Verbose mode when fitting the model.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coef_ : array, shape = (n_features)</span>
+<span class="sd">        Coefficients of the regression model (mean of distribution)</span>
+
+<span class="sd">    alpha_ : float</span>
+<span class="sd">       estimated precision of the noise.</span>
+
+<span class="sd">    lambda_ : array, shape = (n_features)</span>
+<span class="sd">       estimated precisions of the weights.</span>
+
+<span class="sd">    sigma_ : array, shape = (n_features, n_features)</span>
+<span class="sd">        estimated variance-covariance matrix of the weights</span>
+
+<span class="sd">    scores_ : float</span>
+<span class="sd">        if computed, value of the objective function (to be maximized)</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn import linear_model</span>
+<span class="sd">    &gt;&gt;&gt; clf = linear_model.ARDRegression()</span>
+<span class="sd">    &gt;&gt;&gt; clf.fit([[0,0], [1, 1], [2, 2]], [0, 1, 2])</span>
+<span class="sd">    ... # doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    ARDRegression(alpha_1=1e-06, alpha_2=1e-06, compute_score=False,</span>
+<span class="sd">            copy_X=True, fit_intercept=True, lambda_1=1e-06, lambda_2=1e-06,</span>
+<span class="sd">            n_iter=300, normalize=False, threshold_lambda=10000.0, tol=0.001,</span>
+<span class="sd">            verbose=False)</span>
+<span class="sd">    &gt;&gt;&gt; clf.predict([[1, 1]])</span>
+<span class="sd">    array([ 1.])</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    For an example, see :ref:`examples/linear_model/plot_ard.py</span>
+<span class="sd">    &lt;sphx_glr_auto_examples_linear_model_plot_ard.py&gt;`.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    D. J. C. MacKay, Bayesian nonlinear modeling for the prediction</span>
+<span class="sd">    competition, ASHRAE Transactions, 1994.</span>
+
+<span class="sd">    R. Salakhutdinov, Lecture notes on Statistical Machine Learning,</span>
+<span class="sd">    http://www.utstat.toronto.edu/~rsalakhu/sta4273/notes/Lecture2.pdf#page=15</span>
+<span class="sd">    Their beta is our ``self.alpha_``</span>
+<span class="sd">    Their alpha is our ``self.lambda_``</span>
+<span class="sd">    ARD is a little different than the slide: only dimensions/features for</span>
+<span class="sd">    which ``self.lambda_ &lt; self.threshold_lambda`` are kept and the rest are</span>
+<span class="sd">    discarded.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_iter</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1.e-3</span><span class="p">,</span> <span class="n">alpha_1</span><span class="o">=</span><span class="mf">1.e-6</span><span class="p">,</span> <span class="n">alpha_2</span><span class="o">=</span><span class="mf">1.e-6</span><span class="p">,</span>
+                 <span class="n">lambda_1</span><span class="o">=</span><span class="mf">1.e-6</span><span class="p">,</span> <span class="n">lambda_2</span><span class="o">=</span><span class="mf">1.e-6</span><span class="p">,</span> <span class="n">compute_score</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">threshold_lambda</span><span class="o">=</span><span class="mf">1.e+4</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">copy_X</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_iter</span> <span class="o">=</span> <span class="n">n_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span> <span class="o">=</span> <span class="n">fit_intercept</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span> <span class="o">=</span> <span class="n">normalize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha_1</span> <span class="o">=</span> <span class="n">alpha_1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha_2</span> <span class="o">=</span> <span class="n">alpha_2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lambda_1</span> <span class="o">=</span> <span class="n">lambda_1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lambda_2</span> <span class="o">=</span> <span class="n">lambda_2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compute_score</span> <span class="o">=</span> <span class="n">compute_score</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">threshold_lambda</span> <span class="o">=</span> <span class="n">threshold_lambda</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">copy_X</span> <span class="o">=</span> <span class="n">copy_X</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+
+<div class="viewcode-block" id="ARDRegression.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ardregression.html#ibex.sklearn.linear_model.ARDRegression.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the ARDRegression model according to the given training data</span>
+<span class="sd">        and parameters.</span>
+
+<span class="sd">        Iterative procedure to maximize the evidence</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+<span class="sd">            Training vector, where n_samples in the number of samples and</span>
+<span class="sd">            n_features is the number of features.</span>
+<span class="sd">        y : array, shape = [n_samples]</span>
+<span class="sd">            Target values (integers). Will be cast to X&#39;s dtype if necessary</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : returns an instance of self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">y_numeric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">coef_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_features</span><span class="p">)</span>
+
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X_offset_</span><span class="p">,</span> <span class="n">y_offset_</span><span class="p">,</span> <span class="n">X_scale_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preprocess_data</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy_X</span><span class="p">)</span>
+
+        <span class="c1"># Launch the convergence loop</span>
+        <span class="n">keep_lambda</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_features</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+
+        <span class="n">lambda_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lambda_1</span>
+        <span class="n">lambda_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lambda_2</span>
+        <span class="n">alpha_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_1</span>
+        <span class="n">alpha_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_2</span>
+        <span class="n">verbose</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span>
+
+        <span class="c1"># Initialization of the values of the parameters</span>
+        <span class="n">alpha_</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">lambda_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_features</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">scores_</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="n">coef_old_</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Iterative procedure of ARDRegression</span>
+        <span class="k">for</span> <span class="n">iter_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_iter</span><span class="p">):</span>
+            <span class="c1"># Compute mu and sigma (using Woodbury matrix identity)</span>
+            <span class="n">sigma_</span> <span class="o">=</span> <span class="n">pinvh</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span> <span class="o">/</span> <span class="n">alpha_</span> <span class="o">+</span>
+                           <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">[:,</span> <span class="n">keep_lambda</span><span class="p">]</span> <span class="o">*</span>
+                           <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="n">lambda_</span><span class="p">[</span><span class="n">keep_lambda</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]),</span>
+                           <span class="n">X</span><span class="p">[:,</span> <span class="n">keep_lambda</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+            <span class="n">sigma_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sigma_</span><span class="p">,</span> <span class="n">X</span><span class="p">[:,</span> <span class="n">keep_lambda</span><span class="p">]</span> <span class="o">*</span>
+                            <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="n">lambda_</span><span class="p">[</span><span class="n">keep_lambda</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="n">sigma_</span> <span class="o">=</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="n">lambda_</span><span class="p">[</span><span class="n">keep_lambda</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">*</span>
+                              <span class="n">X</span><span class="p">[:,</span> <span class="n">keep_lambda</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">sigma_</span><span class="p">)</span>
+            <span class="n">sigma_</span><span class="o">.</span><span class="n">flat</span><span class="p">[::(</span><span class="n">sigma_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="o">+=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">lambda_</span><span class="p">[</span><span class="n">keep_lambda</span><span class="p">]</span>
+            <span class="n">coef_</span><span class="p">[</span><span class="n">keep_lambda</span><span class="p">]</span> <span class="o">=</span> <span class="n">alpha_</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span>
+                <span class="n">sigma_</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">[:,</span> <span class="n">keep_lambda</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+
+            <span class="c1"># Update alpha and lambda</span>
+            <span class="n">rmse_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">y</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">coef_</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">gamma_</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">-</span> <span class="n">lambda_</span><span class="p">[</span><span class="n">keep_lambda</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">sigma_</span><span class="p">)</span>
+            <span class="n">lambda_</span><span class="p">[</span><span class="n">keep_lambda</span><span class="p">]</span> <span class="o">=</span> <span class="p">((</span><span class="n">gamma_</span> <span class="o">+</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">lambda_1</span><span class="p">)</span> <span class="o">/</span>
+                                    <span class="p">((</span><span class="n">coef_</span><span class="p">[</span><span class="n">keep_lambda</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span>
+                                     <span class="mf">2.</span> <span class="o">*</span> <span class="n">lambda_2</span><span class="p">))</span>
+            <span class="n">alpha_</span> <span class="o">=</span> <span class="p">((</span><span class="n">n_samples</span> <span class="o">-</span> <span class="n">gamma_</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">alpha_1</span><span class="p">)</span> <span class="o">/</span>
+                      <span class="p">(</span><span class="n">rmse_</span> <span class="o">+</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">alpha_2</span><span class="p">))</span>
+
+            <span class="c1"># Prune the weights with a precision over a threshold</span>
+            <span class="n">keep_lambda</span> <span class="o">=</span> <span class="n">lambda_</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold_lambda</span>
+            <span class="n">coef_</span><span class="p">[</span><span class="o">~</span><span class="n">keep_lambda</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="c1"># Compute the objective function</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_score</span><span class="p">:</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="p">(</span><span class="n">lambda_1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">lambda_</span><span class="p">)</span> <span class="o">-</span> <span class="n">lambda_2</span> <span class="o">*</span> <span class="n">lambda_</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="n">alpha_1</span> <span class="o">*</span> <span class="n">log</span><span class="p">(</span><span class="n">alpha_</span><span class="p">)</span> <span class="o">-</span> <span class="n">alpha_2</span> <span class="o">*</span> <span class="n">alpha_</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">fast_logdet</span><span class="p">(</span><span class="n">sigma_</span><span class="p">)</span> <span class="o">+</span> <span class="n">n_samples</span> <span class="o">*</span> <span class="n">log</span><span class="p">(</span><span class="n">alpha_</span><span class="p">)</span> <span class="o">+</span>
+                            <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">lambda_</span><span class="p">)))</span>
+                <span class="n">s</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">alpha_</span> <span class="o">*</span> <span class="n">rmse_</span> <span class="o">+</span> <span class="p">(</span><span class="n">lambda_</span> <span class="o">*</span> <span class="n">coef_</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scores_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+            <span class="c1"># Check for convergence</span>
+            <span class="k">if</span> <span class="n">iter_</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coef_old_</span> <span class="o">-</span> <span class="n">coef_</span><span class="p">))</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Converged after </span><span class="si">%s</span><span class="s2"> iterations&quot;</span> <span class="o">%</span> <span class="n">iter_</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="n">coef_old_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">coef_</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">coef_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span> <span class="o">=</span> <span class="n">alpha_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma_</span> <span class="o">=</span> <span class="n">sigma_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lambda_</span> <span class="o">=</span> <span class="n">lambda_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_intercept</span><span class="p">(</span><span class="n">X_offset_</span><span class="p">,</span> <span class="n">y_offset_</span><span class="p">,</span> <span class="n">X_scale_</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="ARDRegression.predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ardregression.html#ibex.sklearn.linear_model.ARDRegression.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">return_std</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Predict using the linear model.</span>
+
+<span class="sd">        In addition to the mean of the predictive distribution, also its</span>
+<span class="sd">        standard deviation can be returned.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape = (n_samples, n_features)</span>
+<span class="sd">            Samples.</span>
+
+<span class="sd">        return_std : boolean, optional</span>
+<span class="sd">            Whether to return the standard deviation of posterior prediction.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y_mean : array, shape = (n_samples,)</span>
+<span class="sd">            Mean of predictive distribution of query points.</span>
+
+<span class="sd">        y_std : array, shape = (n_samples,)</span>
+<span class="sd">            Standard deviation of predictive distribution of query points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">y_mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">return_std</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">y_mean</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">:</span>
+                <span class="n">X</span> <span class="o">=</span> <span class="p">(</span><span class="n">X</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_offset_</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_scale_</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lambda_</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold_lambda</span><span class="p">]</span>
+            <span class="n">sigmas_squared_data</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_</span><span class="p">)</span> <span class="o">*</span> <span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">y_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">sigmas_squared_data</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">y_mean</span><span class="p">,</span> <span class="n">y_std</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

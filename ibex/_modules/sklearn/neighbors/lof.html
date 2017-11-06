@@ -1,0 +1,410 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.neighbors.lof &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.neighbors.lof</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Authors: Nicolas Goix &lt;nicolas.goix@telecom-paristech.fr&gt;</span>
+<span class="c1">#          Alexandre Gramfort &lt;alexandre.gramfort@telecom-paristech.fr&gt;</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">warnings</span> <span class="k">import</span> <span class="n">warn</span>
+<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="k">import</span> <span class="n">scoreatpercentile</span>
+
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">NeighborsBase</span>
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">KNeighborsMixin</span>
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">UnsupervisedMixin</span>
+
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_is_fitted</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_array</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;LocalOutlierFactor&quot;</span><span class="p">]</span>
+
+
+<span class="k">class</span> <span class="nc">LocalOutlierFactor</span><span class="p">(</span><span class="n">NeighborsBase</span><span class="p">,</span> <span class="n">KNeighborsMixin</span><span class="p">,</span> <span class="n">UnsupervisedMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Unsupervised Outlier Detection using Local Outlier Factor (LOF)</span>
+
+<span class="sd">    The anomaly score of each sample is called Local Outlier Factor.</span>
+<span class="sd">    It measures the local deviation of density of a given sample with</span>
+<span class="sd">    respect to its neighbors.</span>
+<span class="sd">    It is local in that the anomaly score depends on how isolated the object</span>
+<span class="sd">    is with respect to the surrounding neighborhood.</span>
+<span class="sd">    More precisely, locality is given by k-nearest neighbors, whose distance</span>
+<span class="sd">    is used to estimate the local density.</span>
+<span class="sd">    By comparing the local density of a sample to the local densities of</span>
+<span class="sd">    its neighbors, one can identify samples that have a substantially lower</span>
+<span class="sd">    density than their neighbors. These are considered outliers.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_neighbors : int, optional (default=20)</span>
+<span class="sd">        Number of neighbors to use by default for :meth:`kneighbors` queries.</span>
+<span class="sd">        If n_neighbors is larger than the number of samples provided,</span>
+<span class="sd">        all samples will be used.</span>
+
+<span class="sd">    algorithm : {&#39;auto&#39;, &#39;ball_tree&#39;, &#39;kd_tree&#39;, &#39;brute&#39;}, optional</span>
+<span class="sd">        Algorithm used to compute the nearest neighbors:</span>
+
+<span class="sd">        - &#39;ball_tree&#39; will use :class:`BallTree`</span>
+<span class="sd">        - &#39;kd_tree&#39; will use :class:`KDTree`</span>
+<span class="sd">        - &#39;brute&#39; will use a brute-force search.</span>
+<span class="sd">        - &#39;auto&#39; will attempt to decide the most appropriate algorithm</span>
+<span class="sd">          based on the values passed to :meth:`fit` method.</span>
+
+<span class="sd">        Note: fitting on sparse input will override the setting of</span>
+<span class="sd">        this parameter, using brute force.</span>
+
+<span class="sd">    leaf_size : int, optional (default=30)</span>
+<span class="sd">        Leaf size passed to :class:`BallTree` or :class:`KDTree`. This can</span>
+<span class="sd">        affect the speed of the construction and query, as well as the memory</span>
+<span class="sd">        required to store the tree. The optimal value depends on the</span>
+<span class="sd">        nature of the problem.</span>
+
+<span class="sd">    metric : string or callable, default &#39;minkowski&#39;</span>
+<span class="sd">        metric used for the distance computation. Any metric from scikit-learn</span>
+<span class="sd">        or scipy.spatial.distance can be used.</span>
+
+<span class="sd">        If &#39;precomputed&#39;, the training input X is expected to be a distance</span>
+<span class="sd">        matrix.</span>
+
+<span class="sd">        If metric is a callable function, it is called on each</span>
+<span class="sd">        pair of instances (rows) and the resulting value recorded. The callable</span>
+<span class="sd">        should take two arrays as input and return one value indicating the</span>
+<span class="sd">        distance between them. This works for Scipy&#39;s metrics, but is less</span>
+<span class="sd">        efficient than passing the metric name as a string.</span>
+
+<span class="sd">        Valid values for metric are:</span>
+
+<span class="sd">        - from scikit-learn: [&#39;cityblock&#39;, &#39;cosine&#39;, &#39;euclidean&#39;, &#39;l1&#39;, &#39;l2&#39;,</span>
+<span class="sd">          &#39;manhattan&#39;]</span>
+
+<span class="sd">        - from scipy.spatial.distance: [&#39;braycurtis&#39;, &#39;canberra&#39;, &#39;chebyshev&#39;,</span>
+<span class="sd">          &#39;correlation&#39;, &#39;dice&#39;, &#39;hamming&#39;, &#39;jaccard&#39;, &#39;kulsinski&#39;,</span>
+<span class="sd">          &#39;mahalanobis&#39;, &#39;matching&#39;, &#39;minkowski&#39;, &#39;rogerstanimoto&#39;,</span>
+<span class="sd">          &#39;russellrao&#39;, &#39;seuclidean&#39;, &#39;sokalmichener&#39;, &#39;sokalsneath&#39;,</span>
+<span class="sd">          &#39;sqeuclidean&#39;, &#39;yule&#39;]</span>
+
+<span class="sd">        See the documentation for scipy.spatial.distance for details on these</span>
+<span class="sd">        metrics:</span>
+<span class="sd">        http://docs.scipy.org/doc/scipy/reference/spatial.distance.html</span>
+
+<span class="sd">    p : integer, optional (default=2)</span>
+<span class="sd">        Parameter for the Minkowski metric from</span>
+<span class="sd">        :func:`sklearn.metrics.pairwise.pairwise_distances`. When p = 1, this</span>
+<span class="sd">        is equivalent to using manhattan_distance (l1), and euclidean_distance</span>
+<span class="sd">        (l2) for p = 2. For arbitrary p, minkowski_distance (l_p) is used.</span>
+
+<span class="sd">    metric_params : dict, optional (default=None)</span>
+<span class="sd">        Additional keyword arguments for the metric function.</span>
+
+<span class="sd">    contamination : float in (0., 0.5), optional (default=0.1)</span>
+<span class="sd">        The amount of contamination of the data set, i.e. the proportion</span>
+<span class="sd">        of outliers in the data set. When fitting this is used to define the</span>
+<span class="sd">        threshold on the decision function.</span>
+
+<span class="sd">    n_jobs : int, optional (default=1)</span>
+<span class="sd">        The number of parallel jobs to run for neighbors search.</span>
+<span class="sd">        If ``-1``, then the number of jobs is set to the number of CPU cores.</span>
+<span class="sd">        Affects only :meth:`kneighbors` and :meth:`kneighbors_graph` methods.</span>
+
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    negative_outlier_factor_ : numpy array, shape (n_samples,)</span>
+<span class="sd">        The opposite LOF of the training samples. The lower, the more normal.</span>
+<span class="sd">        Inliers tend to have a LOF score close to 1, while outliers tend</span>
+<span class="sd">        to have a larger LOF score.</span>
+
+<span class="sd">        The local outlier factor (LOF) of a sample captures its</span>
+<span class="sd">        supposed &#39;degree of abnormality&#39;.</span>
+<span class="sd">        It is the average of the ratio of the local reachability density of</span>
+<span class="sd">        a sample and those of its k-nearest neighbors.</span>
+
+<span class="sd">    n_neighbors_ : integer</span>
+<span class="sd">        The actual number of neighbors used for :meth:`kneighbors` queries.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Breunig, M. M., Kriegel, H. P., Ng, R. T., &amp; Sander, J. (2000, May).</span>
+<span class="sd">           LOF: identifying density-based local outliers. In ACM sigmod record.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">leaf_size</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+                 <span class="n">metric</span><span class="o">=</span><span class="s1">&#39;minkowski&#39;</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">metric_params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">contamination</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_params</span><span class="p">(</span><span class="n">n_neighbors</span><span class="o">=</span><span class="n">n_neighbors</span><span class="p">,</span>
+                          <span class="n">algorithm</span><span class="o">=</span><span class="n">algorithm</span><span class="p">,</span>
+                          <span class="n">leaf_size</span><span class="o">=</span><span class="n">leaf_size</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="p">,</span>
+                          <span class="n">metric_params</span><span class="o">=</span><span class="n">metric_params</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">contamination</span> <span class="o">=</span> <span class="n">contamination</span>
+
+<div class="viewcode-block" id="LocalOutlierFactor.fit_predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_neighbors_localoutlierfactor.html#ibex.sklearn.neighbors.LocalOutlierFactor.fit_predict">[docs]</a>    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;&quot;Fits the model to the training set X and returns the labels</span>
+<span class="sd">        (1 inlier, -1 outlier) on the training set according to the LOF score</span>
+<span class="sd">        and the contamination parameter.</span>
+
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features), default=None</span>
+<span class="sd">            The query sample or samples to compute the Local Outlier Factor</span>
+<span class="sd">            w.r.t. to the training samples.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        is_inlier : array, shape (n_samples,)</span>
+<span class="sd">            Returns -1 for anomalies/outliers and 1 for inliers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">_predict</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="LocalOutlierFactor.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_neighbors_localoutlierfactor.html#ibex.sklearn.neighbors.LocalOutlierFactor.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model using X as training data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix, BallTree, KDTree}</span>
+<span class="sd">            Training data. If array or matrix, shape [n_samples, n_features],</span>
+<span class="sd">            or [n_samples, n_samples] if metric=&#39;precomputed&#39;.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : object</span>
+<span class="sd">            Returns self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mf">0.</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">contamination</span> <span class="o">&lt;=</span> <span class="o">.</span><span class="mi">5</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;contamination must be in (0, 0.5]&quot;</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">LocalOutlierFactor</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+        <span class="n">n_samples</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span> <span class="o">&gt;</span> <span class="n">n_samples</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;n_neighbors (</span><span class="si">%s</span><span class="s2">) is greater than the &quot;</span>
+                 <span class="s2">&quot;total number of samples (</span><span class="si">%s</span><span class="s2">). n_neighbors &quot;</span>
+                 <span class="s2">&quot;will be set to (n_samples - 1) for estimation.&quot;</span>
+                 <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors_</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors</span><span class="p">,</span> <span class="n">n_samples</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_distances_fit_X_</span><span class="p">,</span> <span class="n">_neighbors_indices_fit_X_</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kneighbors</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors_</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lrd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_local_reachability_density</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_distances_fit_X_</span><span class="p">,</span> <span class="n">_neighbors_indices_fit_X_</span><span class="p">)</span>
+
+        <span class="c1"># Compute lof score over training samples to define threshold_:</span>
+        <span class="n">lrd_ratios_array</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_lrd</span><span class="p">[</span><span class="n">_neighbors_indices_fit_X_</span><span class="p">]</span> <span class="o">/</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_lrd</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">negative_outlier_factor_</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">lrd_ratios_array</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">threshold_</span> <span class="o">=</span> <span class="o">-</span><span class="n">scoreatpercentile</span><span class="p">(</span>
+            <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">negative_outlier_factor_</span><span class="p">,</span> <span class="mf">100.</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">contamination</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+    <span class="k">def</span> <span class="nf">_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Predict the labels (1 inlier, -1 outlier) of X according to LOF.</span>
+
+<span class="sd">        If X is None, returns the same as fit_predict(X_train).</span>
+<span class="sd">        This method allows to generalize prediction to new observations (not</span>
+<span class="sd">        in the training set). As LOF originally does not deal with new data,</span>
+<span class="sd">        this method is kept private.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features), default=None</span>
+<span class="sd">            The query sample or samples to compute the Local Outlier Factor</span>
+<span class="sd">            w.r.t. to the training samples. If None, makes prediction on the</span>
+<span class="sd">            training data without considering them as their own neighbors.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        is_inlier : array, shape (n_samples,)</span>
+<span class="sd">            Returns -1 for anomalies/outliers and +1 for inliers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;threshold_&quot;</span><span class="p">,</span> <span class="s2">&quot;negative_outlier_factor_&quot;</span><span class="p">,</span>
+                               <span class="s2">&quot;n_neighbors_&quot;</span><span class="p">,</span> <span class="s2">&quot;_distances_fit_X_&quot;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">X</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">)</span>
+            <span class="n">is_inlier</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+            <span class="n">is_inlier</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold_</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">is_inlier</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_fit_X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+            <span class="n">is_inlier</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">negative_outlier_factor_</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold_</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">is_inlier</span>
+
+    <span class="k">def</span> <span class="nf">_decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Opposite of the Local Outlier Factor of X (as bigger is better,</span>
+<span class="sd">        i.e. large values correspond to inliers).</span>
+
+<span class="sd">        The argument X is supposed to contain *new data*: if X contains a</span>
+<span class="sd">        point from training, it consider the later in its own neighborhood.</span>
+<span class="sd">        Also, the samples in X are not considered in the neighborhood of any</span>
+<span class="sd">        point.</span>
+<span class="sd">        The decision function on training data is available by considering the</span>
+<span class="sd">        opposite of the negative_outlier_factor_ attribute.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            The query sample or samples to compute the Local Outlier Factor</span>
+<span class="sd">            w.r.t. the training samples.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        opposite_lof_scores : array, shape (n_samples,)</span>
+<span class="sd">            The opposite of the Local Outlier Factor of each input samples.</span>
+<span class="sd">            The lower, the more abnormal.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;threshold_&quot;</span><span class="p">,</span> <span class="s2">&quot;negative_outlier_factor_&quot;</span><span class="p">,</span>
+                               <span class="s2">&quot;_distances_fit_X_&quot;</span><span class="p">])</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">)</span>
+
+        <span class="n">distances_X</span><span class="p">,</span> <span class="n">neighbors_indices_X</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kneighbors</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors_</span><span class="p">))</span>
+        <span class="n">X_lrd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_local_reachability_density</span><span class="p">(</span><span class="n">distances_X</span><span class="p">,</span>
+                                                 <span class="n">neighbors_indices_X</span><span class="p">)</span>
+
+        <span class="n">lrd_ratios_array</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_lrd</span><span class="p">[</span><span class="n">neighbors_indices_X</span><span class="p">]</span> <span class="o">/</span>
+                            <span class="n">X_lrd</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])</span>
+
+        <span class="c1"># as bigger is better:</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">lrd_ratios_array</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_local_reachability_density</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">distances_X</span><span class="p">,</span> <span class="n">neighbors_indices</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The local reachability density (LRD)</span>
+
+<span class="sd">        The LRD of a sample is the inverse of the average reachability</span>
+<span class="sd">        distance of its k-nearest neighbors.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        distances_X : array, shape (n_query, self.n_neighbors)</span>
+<span class="sd">            Distances to the neighbors (in the training samples `self._fit_X`)</span>
+<span class="sd">            of each query point to compute the LRD.</span>
+
+<span class="sd">        neighbors_indices : array, shape (n_query, self.n_neighbors)</span>
+<span class="sd">            Neighbors indices (of each query point) among training samples</span>
+<span class="sd">            self._fit_X.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        local_reachability_density : array, shape (n_samples,)</span>
+<span class="sd">            The local reachability density of each sample.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dist_k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_distances_fit_X_</span><span class="p">[</span><span class="n">neighbors_indices</span><span class="p">,</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">n_neighbors_</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">reach_dist_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">distances_X</span><span class="p">,</span> <span class="n">dist_k</span><span class="p">)</span>
+
+        <span class="c1">#  1e-10 to avoid `nan&#39; when nb of duplicates &gt; n_neighbors_:</span>
+        <span class="k">return</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">reach_dist_array</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-10</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

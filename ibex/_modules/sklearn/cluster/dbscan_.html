@@ -1,0 +1,424 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.cluster.dbscan_ &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.cluster.dbscan_</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">DBSCAN: Density-Based Spatial Clustering of Applications with Noise</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Author: Robert Layton &lt;robertlayton@gmail.com&gt;</span>
+<span class="c1">#         Joel Nothman &lt;joel.nothman@gmail.com&gt;</span>
+<span class="c1">#         Lars Buitinck</span>
+<span class="c1">#</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">sparse</span>
+
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClusterMixin</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_array</span><span class="p">,</span> <span class="n">check_consistent_length</span>
+<span class="kn">from</span> <span class="nn">..neighbors</span> <span class="k">import</span> <span class="n">NearestNeighbors</span>
+
+<span class="kn">from</span> <span class="nn">._dbscan_inner</span> <span class="k">import</span> <span class="n">dbscan_inner</span>
+
+
+<span class="k">def</span> <span class="nf">dbscan</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">min_samples</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s1">&#39;minkowski&#39;</span><span class="p">,</span> <span class="n">metric_params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+           <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">leaf_size</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform DBSCAN clustering from vector array or distance matrix.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;dbscan&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array or sparse (CSR) matrix of shape (n_samples, n_features), or \</span>
+<span class="sd">            array of shape (n_samples, n_samples)</span>
+<span class="sd">        A feature array, or array of distances between samples if</span>
+<span class="sd">        ``metric=&#39;precomputed&#39;``.</span>
+
+<span class="sd">    eps : float, optional</span>
+<span class="sd">        The maximum distance between two samples for them to be considered</span>
+<span class="sd">        as in the same neighborhood.</span>
+
+<span class="sd">    min_samples : int, optional</span>
+<span class="sd">        The number of samples (or total weight) in a neighborhood for a point</span>
+<span class="sd">        to be considered as a core point. This includes the point itself.</span>
+
+<span class="sd">    metric : string, or callable</span>
+<span class="sd">        The metric to use when calculating distance between instances in a</span>
+<span class="sd">        feature array. If metric is a string or callable, it must be one of</span>
+<span class="sd">        the options allowed by metrics.pairwise.pairwise_distances for its</span>
+<span class="sd">        metric parameter.</span>
+<span class="sd">        If metric is &quot;precomputed&quot;, X is assumed to be a distance matrix and</span>
+<span class="sd">        must be square. X may be a sparse matrix, in which case only &quot;nonzero&quot;</span>
+<span class="sd">        elements may be considered neighbors for DBSCAN.</span>
+
+<span class="sd">    metric_params : dict, optional</span>
+<span class="sd">        Additional keyword arguments for the metric function.</span>
+
+<span class="sd">        .. versionadded:: 0.19</span>
+
+<span class="sd">    algorithm : {&#39;auto&#39;, &#39;ball_tree&#39;, &#39;kd_tree&#39;, &#39;brute&#39;}, optional</span>
+<span class="sd">        The algorithm to be used by the NearestNeighbors module</span>
+<span class="sd">        to compute pointwise distances and find nearest neighbors.</span>
+<span class="sd">        See NearestNeighbors module documentation for details.</span>
+
+<span class="sd">    leaf_size : int, optional (default = 30)</span>
+<span class="sd">        Leaf size passed to BallTree or cKDTree. This can affect the speed</span>
+<span class="sd">        of the construction and query, as well as the memory required</span>
+<span class="sd">        to store the tree. The optimal value depends</span>
+<span class="sd">        on the nature of the problem.</span>
+
+<span class="sd">    p : float, optional</span>
+<span class="sd">        The power of the Minkowski metric to be used to calculate distance</span>
+<span class="sd">        between points.</span>
+
+<span class="sd">    sample_weight : array, shape (n_samples,), optional</span>
+<span class="sd">        Weight of each sample, such that a sample with a weight of at least</span>
+<span class="sd">        ``min_samples`` is by itself a core sample; a sample with negative</span>
+<span class="sd">        weight may inhibit its eps-neighbor from being core.</span>
+<span class="sd">        Note that weights are absolute, and default to 1.</span>
+
+<span class="sd">    n_jobs : int, optional (default = 1)</span>
+<span class="sd">        The number of parallel jobs to run for neighbors search.</span>
+<span class="sd">        If ``-1``, then the number of jobs is set to the number of CPU cores.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    core_samples : array [n_core_samples]</span>
+<span class="sd">        Indices of core samples.</span>
+
+<span class="sd">    labels : array [n_samples]</span>
+<span class="sd">        Cluster labels for each point.  Noisy samples are given the label -1.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    For an example, see :ref:`examples/cluster/plot_dbscan.py</span>
+<span class="sd">    &lt;sphx_glr_auto_examples_cluster_plot_dbscan.py&gt;`.</span>
+
+<span class="sd">    This implementation bulk-computes all neighborhood queries, which increases</span>
+<span class="sd">    the memory complexity to O(n.d) where d is the average number of neighbors,</span>
+<span class="sd">    while original DBSCAN had memory complexity O(n).</span>
+
+<span class="sd">    Sparse neighborhoods can be precomputed using</span>
+<span class="sd">    :func:`NearestNeighbors.radius_neighbors_graph</span>
+<span class="sd">    &lt;sklearn.neighbors.NearestNeighbors.radius_neighbors_graph&gt;`</span>
+<span class="sd">    with ``mode=&#39;distance&#39;``.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Ester, M., H. P. Kriegel, J. Sander, and X. Xu, &quot;A Density-Based</span>
+<span class="sd">    Algorithm for Discovering Clusters in Large Spatial Databases with Noise&quot;.</span>
+<span class="sd">    In: Proceedings of the 2nd International Conference on Knowledge Discovery</span>
+<span class="sd">    and Data Mining, Portland, OR, AAAI Press, pp. 226-231. 1996</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">eps</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;eps must be positive.&quot;</span><span class="p">)</span>
+
+    <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">sample_weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">sample_weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">)</span>
+        <span class="n">check_consistent_length</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">)</span>
+
+    <span class="c1"># Calculate neighborhood for all samples. This leaves the original point</span>
+    <span class="c1"># in, which needs to be considered later (i.e. point i is in the</span>
+    <span class="c1"># neighborhood of point i. While True, its useless information)</span>
+    <span class="k">if</span> <span class="n">metric</span> <span class="o">==</span> <span class="s1">&#39;precomputed&#39;</span> <span class="ow">and</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+        <span class="n">neighborhoods</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>
+        <span class="n">X</span><span class="o">.</span><span class="n">sum_duplicates</span><span class="p">()</span>  <span class="c1"># XXX: modifies X&#39;s internals in-place</span>
+        <span class="n">X_mask</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">data</span> <span class="o">&lt;=</span> <span class="n">eps</span>
+        <span class="n">masked_indices</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">indices</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="n">X_mask</span><span class="p">]</span>
+        <span class="n">masked_indptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(([</span><span class="mi">0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">X_mask</span><span class="p">)))[</span><span class="n">X</span><span class="o">.</span><span class="n">indptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span>
+
+        <span class="c1"># insert the diagonal: a point is its own neighbor, but 0 distance</span>
+        <span class="c1"># means absence from sparse matrix data</span>
+        <span class="n">masked_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">masked_indices</span><span class="p">,</span> <span class="n">masked_indptr</span><span class="p">,</span>
+                                   <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">masked_indptr</span> <span class="o">=</span> <span class="n">masked_indptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="c1"># split into rows</span>
+        <span class="n">neighborhoods</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">masked_indices</span><span class="p">,</span> <span class="n">masked_indptr</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">neighbors_model</span> <span class="o">=</span> <span class="n">NearestNeighbors</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="n">eps</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="n">algorithm</span><span class="p">,</span>
+                                           <span class="n">leaf_size</span><span class="o">=</span><span class="n">leaf_size</span><span class="p">,</span>
+                                           <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span>
+                                           <span class="n">metric_params</span><span class="o">=</span><span class="n">metric_params</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="p">,</span>
+                                           <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">)</span>
+        <span class="n">neighbors_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="c1"># This has worst case O(n^2) memory complexity</span>
+        <span class="n">neighborhoods</span> <span class="o">=</span> <span class="n">neighbors_model</span><span class="o">.</span><span class="n">radius_neighbors</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span>
+                                                         <span class="n">return_distance</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">sample_weight</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">n_neighbors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">neighbors</span><span class="p">)</span>
+                                <span class="k">for</span> <span class="n">neighbors</span> <span class="ow">in</span> <span class="n">neighborhoods</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">n_neighbors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">[</span><span class="n">neighbors</span><span class="p">])</span>
+                                <span class="k">for</span> <span class="n">neighbors</span> <span class="ow">in</span> <span class="n">neighborhoods</span><span class="p">])</span>
+
+    <span class="c1"># Initially, all samples are noise.</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">)</span>
+
+    <span class="c1"># A list of all core samples found.</span>
+    <span class="n">core_samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">n_neighbors</span> <span class="o">&gt;=</span> <span class="n">min_samples</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">dbscan_inner</span><span class="p">(</span><span class="n">core_samples</span><span class="p">,</span> <span class="n">neighborhoods</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">core_samples</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="n">labels</span>
+
+
+<span class="k">class</span> <span class="nc">DBSCAN</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClusterMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform DBSCAN clustering from vector array or distance matrix.</span>
+
+<span class="sd">    DBSCAN - Density-Based Spatial Clustering of Applications with Noise.</span>
+<span class="sd">    Finds core samples of high density and expands clusters from them.</span>
+<span class="sd">    Good for data which contains clusters of similar density.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;dbscan&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    eps : float, optional</span>
+<span class="sd">        The maximum distance between two samples for them to be considered</span>
+<span class="sd">        as in the same neighborhood.</span>
+
+<span class="sd">    min_samples : int, optional</span>
+<span class="sd">        The number of samples (or total weight) in a neighborhood for a point</span>
+<span class="sd">        to be considered as a core point. This includes the point itself.</span>
+
+<span class="sd">    metric : string, or callable</span>
+<span class="sd">        The metric to use when calculating distance between instances in a</span>
+<span class="sd">        feature array. If metric is a string or callable, it must be one of</span>
+<span class="sd">        the options allowed by metrics.pairwise.calculate_distance for its</span>
+<span class="sd">        metric parameter.</span>
+<span class="sd">        If metric is &quot;precomputed&quot;, X is assumed to be a distance matrix and</span>
+<span class="sd">        must be square. X may be a sparse matrix, in which case only &quot;nonzero&quot;</span>
+<span class="sd">        elements may be considered neighbors for DBSCAN.</span>
+
+<span class="sd">        .. versionadded:: 0.17</span>
+<span class="sd">           metric *precomputed* to accept precomputed sparse matrix.</span>
+
+<span class="sd">    metric_params : dict, optional</span>
+<span class="sd">        Additional keyword arguments for the metric function.</span>
+
+<span class="sd">        .. versionadded:: 0.19</span>
+
+<span class="sd">    algorithm : {&#39;auto&#39;, &#39;ball_tree&#39;, &#39;kd_tree&#39;, &#39;brute&#39;}, optional</span>
+<span class="sd">        The algorithm to be used by the NearestNeighbors module</span>
+<span class="sd">        to compute pointwise distances and find nearest neighbors.</span>
+<span class="sd">        See NearestNeighbors module documentation for details.</span>
+
+<span class="sd">    leaf_size : int, optional (default = 30)</span>
+<span class="sd">        Leaf size passed to BallTree or cKDTree. This can affect the speed</span>
+<span class="sd">        of the construction and query, as well as the memory required</span>
+<span class="sd">        to store the tree. The optimal value depends</span>
+<span class="sd">        on the nature of the problem.</span>
+
+<span class="sd">    p : float, optional</span>
+<span class="sd">        The power of the Minkowski metric to be used to calculate distance</span>
+<span class="sd">        between points.</span>
+
+<span class="sd">    n_jobs : int, optional (default = 1)</span>
+<span class="sd">        The number of parallel jobs to run.</span>
+<span class="sd">        If ``-1``, then the number of jobs is set to the number of CPU cores.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    core_sample_indices_ : array, shape = [n_core_samples]</span>
+<span class="sd">        Indices of core samples.</span>
+
+<span class="sd">    components_ : array, shape = [n_core_samples, n_features]</span>
+<span class="sd">        Copy of each core sample found by training.</span>
+
+<span class="sd">    labels_ : array, shape = [n_samples]</span>
+<span class="sd">        Cluster labels for each point in the dataset given to fit().</span>
+<span class="sd">        Noisy samples are given the label -1.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    For an example, see :ref:`examples/cluster/plot_dbscan.py</span>
+<span class="sd">    &lt;sphx_glr_auto_examples_cluster_plot_dbscan.py&gt;`.</span>
+
+<span class="sd">    This implementation bulk-computes all neighborhood queries, which increases</span>
+<span class="sd">    the memory complexity to O(n.d) where d is the average number of neighbors,</span>
+<span class="sd">    while original DBSCAN had memory complexity O(n).</span>
+
+<span class="sd">    Sparse neighborhoods can be precomputed using</span>
+<span class="sd">    :func:`NearestNeighbors.radius_neighbors_graph</span>
+<span class="sd">    &lt;sklearn.neighbors.NearestNeighbors.radius_neighbors_graph&gt;`</span>
+<span class="sd">    with ``mode=&#39;distance&#39;``.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Ester, M., H. P. Kriegel, J. Sander, and X. Xu, &quot;A Density-Based</span>
+<span class="sd">    Algorithm for Discovering Clusters in Large Spatial Databases with Noise&quot;.</span>
+<span class="sd">    In: Proceedings of the 2nd International Conference on Knowledge Discovery</span>
+<span class="sd">    and Data Mining, Portland, OR, AAAI Press, pp. 226-231. 1996</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">min_samples</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s1">&#39;euclidean&#39;</span><span class="p">,</span>
+                 <span class="n">metric_params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">leaf_size</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="n">eps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_samples</span> <span class="o">=</span> <span class="n">min_samples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metric</span> <span class="o">=</span> <span class="n">metric</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metric_params</span> <span class="o">=</span> <span class="n">metric_params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span> <span class="o">=</span> <span class="n">algorithm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">leaf_size</span> <span class="o">=</span> <span class="n">leaf_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="n">p</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
+
+<div class="viewcode-block" id="DBSCAN.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_cluster_dbscan.html#ibex.sklearn.cluster.DBSCAN.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Perform DBSCAN clustering from features or distance matrix.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array or sparse (CSR) matrix of shape (n_samples, n_features), or \</span>
+<span class="sd">                array of shape (n_samples, n_samples)</span>
+<span class="sd">            A feature array, or array of distances between samples if</span>
+<span class="sd">            ``metric=&#39;precomputed&#39;``.</span>
+<span class="sd">        sample_weight : array, shape (n_samples,), optional</span>
+<span class="sd">            Weight of each sample, such that a sample with a weight of at least</span>
+<span class="sd">            ``min_samples`` is by itself a core sample; a sample with negative</span>
+<span class="sd">            weight may inhibit its eps-neighbor from being core.</span>
+<span class="sd">            Note that weights are absolute, and default to 1.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">)</span>
+        <span class="n">clust</span> <span class="o">=</span> <span class="n">dbscan</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">,</span>
+                       <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">get_params</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">core_sample_indices_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels_</span> <span class="o">=</span> <span class="n">clust</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">core_sample_indices_</span><span class="p">):</span>
+            <span class="c1"># fix for scipy sparse indexing issue</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">core_sample_indices_</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># no core samples</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="DBSCAN.fit_predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_cluster_dbscan.html#ibex.sklearn.cluster.DBSCAN.fit_predict">[docs]</a>    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Performs clustering on X and returns cluster labels.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array or sparse (CSR) matrix of shape (n_samples, n_features), or \</span>
+<span class="sd">                array of shape (n_samples, n_samples)</span>
+<span class="sd">            A feature array, or array of distances between samples if</span>
+<span class="sd">            ``metric=&#39;precomputed&#39;``.</span>
+<span class="sd">        sample_weight : array, shape (n_samples,), optional</span>
+<span class="sd">            Weight of each sample, such that a sample with a weight of at least</span>
+<span class="sd">            ``min_samples`` is by itself a core sample; a sample with negative</span>
+<span class="sd">            weight may inhibit its eps-neighbor from being core.</span>
+<span class="sd">            Note that weights are absolute, and default to 1.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y : ndarray, shape (n_samples,)</span>
+<span class="sd">            cluster labels</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels_</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

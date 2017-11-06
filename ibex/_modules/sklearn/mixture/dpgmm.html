@@ -1,0 +1,983 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.mixture.dpgmm &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.mixture.dpgmm</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Bayesian Gaussian Mixture Models and</span>
+<span class="sd">Dirichlet Process Gaussian Mixture Models&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+
+<span class="c1"># Author: Alexandre Passos (alexandre.tp@gmail.com)</span>
+<span class="c1">#         Bertrand Thirion &lt;bertrand.thirion@inria.fr&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># Based on mixture.py by:</span>
+<span class="c1">#         Ron Weiss &lt;ronweiss@gmail.com&gt;</span>
+<span class="c1">#         Fabian Pedregosa &lt;fabian.pedregosa@inria.fr&gt;</span>
+<span class="c1">#</span>
+
+<span class="c1"># Important note for the deprecation cleaning of 0.20 :</span>
+<span class="c1"># All the function and classes of this file have been deprecated in 0.18.</span>
+<span class="c1"># When you remove this file please also remove the related files</span>
+<span class="c1"># - &#39;sklearn/mixture/gmm.py&#39;</span>
+<span class="c1"># - &#39;sklearn/mixture/test_dpgmm.py&#39;</span>
+<span class="c1"># - &#39;sklearn/mixture/test_gmm.py&#39;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="k">import</span> <span class="n">digamma</span> <span class="k">as</span> <span class="n">_digamma</span><span class="p">,</span> <span class="n">gammaln</span> <span class="k">as</span> <span class="n">_gammaln</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">linalg</span>
+<span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="k">import</span> <span class="n">pinvh</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial.distance</span> <span class="k">import</span> <span class="n">cdist</span>
+
+<span class="kn">from</span> <span class="nn">..externals.six.moves</span> <span class="k">import</span> <span class="n">xrange</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_random_state</span><span class="p">,</span> <span class="n">check_array</span><span class="p">,</span> <span class="n">deprecated</span>
+<span class="kn">from</span> <span class="nn">..utils.fixes</span> <span class="k">import</span> <span class="n">logsumexp</span>
+<span class="kn">from</span> <span class="nn">..utils.extmath</span> <span class="k">import</span> <span class="n">squared_norm</span><span class="p">,</span> <span class="n">stable_cumsum</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_is_fitted</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="k">import</span> <span class="n">cluster</span>
+<span class="kn">from</span> <span class="nn">.gmm</span> <span class="k">import</span> <span class="n">_GMMBase</span>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The function digamma is deprecated in 0.18 and &quot;</span>
+            <span class="s2">&quot;will be removed in 0.20. Use scipy.special.digamma instead.&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">digamma</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">_digamma</span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The function gammaln is deprecated in 0.18 and &quot;</span>
+            <span class="s2">&quot;will be removed in 0.20. Use scipy.special.gammaln instead.&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">gammaln</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">_gammaln</span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The function log_normalize is deprecated in 0.18 and &quot;</span>
+            <span class="s2">&quot;will be removed in 0.20.&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">log_normalize</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Normalized probabilities from unnormalized log-probabilities&quot;&quot;&quot;</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rollaxis</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">v</span> <span class="o">-=</span> <span class="n">v</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">logsumexp</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">v</span> <span class="o">-</span> <span class="n">out</span><span class="p">)</span>
+    <span class="n">v</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+    <span class="n">v</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The function wishart_log_det is deprecated in 0.18 and &quot;</span>
+            <span class="s2">&quot;will be removed in 0.20.&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">wishart_log_det</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">detB</span><span class="p">,</span> <span class="n">n_features</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Expected value of the log of the determinant of a Wishart</span>
+
+<span class="sd">    The expected value of the logarithm of the determinant of a</span>
+<span class="sd">    wishart-distributed random variable with the specified parameters.&quot;&quot;&quot;</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">digamma</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">a</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))))</span>
+    <span class="n">l</span> <span class="o">+=</span> <span class="n">n_features</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">l</span> <span class="o">+</span> <span class="n">detB</span>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The function wishart_logz is deprecated in 0.18 and &quot;</span>
+            <span class="s2">&quot;will be removed in 0.20.&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">wishart_logz</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">dets</span><span class="p">,</span> <span class="n">n_features</span><span class="p">):</span>
+    <span class="s2">&quot;The logarithm of the normalization constant for the wishart distribution&quot;</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="n">z</span> <span class="o">+=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">v</span> <span class="o">*</span> <span class="n">n_features</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">+=</span> <span class="p">(</span><span class="mf">0.25</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span>
+    <span class="n">z</span> <span class="o">+=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">v</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">dets</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">gammaln</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">v</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_features</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">z</span>
+
+
+<span class="k">def</span> <span class="nf">_bound_wishart</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">detB</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a function of the dof, scale matrix and its determinant</span>
+<span class="sd">    used as an upper bound in variational approximation of the evidence&quot;&quot;&quot;</span>
+    <span class="n">n_features</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">logprior</span> <span class="o">=</span> <span class="n">wishart_logz</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">detB</span><span class="p">,</span> <span class="n">n_features</span><span class="p">)</span>
+    <span class="n">logprior</span> <span class="o">-=</span> <span class="n">wishart_logz</span><span class="p">(</span><span class="n">n_features</span><span class="p">,</span>
+                             <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">n_features</span><span class="p">),</span>
+                             <span class="mi">1</span><span class="p">,</span> <span class="n">n_features</span><span class="p">)</span>
+    <span class="n">logprior</span> <span class="o">+=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">a</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">wishart_log_det</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">detB</span><span class="p">,</span> <span class="n">n_features</span><span class="p">)</span>
+    <span class="n">logprior</span> <span class="o">+=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">a</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">B</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">logprior</span>
+
+
+<span class="c1">##############################################################################</span>
+<span class="c1"># Variational bound on the log likelihood of each class</span>
+<span class="c1">##############################################################################</span>
+
+
+<span class="k">def</span> <span class="nf">_sym_quad_form</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">A</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;helper function to calculate symmetric quadratic form x.T * A * x&quot;&quot;&quot;</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="p">(</span><span class="n">cdist</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mu</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="s2">&quot;mahalanobis&quot;</span><span class="p">,</span> <span class="n">VI</span><span class="o">=</span><span class="n">A</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">q</span>
+
+
+<span class="k">def</span> <span class="nf">_bound_state_log_lik</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">initial_bound</span><span class="p">,</span> <span class="n">precs</span><span class="p">,</span> <span class="n">means</span><span class="p">,</span> <span class="n">covariance_type</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update the bound with likelihood terms, for standard covariance types&quot;&quot;&quot;</span>
+    <span class="n">n_components</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">means</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">n_samples</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">bound</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_components</span><span class="p">))</span>
+    <span class="n">bound</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">initial_bound</span>
+    <span class="k">if</span> <span class="n">covariance_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;diag&#39;</span><span class="p">,</span> <span class="s1">&#39;spherical&#39;</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_components</span><span class="p">):</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="n">X</span> <span class="o">-</span> <span class="n">means</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+            <span class="n">bound</span><span class="p">[:,</span> <span class="n">k</span><span class="p">]</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">d</span> <span class="o">*</span> <span class="n">d</span> <span class="o">*</span> <span class="n">precs</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;tied&#39;</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_components</span><span class="p">):</span>
+            <span class="n">bound</span><span class="p">[:,</span> <span class="n">k</span><span class="p">]</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">_sym_quad_form</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">means</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">precs</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;full&#39;</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_components</span><span class="p">):</span>
+            <span class="n">bound</span><span class="p">[:,</span> <span class="n">k</span><span class="p">]</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">_sym_quad_form</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">means</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">precs</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">bound</span>
+
+
+<span class="k">class</span> <span class="nc">_DPGMMBase</span><span class="p">(</span><span class="n">_GMMBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Variational Inference for the Infinite Gaussian Mixture Model.</span>
+
+<span class="sd">    DPGMM stands for Dirichlet Process Gaussian Mixture Model, and it</span>
+<span class="sd">    is an infinite mixture model with the Dirichlet Process as a prior</span>
+<span class="sd">    distribution on the number of clusters. In practice the</span>
+<span class="sd">    approximate inference algorithm uses a truncated distribution with</span>
+<span class="sd">    a fixed maximum number of components, but almost always the number</span>
+<span class="sd">    of components actually used depends on the data.</span>
+
+<span class="sd">    Stick-breaking Representation of a Gaussian mixture model</span>
+<span class="sd">    probability distribution. This class allows for easy and efficient</span>
+<span class="sd">    inference of an approximate posterior distribution over the</span>
+<span class="sd">    parameters of a Gaussian mixture model with a variable number of</span>
+<span class="sd">    components (smaller than the truncation parameter n_components).</span>
+
+<span class="sd">    Initialization is with normally-distributed means and identity</span>
+<span class="sd">    covariance, for proper convergence.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;dpgmm&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_components : int, default 1</span>
+<span class="sd">        Number of mixture components.</span>
+
+<span class="sd">    covariance_type : string, default &#39;diag&#39;</span>
+<span class="sd">        String describing the type of covariance parameters to</span>
+<span class="sd">        use.  Must be one of &#39;spherical&#39;, &#39;tied&#39;, &#39;diag&#39;, &#39;full&#39;.</span>
+
+<span class="sd">    alpha : float, default 1</span>
+<span class="sd">        Real number representing the concentration parameter of</span>
+<span class="sd">        the dirichlet process. Intuitively, the Dirichlet Process</span>
+<span class="sd">        is as likely to start a new cluster for a point as it is</span>
+<span class="sd">        to add that point to a cluster with alpha elements. A</span>
+<span class="sd">        higher alpha means more clusters, as the expected number</span>
+<span class="sd">        of clusters is ``alpha*log(N)``.</span>
+
+<span class="sd">    tol : float, default 1e-3</span>
+<span class="sd">        Convergence threshold.</span>
+
+<span class="sd">    n_iter : int, default 10</span>
+<span class="sd">        Maximum number of iterations to perform before convergence.</span>
+
+<span class="sd">    params : string, default &#39;wmc&#39;</span>
+<span class="sd">        Controls which parameters are updated in the training</span>
+<span class="sd">        process.  Can contain any combination of &#39;w&#39; for weights,</span>
+<span class="sd">        &#39;m&#39; for means, and &#39;c&#39; for covars.</span>
+
+<span class="sd">    init_params : string, default &#39;wmc&#39;</span>
+<span class="sd">        Controls which parameters are updated in the initialization</span>
+<span class="sd">        process.  Can contain any combination of &#39;w&#39; for weights,</span>
+<span class="sd">        &#39;m&#39; for means, and &#39;c&#39; for covars.  Defaults to &#39;wmc&#39;.</span>
+
+<span class="sd">    verbose : int, default 0</span>
+<span class="sd">        Controls output verbosity.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    covariance_type : string</span>
+<span class="sd">        String describing the type of covariance parameters used by</span>
+<span class="sd">        the DP-GMM.  Must be one of &#39;spherical&#39;, &#39;tied&#39;, &#39;diag&#39;, &#39;full&#39;.</span>
+
+<span class="sd">    n_components : int</span>
+<span class="sd">        Number of mixture components.</span>
+
+<span class="sd">    weights_ : array, shape (`n_components`,)</span>
+<span class="sd">        Mixing weights for each mixture component.</span>
+
+<span class="sd">    means_ : array, shape (`n_components`, `n_features`)</span>
+<span class="sd">        Mean parameters for each mixture component.</span>
+
+<span class="sd">    precs_ : array</span>
+<span class="sd">        Precision (inverse covariance) parameters for each mixture</span>
+<span class="sd">        component.  The shape depends on `covariance_type`::</span>
+
+<span class="sd">            (`n_components`, &#39;n_features&#39;)                if &#39;spherical&#39;,</span>
+<span class="sd">            (`n_features`, `n_features`)                  if &#39;tied&#39;,</span>
+<span class="sd">            (`n_components`, `n_features`)                if &#39;diag&#39;,</span>
+<span class="sd">            (`n_components`, `n_features`, `n_features`)  if &#39;full&#39;</span>
+
+<span class="sd">    converged_ : bool</span>
+<span class="sd">        True when convergence was reached in fit(), False otherwise.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    GMM : Finite Gaussian mixture model fit with EM</span>
+
+<span class="sd">    VBGMM : Finite Gaussian mixture model fit with a variational</span>
+<span class="sd">        algorithm, better for situations where there might be too little</span>
+<span class="sd">        data to get a good estimate of the covariance matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">covariance_type</span><span class="o">=</span><span class="s1">&#39;diag&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                 <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">min_covar</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">n_iter</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="s1">&#39;wmc&#39;</span><span class="p">,</span> <span class="n">init_params</span><span class="o">=</span><span class="s1">&#39;wmc&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">_DPGMMBase</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="n">covariance_type</span><span class="p">,</span>
+                                         <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">,</span>
+                                         <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">min_covar</span><span class="o">=</span><span class="n">min_covar</span><span class="p">,</span>
+                                         <span class="n">n_iter</span><span class="o">=</span><span class="n">n_iter</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
+                                         <span class="n">init_params</span><span class="o">=</span><span class="n">init_params</span><span class="p">,</span>
+                                         <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_precisions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return precisions as a full matrix.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;full&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;diag&#39;</span><span class="p">,</span> <span class="s1">&#39;spherical&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span> <span class="k">for</span> <span class="n">cov</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;tied&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">precs_</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span>
+
+    <span class="k">def</span> <span class="nf">_get_covars</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">pinvh</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_precisions</span><span class="p">()]</span>
+
+    <span class="k">def</span> <span class="nf">_set_covars</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">covars</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;The variational algorithm does</span>
+<span class="s2">        not support setting the covariance parameters.&quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">score_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the likelihood of the data under the model.</span>
+
+<span class="sd">        Compute the bound on log probability of X under the model</span>
+<span class="sd">        and return the posterior distribution (responsibilities) of</span>
+<span class="sd">        each mixture component for each element of X.</span>
+
+<span class="sd">        This is done by computing the parameters for the mean-field of</span>
+<span class="sd">        z for each observation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array_like, shape (n_samples, n_features)</span>
+<span class="sd">            List of n_features-dimensional data points.  Each row</span>
+<span class="sd">            corresponds to a single data point.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        logprob : array_like, shape (n_samples,)</span>
+<span class="sd">            Log probabilities of each data point in X</span>
+<span class="sd">        responsibilities : array_like, shape (n_samples, n_components)</span>
+<span class="sd">            Posterior probabilities of each mixture component for each</span>
+<span class="sd">            observation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;gamma_&#39;</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">))</span>
+        <span class="n">sd</span> <span class="o">=</span> <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">dgamma1</span> <span class="o">=</span> <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="n">sd</span>
+        <span class="n">dgamma2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">)</span>
+        <span class="n">dgamma2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">-</span> <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span>
+                                                          <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+            <span class="n">dgamma2</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">dgamma2</span><span class="p">[</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">[</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+            <span class="n">dgamma2</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">-=</span> <span class="n">sd</span><span class="p">[</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">dgamma</span> <span class="o">=</span> <span class="n">dgamma1</span> <span class="o">+</span> <span class="n">dgamma2</span>
+        <span class="c1"># Free memory and developers cognitive load:</span>
+        <span class="k">del</span> <span class="n">dgamma1</span><span class="p">,</span> <span class="n">dgamma2</span><span class="p">,</span> <span class="n">sd</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">,</span> <span class="s1">&#39;tied&#39;</span><span class="p">,</span> <span class="s1">&#39;diag&#39;</span><span class="p">,</span> <span class="s1">&#39;spherical&#39;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;This ctype is not implemented: </span><span class="si">%s</span><span class="s2">&quot;</span>
+                                      <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="p">)</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">_bound_state_log_lik</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initial_bound</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span><span class="p">,</span>
+                                 <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">,</span>
+                                 <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="p">)</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">p</span> <span class="o">+</span> <span class="n">dgamma</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">log_normalize</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">bound</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span> <span class="o">*</span> <span class="n">p</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">bound</span><span class="p">,</span> <span class="n">z</span>
+
+    <span class="k">def</span> <span class="nf">_update_concentration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the concentration parameters for each cluster&quot;&quot;&quot;</span>
+        <span class="n">sz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">+</span> <span class="n">sz</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">-</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">sz</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span>
+
+    <span class="k">def</span> <span class="nf">_update_means</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the variational distributions for the means&quot;&quot;&quot;</span>
+        <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;spherical&#39;</span><span class="p">,</span> <span class="s1">&#39;diag&#39;</span><span class="p">]:</span>
+                <span class="n">num</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="n">X</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">num</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+                <span class="n">den</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">num</span> <span class="o">/</span> <span class="n">den</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;tied&#39;</span><span class="p">,</span> <span class="s1">&#39;full&#39;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;tied&#39;</span><span class="p">:</span>
+                    <span class="n">cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+                <span class="n">den</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">n_features</span><span class="p">)</span> <span class="o">+</span> <span class="n">cov</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="n">num</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="n">X</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">num</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">cov</span><span class="p">,</span> <span class="n">num</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span><span class="n">den</span><span class="p">,</span> <span class="n">num</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_update_precisions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the variational distributions for the precisions&quot;&quot;&quot;</span>
+        <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;spherical&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">n_features</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+                <span class="c1"># could be more memory efficient ?</span>
+                <span class="n">sq_diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">X</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">+=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">sq_diff</span> <span class="o">+</span> <span class="n">n_features</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="mf">0.5</span> <span class="o">*</span> <span class="n">n_features</span> <span class="o">*</span> <span class="p">(</span>
+                        <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">])))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">,</span> <span class="p">[</span><span class="n">n_features</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;diag&#39;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="mf">1.</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+                <span class="n">sq_diff</span> <span class="o">=</span> <span class="p">(</span><span class="n">X</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>  <span class="c1"># see comment above</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_features</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span>
+                    <span class="n">z</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="p">(</span><span class="n">sq_diff</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                                                   <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">]))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">precs_</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;tied&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">n_features</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span> <span class="o">=</span> <span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">n_features</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+                <span class="n">diff</span> <span class="o">=</span> <span class="n">X</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">diff</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">z</span><span class="p">[:,</span> <span class="n">k</span><span class="p">:</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">diff</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span> <span class="o">=</span> <span class="n">pinvh</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">det_scale_</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">wishart_log_det</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">det_scale_</span><span class="p">,</span> <span class="n">n_features</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;full&#39;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+                <span class="n">sum_resp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">sum_resp</span> <span class="o">+</span> <span class="n">n_features</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">sum_resp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">n_features</span><span class="p">)</span>
+                <span class="n">diff</span> <span class="o">=</span> <span class="n">X</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">diff</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">z</span><span class="p">[:,</span> <span class="n">k</span><span class="p">:</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">diff</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">pinvh</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">det_scale_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">wishart_log_det</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">det_scale_</span><span class="p">[</span><span class="n">k</span><span class="p">],</span>
+                    <span class="n">n_features</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">_monitor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Monitor the lower bound during iteration</span>
+
+<span class="sd">        Debug method to help see exactly when it is failing to converge as</span>
+<span class="sd">        expected.</span>
+
+<span class="sd">        Note: this is very expensive and should not be used by default.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Bound after updating </span><span class="si">%8s</span><span class="s2">: </span><span class="si">%f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="n">end</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Cluster proportions:&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;covariance_type:&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_do_mstep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Maximize the variational lower bound</span>
+
+<span class="sd">        Update each of the parameters to maximize the lower bound.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_monitor</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_concentration</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_monitor</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="s2">&quot;gamma&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s1">&#39;m&#39;</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_means</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_monitor</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="s2">&quot;mu&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s1">&#39;c&#39;</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_precisions</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_monitor</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="s2">&quot;a and b&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_initialize_gamma</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s2">&quot;Initializes the concentration parameters&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_bound_concentration</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The variational lower bound for the concentration parameter.&quot;&quot;&quot;</span>
+        <span class="n">logprior</span> <span class="o">=</span> <span class="n">gammaln</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span>
+        <span class="n">logprior</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+            <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">-</span> <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span>
+                                                <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">])))</span>
+        <span class="n">logprior</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span> <span class="n">gammaln</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="n">logprior</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">gammaln</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span>
+                           <span class="n">gammaln</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="n">logprior</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+            <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span>
+                                                <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">])))</span>
+        <span class="n">logprior</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+            <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">-</span> <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span>
+                                                <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">])))</span>
+        <span class="k">return</span> <span class="n">logprior</span>
+
+    <span class="k">def</span> <span class="nf">_bound_means</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s2">&quot;The variational lower bound for the mean parameters&quot;</span>
+        <span class="n">logprior</span> <span class="o">=</span> <span class="mf">0.</span>
+        <span class="n">logprior</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">squared_norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">)</span>
+        <span class="n">logprior</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span>
+        <span class="k">return</span> <span class="n">logprior</span>
+
+    <span class="k">def</span> <span class="nf">_bound_precisions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the bound term related to precisions&quot;&quot;&quot;</span>
+        <span class="n">logprior</span> <span class="o">=</span> <span class="mf">0.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;spherical&#39;</span><span class="p">:</span>
+            <span class="n">logprior</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">gammaln</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">))</span>
+            <span class="n">logprior</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">digamma</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">)))</span>
+            <span class="n">logprior</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span>
+                               <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;diag&#39;</span><span class="p">:</span>
+            <span class="n">logprior</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">gammaln</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">))</span>
+            <span class="n">logprior</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">digamma</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">)))</span>
+            <span class="n">logprior</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;tied&#39;</span><span class="p">:</span>
+            <span class="n">logprior</span> <span class="o">+=</span> <span class="n">_bound_wishart</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">det_scale_</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;full&#39;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+                <span class="n">logprior</span> <span class="o">+=</span> <span class="n">_bound_wishart</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">[</span><span class="n">k</span><span class="p">],</span>
+                                           <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">],</span>
+                                           <span class="bp">self</span><span class="o">.</span><span class="n">det_scale_</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">logprior</span>
+
+    <span class="k">def</span> <span class="nf">_bound_proportions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the bound term related to proportions&quot;&quot;&quot;</span>
+        <span class="n">dg12</span> <span class="o">=</span> <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">dg1</span> <span class="o">=</span> <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="n">dg12</span>
+        <span class="n">dg2</span> <span class="o">=</span> <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">-</span> <span class="n">dg12</span>
+
+        <span class="n">cz</span> <span class="o">=</span> <span class="n">stable_cumsum</span><span class="p">(</span><span class="n">z</span><span class="p">[:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)[:,</span> <span class="o">-</span><span class="mi">2</span><span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">logprior</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cz</span> <span class="o">*</span> <span class="n">dg2</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span> <span class="o">*</span> <span class="n">dg1</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">cz</span>  <span class="c1"># Save memory</span>
+        <span class="n">z_non_zeros</span> <span class="o">=</span> <span class="n">z</span><span class="p">[</span><span class="n">z</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">]</span>
+        <span class="n">logprior</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z_non_zeros</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">z_non_zeros</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">logprior</span>
+
+    <span class="k">def</span> <span class="nf">_logprior</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="n">logprior</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bound_concentration</span><span class="p">()</span>
+        <span class="n">logprior</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bound_means</span><span class="p">()</span>
+        <span class="n">logprior</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bound_precisions</span><span class="p">()</span>
+        <span class="n">logprior</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bound_proportions</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">logprior</span>
+
+    <span class="k">def</span> <span class="nf">lower_bound</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;returns a lower bound on model evidence based on X and membership&quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;means_&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">,</span> <span class="s1">&#39;tied&#39;</span><span class="p">,</span> <span class="s1">&#39;diag&#39;</span><span class="p">,</span> <span class="s1">&#39;spherical&#39;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;This ctype is not implemented: </span><span class="si">%s</span><span class="s2">&quot;</span>
+                                      <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span> <span class="o">*</span> <span class="n">_bound_state_log_lik</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initial_bound</span> <span class="o">+</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span><span class="p">,</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">c</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logprior</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_set_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">xrange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+                                                    <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Estimate model parameters with the variational</span>
+<span class="sd">        algorithm.</span>
+
+<span class="sd">        For a full derivation and description of the algorithm see</span>
+<span class="sd">        doc/modules/dp-derivation.rst</span>
+<span class="sd">        or</span>
+<span class="sd">        http://scikit-learn.org/stable/modules/dp-derivation.html</span>
+
+<span class="sd">        A initialization step is performed before entering the em</span>
+<span class="sd">        algorithm. If you want to avoid this step, set the keyword</span>
+<span class="sd">        argument init_params to the empty string &#39;&#39; when creating</span>
+<span class="sd">        the object. Likewise, if you would like just to do an</span>
+<span class="sd">        initialization, set n_iter=0.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array_like, shape (n, n_features)</span>
+<span class="sd">            List of n_features-dimensional data points.  Each row</span>
+<span class="sd">            corresponds to a single data point.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        responsibilities : array, shape (n_samples, n_components)</span>
+<span class="sd">            Posterior probabilities of each mixture component for each</span>
+<span class="sd">            observation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state_</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+
+        <span class="c1"># initialization step</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n_samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">))</span>
+        <span class="n">z</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initial_bound</span> <span class="o">=</span> <span class="o">-</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">n_features</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initial_bound</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">init_params</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;gamma_&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_gamma</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="s1">&#39;m&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_params</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;means_&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">means_</span> <span class="o">=</span> <span class="n">cluster</span><span class="o">.</span><span class="n">KMeans</span><span class="p">(</span>
+                <span class="n">n_clusters</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span>
+                <span class="n">random_state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state_</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">cluster_centers_</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="s1">&#39;w&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_params</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;weights_&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s1">&#39;c&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_params</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;precs_&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;spherical&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span> <span class="n">n_features</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">n_features</span> <span class="o">*</span> <span class="p">(</span>
+                    <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;diag&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">n_features</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span> <span class="n">n_features</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span> <span class="n">n_features</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span> <span class="n">n_features</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">)</span> <span class="o">-</span>
+                                                 <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">precs_</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;tied&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">=</span> <span class="mf">1.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">n_features</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">n_features</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">det_scale_</span> <span class="o">=</span> <span class="mf">1.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">wishart_log_det</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">det_scale_</span><span class="p">,</span> <span class="n">n_features</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;full&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">+</span> <span class="n">n_samples</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">n_features</span><span class="p">)</span>
+                               <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">)]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">n_features</span><span class="p">)</span>
+                               <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">)]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">det_scale_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">wishart_log_det</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">det_scale_</span><span class="p">[</span><span class="n">k</span><span class="p">],</span>
+                        <span class="n">n_features</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">-=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dof_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span>
+                                            <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">k</span><span class="p">]))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span> <span class="o">*=</span> <span class="mf">0.5</span>
+
+        <span class="c1"># EM algorithms</span>
+        <span class="n">current_log_likelihood</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="c1"># reset self.converged_ to False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">converged_</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_iter</span><span class="p">):</span>
+            <span class="n">prev_log_likelihood</span> <span class="o">=</span> <span class="n">current_log_likelihood</span>
+            <span class="c1"># Expectation step</span>
+            <span class="n">curr_logprob</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">score_samples</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+            <span class="n">current_log_likelihood</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">curr_logprob</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logprior</span><span class="p">(</span><span class="n">z</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_samples</span><span class="p">)</span>
+
+            <span class="c1"># Check for convergence.</span>
+            <span class="k">if</span> <span class="n">prev_log_likelihood</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">change</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">current_log_likelihood</span> <span class="o">-</span> <span class="n">prev_log_likelihood</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">change</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">converged_</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span>
+
+            <span class="c1"># Maximization step</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_do_mstep</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_iter</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Need to make sure that there is a z value to output</span>
+            <span class="c1"># Output zeros because it was just a quick initialization</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_weights</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">z</span>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The `DPGMM` class is not working correctly and it&#39;s better &quot;</span>
+            <span class="s2">&quot;to use `sklearn.mixture.BayesianGaussianMixture` class with &quot;</span>
+            <span class="s2">&quot;parameter `weight_concentration_prior_type=&#39;dirichlet_process&#39;` &quot;</span>
+            <span class="s2">&quot;instead. DPGMM is deprecated in 0.18 and will be &quot;</span>
+            <span class="s2">&quot;removed in 0.20.&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">DPGMM</span><span class="p">(</span><span class="n">_DPGMMBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Dirichlet Process Gaussian Mixture Models</span>
+
+<span class="sd">    .. deprecated:: 0.18</span>
+<span class="sd">        This class will be removed in 0.20.</span>
+<span class="sd">        Use :class:`sklearn.mixture.BayesianGaussianMixture` with</span>
+<span class="sd">        parameter ``weight_concentration_prior_type=&#39;dirichlet_process&#39;``</span>
+<span class="sd">        instead.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">covariance_type</span><span class="o">=</span><span class="s1">&#39;diag&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                 <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">min_covar</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">n_iter</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="s1">&#39;wmc&#39;</span><span class="p">,</span> <span class="n">init_params</span><span class="o">=</span><span class="s1">&#39;wmc&#39;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DPGMM</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">n_components</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span> <span class="n">covariance_type</span><span class="o">=</span><span class="n">covariance_type</span><span class="p">,</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span>
+            <span class="n">min_covar</span><span class="o">=</span><span class="n">min_covar</span><span class="p">,</span> <span class="n">n_iter</span><span class="o">=</span><span class="n">n_iter</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
+            <span class="n">init_params</span><span class="o">=</span><span class="n">init_params</span><span class="p">)</span>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The `VBGMM` class is not working correctly and it&#39;s better &quot;</span>
+            <span class="s2">&quot;to use `sklearn.mixture.BayesianGaussianMixture` class with &quot;</span>
+            <span class="s2">&quot;parameter `weight_concentration_prior_type=&quot;</span>
+            <span class="s2">&quot;&#39;dirichlet_distribution&#39;` instead. &quot;</span>
+            <span class="s2">&quot;VBGMM is deprecated in 0.18 and will be removed in 0.20.&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">VBGMM</span><span class="p">(</span><span class="n">_DPGMMBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Variational Inference for the Gaussian Mixture Model</span>
+
+<span class="sd">    .. deprecated:: 0.18</span>
+<span class="sd">        This class will be removed in 0.20.</span>
+<span class="sd">        Use :class:`sklearn.mixture.BayesianGaussianMixture` with parameter</span>
+<span class="sd">        ``weight_concentration_prior_type=&#39;dirichlet_distribution&#39;`` instead.</span>
+
+<span class="sd">    Variational inference for a Gaussian mixture model probability</span>
+<span class="sd">    distribution. This class allows for easy and efficient inference</span>
+<span class="sd">    of an approximate posterior distribution over the parameters of a</span>
+<span class="sd">    Gaussian mixture model with a fixed number of components.</span>
+
+<span class="sd">    Initialization is with normally-distributed means and identity</span>
+<span class="sd">    covariance, for proper convergence.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;bgmm&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_components : int, default 1</span>
+<span class="sd">        Number of mixture components.</span>
+
+<span class="sd">    covariance_type : string, default &#39;diag&#39;</span>
+<span class="sd">        String describing the type of covariance parameters to</span>
+<span class="sd">        use.  Must be one of &#39;spherical&#39;, &#39;tied&#39;, &#39;diag&#39;, &#39;full&#39;.</span>
+
+<span class="sd">    alpha : float, default 1</span>
+<span class="sd">        Real number representing the concentration parameter of</span>
+<span class="sd">        the dirichlet distribution. Intuitively, the higher the</span>
+<span class="sd">        value of alpha the more likely the variational mixture of</span>
+<span class="sd">        Gaussians model will use all components it can.</span>
+
+<span class="sd">    tol : float, default 1e-3</span>
+<span class="sd">        Convergence threshold.</span>
+
+<span class="sd">    n_iter : int, default 10</span>
+<span class="sd">        Maximum number of iterations to perform before convergence.</span>
+
+<span class="sd">    params : string, default &#39;wmc&#39;</span>
+<span class="sd">        Controls which parameters are updated in the training</span>
+<span class="sd">        process.  Can contain any combination of &#39;w&#39; for weights,</span>
+<span class="sd">        &#39;m&#39; for means, and &#39;c&#39; for covars.</span>
+
+<span class="sd">    init_params : string, default &#39;wmc&#39;</span>
+<span class="sd">        Controls which parameters are updated in the initialization</span>
+<span class="sd">        process.  Can contain any combination of &#39;w&#39; for weights,</span>
+<span class="sd">        &#39;m&#39; for means, and &#39;c&#39; for covars.  Defaults to &#39;wmc&#39;.</span>
+
+<span class="sd">    verbose : int, default 0</span>
+<span class="sd">        Controls output verbosity.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    covariance_type : string</span>
+<span class="sd">        String describing the type of covariance parameters used by</span>
+<span class="sd">        the DP-GMM.  Must be one of &#39;spherical&#39;, &#39;tied&#39;, &#39;diag&#39;, &#39;full&#39;.</span>
+
+<span class="sd">    n_features : int</span>
+<span class="sd">        Dimensionality of the Gaussians.</span>
+
+<span class="sd">    n_components : int (read-only)</span>
+<span class="sd">        Number of mixture components.</span>
+
+<span class="sd">    weights_ : array, shape (`n_components`,)</span>
+<span class="sd">        Mixing weights for each mixture component.</span>
+
+<span class="sd">    means_ : array, shape (`n_components`, `n_features`)</span>
+<span class="sd">        Mean parameters for each mixture component.</span>
+
+<span class="sd">    precs_ : array</span>
+<span class="sd">        Precision (inverse covariance) parameters for each mixture</span>
+<span class="sd">        component.  The shape depends on `covariance_type`::</span>
+
+<span class="sd">            (`n_components`, &#39;n_features&#39;)                if &#39;spherical&#39;,</span>
+<span class="sd">            (`n_features`, `n_features`)                  if &#39;tied&#39;,</span>
+<span class="sd">            (`n_components`, `n_features`)                if &#39;diag&#39;,</span>
+<span class="sd">            (`n_components`, `n_features`, `n_features`)  if &#39;full&#39;</span>
+
+<span class="sd">    converged_ : bool</span>
+<span class="sd">        True when convergence was reached in fit(), False</span>
+<span class="sd">        otherwise.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    GMM : Finite Gaussian mixture model fit with EM</span>
+<span class="sd">    DPGMM : Infinite Gaussian mixture model, using the dirichlet</span>
+<span class="sd">        process, fit with a variational algorithm</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">covariance_type</span><span class="o">=</span><span class="s1">&#39;diag&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                 <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">min_covar</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_iter</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="s1">&#39;wmc&#39;</span><span class="p">,</span> <span class="n">init_params</span><span class="o">=</span><span class="s1">&#39;wmc&#39;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">VBGMM</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">n_components</span><span class="p">,</span> <span class="n">covariance_type</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">,</span>
+            <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span> <span class="n">min_covar</span><span class="o">=</span><span class="n">min_covar</span><span class="p">,</span>
+            <span class="n">n_iter</span><span class="o">=</span><span class="n">n_iter</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span> <span class="n">init_params</span><span class="o">=</span><span class="n">init_params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha</span>
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Estimate model parameters with the variational algorithm.</span>
+
+<span class="sd">        For a full derivation and description of the algorithm see</span>
+<span class="sd">        doc/modules/dp-derivation.rst</span>
+<span class="sd">        or</span>
+<span class="sd">        http://scikit-learn.org/stable/modules/dp-derivation.html</span>
+
+<span class="sd">        A initialization step is performed before entering the EM</span>
+<span class="sd">        algorithm. If you want to avoid this step, set the keyword</span>
+<span class="sd">        argument init_params to the empty string &#39;&#39; when creating</span>
+<span class="sd">        the object. Likewise, if you just would like to do an</span>
+<span class="sd">        initialization, set n_iter=0.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array_like, shape (n, n_features)</span>
+<span class="sd">            List of n_features-dimensional data points.  Each row</span>
+<span class="sd">            corresponds to a single data point.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        responsibilities : array, shape (n_samples, n_components)</span>
+<span class="sd">            Posterior probabilities of each mixture component for each</span>
+<span class="sd">            observation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">VBGMM</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+<div class="viewcode-block" id="VBGMM.score_samples"><a class="viewcode-back" href="../../../api_ibex_sklearn_mixture_vbgmm.html#ibex.sklearn.mixture.VBGMM.score_samples">[docs]</a>    <span class="k">def</span> <span class="nf">score_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the likelihood of the data under the model.</span>
+
+<span class="sd">        Compute the bound on log probability of X under the model</span>
+<span class="sd">        and return the posterior distribution (responsibilities) of</span>
+<span class="sd">        each mixture component for each element of X.</span>
+
+<span class="sd">        This is done by computing the parameters for the mean-field of</span>
+<span class="sd">        z for each observation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array_like, shape (n_samples, n_features)</span>
+<span class="sd">            List of n_features-dimensional data points.  Each row</span>
+<span class="sd">            corresponds to a single data point.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        logprob : array_like, shape (n_samples,)</span>
+<span class="sd">            Log probabilities of each data point in X</span>
+<span class="sd">        responsibilities : array_like, shape (n_samples, n_components)</span>
+<span class="sd">            Posterior probabilities of each mixture component for each</span>
+<span class="sd">            observation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;gamma_&#39;</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="n">dg</span> <span class="o">=</span> <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">)</span> <span class="o">-</span> <span class="n">digamma</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">,</span> <span class="s1">&#39;tied&#39;</span><span class="p">,</span> <span class="s1">&#39;diag&#39;</span><span class="p">,</span> <span class="s1">&#39;spherical&#39;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;This ctype is not implemented: </span><span class="si">%s</span><span class="s2">&quot;</span>
+                                      <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="p">)</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">_bound_state_log_lik</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initial_bound</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">bound_prec_</span><span class="p">,</span>
+                                 <span class="bp">self</span><span class="o">.</span><span class="n">precs_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">,</span>
+                                 <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="p">)</span>
+
+        <span class="n">z</span> <span class="o">=</span> <span class="n">p</span> <span class="o">+</span> <span class="n">dg</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">log_normalize</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">bound</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span> <span class="o">*</span> <span class="n">p</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">bound</span><span class="p">,</span> <span class="n">z</span></div>
+
+    <span class="k">def</span> <span class="nf">_update_concentration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">_initialize_gamma</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_bound_proportions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="n">logprior</span> <span class="o">=</span> <span class="mf">0.</span>
+        <span class="n">dg</span> <span class="o">=</span> <span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">)</span>
+        <span class="n">dg</span> <span class="o">-=</span> <span class="n">digamma</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">))</span>
+        <span class="n">logprior</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dg</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="n">z</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="n">z_non_zeros</span> <span class="o">=</span> <span class="n">z</span><span class="p">[</span><span class="n">z</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">]</span>
+        <span class="n">logprior</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z_non_zeros</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">z_non_zeros</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">logprior</span>
+
+    <span class="k">def</span> <span class="nf">_bound_concentration</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">logprior</span> <span class="o">=</span> <span class="mf">0.</span>
+        <span class="n">logprior</span> <span class="o">=</span> <span class="n">gammaln</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">))</span> <span class="o">-</span> <span class="n">gammaln</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span>
+                                                          <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span><span class="p">)</span>
+        <span class="n">logprior</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">gammaln</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">)</span> <span class="o">-</span> <span class="n">gammaln</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span><span class="p">))</span>
+        <span class="n">sg</span> <span class="o">=</span> <span class="n">digamma</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">))</span>
+        <span class="n">logprior</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span><span class="p">)</span>
+                           <span class="o">*</span> <span class="p">(</span><span class="n">digamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">)</span> <span class="o">-</span> <span class="n">sg</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">logprior</span>
+
+    <span class="k">def</span> <span class="nf">_monitor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Monitor the lower bound during iteration</span>
+
+<span class="sd">        Debug method to help see exactly when it is failing to converge as</span>
+<span class="sd">        expected.</span>
+
+<span class="sd">        Note: this is very expensive and should not be used by default.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Bound after updating </span><span class="si">%8s</span><span class="s2">: </span><span class="si">%f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">z</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="n">end</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Cluster proportions:&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;covariance_type:&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_set_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

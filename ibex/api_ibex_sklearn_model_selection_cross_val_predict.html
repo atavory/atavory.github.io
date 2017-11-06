@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>cross_val_predict &#8212; ibex 0.1.1 documentation</title>
+    <title>cross_val_predict &#8212; ibex latest documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1.1',
+        VERSION:     'latest',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -53,7 +53,7 @@
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>estimator</strong> – estimator object implementing ‘fit’ and ‘predict’
 The object to use to fit the data.</li>
-<li><strong>X</strong> – <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>
+<li><strong>X</strong> – <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>
 The data to fit.</li>
 <li><strong>y</strong> – The target variable to try to predict in the case of
 supervised learning.</li>
@@ -72,7 +72,7 @@ Possible inputs for cv are:</p>
 <p>For integer/<code class="docutils literal"><span class="pre">None</span></code> inputs, if the estimator is a classifier and <code class="docutils literal"><span class="pre">y</span></code> is
 either binary or multiclass, <code class="xref py py-class docutils literal"><span class="pre">StratifiedKFold</span></code> is used. In all
 other cases, <code class="xref py py-class docutils literal"><span class="pre">KFold</span></code> is used.
-Refer <a class="reference external" href="http://scikit-learn.org/stable/modules/cross_validation.html#cross-validation" title="(in scikit-learn v0.19.0)"><span class="xref std std-ref">User Guide</span></a> for the various
+Refer <a class="reference external" href="http://scikit-learn.org/stable/modules/cross_validation.html#cross-validation" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a> for the various
 cross-validation strategies that can be used here.</p>
 </li>
 <li><strong>n_jobs</strong> – integer, optional
@@ -114,15 +114,18 @@ Invokes the passed method name of the passed estimator.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> or <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a> (depending on <code class="docutils literal"><span class="pre">y</span></code>).</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> or <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a> (depending on <code class="docutils literal"><span class="pre">y</span></code>).</p>
 </td>
 </tr>
 </tbody>
 </table>
 <p class="rubric">Example</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">model_selection</span> <span class="k">as</span> <span class="n">pd_model_selection</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">linear_model</span> <span class="k">as</span> <span class="n">pd_linear_model</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LinearRegression</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">try</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="kn">from</span> <span class="nn">ibex.sklearn.model_selection</span> <span class="k">import</span> <span class="n">cross_val_predict</span>
+<span class="gp">... </span><span class="k">except</span><span class="p">:</span> <span class="c1"># Older sklearn versions</span>
+<span class="gp">... </span>    <span class="kn">from</span> <span class="nn">ibex.sklearn.cross_validation</span> <span class="k">import</span> <span class="n">cross_val_predict</span>
 </pre></div>
 </div>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
@@ -132,8 +135,8 @@ Invokes the passed method name of the passed estimator.</li>
 <span class="gp">... </span>    <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;i</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">)])</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pd_model_selection</span><span class="o">.</span><span class="n">cross_val_predict</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">pd_linear_model</span><span class="o">.</span><span class="n">LinearRegression</span><span class="p">(),</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">cross_val_predict</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">LinearRegression</span><span class="p">(),</span>
 <span class="gp">... </span>    <span class="n">df</span><span class="p">[[</span><span class="s1">&#39;x&#39;</span><span class="p">]],</span>
 <span class="gp">... </span>    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span>
 <span class="go">i0     ...</span>

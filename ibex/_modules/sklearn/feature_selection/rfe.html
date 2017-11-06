@@ -1,0 +1,571 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.feature_selection.rfe &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.feature_selection.rfe</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Authors: Alexandre Gramfort &lt;alexandre.gramfort@inria.fr&gt;</span>
+<span class="c1">#          Vincent Michel &lt;vincent.michel@inria.fr&gt;</span>
+<span class="c1">#          Gilles Louppe &lt;g.louppe@gmail.com&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+<span class="sd">&quot;&quot;&quot;Recursive feature elimination for feature ranking&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_X_y</span><span class="p">,</span> <span class="n">safe_sqr</span>
+<span class="kn">from</span> <span class="nn">..utils.metaestimators</span> <span class="k">import</span> <span class="n">if_delegate_has_method</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_is_fitted</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">MetaEstimatorMixin</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">clone</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">is_classifier</span>
+<span class="kn">from</span> <span class="nn">..externals.joblib</span> <span class="k">import</span> <span class="n">Parallel</span><span class="p">,</span> <span class="n">delayed</span>
+<span class="kn">from</span> <span class="nn">..model_selection</span> <span class="k">import</span> <span class="n">check_cv</span>
+<span class="kn">from</span> <span class="nn">..model_selection._validation</span> <span class="k">import</span> <span class="n">_safe_split</span><span class="p">,</span> <span class="n">_score</span>
+<span class="kn">from</span> <span class="nn">..metrics.scorer</span> <span class="k">import</span> <span class="n">check_scoring</span>
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">SelectorMixin</span>
+
+
+<span class="k">def</span> <span class="nf">_rfe_single_fit</span><span class="p">(</span><span class="n">rfe</span><span class="p">,</span> <span class="n">estimator</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">scorer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the score for a fit across one fold.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span> <span class="o">=</span> <span class="n">_safe_split</span><span class="p">(</span><span class="n">estimator</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">train</span><span class="p">)</span>
+    <span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">_safe_split</span><span class="p">(</span><span class="n">estimator</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">train</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">rfe</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span>
+        <span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">estimator</span><span class="p">,</span> <span class="n">features</span><span class="p">:</span>
+        <span class="n">_score</span><span class="p">(</span><span class="n">estimator</span><span class="p">,</span> <span class="n">X_test</span><span class="p">[:,</span> <span class="n">features</span><span class="p">],</span> <span class="n">y_test</span><span class="p">,</span> <span class="n">scorer</span><span class="p">))</span><span class="o">.</span><span class="n">scores_</span>
+
+
+<span class="k">class</span> <span class="nc">RFE</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">MetaEstimatorMixin</span><span class="p">,</span> <span class="n">SelectorMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Feature ranking with recursive feature elimination.</span>
+
+<span class="sd">    Given an external estimator that assigns weights to features (e.g., the</span>
+<span class="sd">    coefficients of a linear model), the goal of recursive feature elimination</span>
+<span class="sd">    (RFE) is to select features by recursively considering smaller and smaller</span>
+<span class="sd">    sets of features. First, the estimator is trained on the initial set of</span>
+<span class="sd">    features and the importance of each feature is obtained either through a</span>
+<span class="sd">    ``coef_`` attribute or through a ``feature_importances_`` attribute.</span>
+<span class="sd">    Then, the least important features are pruned from current set of features.</span>
+<span class="sd">    That procedure is recursively repeated on the pruned set until the desired</span>
+<span class="sd">    number of features to select is eventually reached.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;rfe&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    estimator : object</span>
+<span class="sd">        A supervised learning estimator with a ``fit`` method that provides</span>
+<span class="sd">        information about feature importance either through a ``coef_``</span>
+<span class="sd">        attribute or through a ``feature_importances_`` attribute.</span>
+
+<span class="sd">    n_features_to_select : int or None (default=None)</span>
+<span class="sd">        The number of features to select. If `None`, half of the features</span>
+<span class="sd">        are selected.</span>
+
+<span class="sd">    step : int or float, optional (default=1)</span>
+<span class="sd">        If greater than or equal to 1, then `step` corresponds to the (integer)</span>
+<span class="sd">        number of features to remove at each iteration.</span>
+<span class="sd">        If within (0.0, 1.0), then `step` corresponds to the percentage</span>
+<span class="sd">        (rounded down) of features to remove at each iteration.</span>
+
+<span class="sd">    verbose : int, default=0</span>
+<span class="sd">        Controls verbosity of output.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_features_ : int</span>
+<span class="sd">        The number of selected features.</span>
+
+<span class="sd">    support_ : array of shape [n_features]</span>
+<span class="sd">        The mask of selected features.</span>
+
+<span class="sd">    ranking_ : array of shape [n_features]</span>
+<span class="sd">        The feature ranking, such that ``ranking_[i]`` corresponds to the</span>
+<span class="sd">        ranking position of the i-th feature. Selected (i.e., estimated</span>
+<span class="sd">        best) features are assigned rank 1.</span>
+
+<span class="sd">    estimator_ : object</span>
+<span class="sd">        The external estimator fit on the reduced dataset.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    The following example shows how to retrieve the 5 right informative</span>
+<span class="sd">    features in the Friedman #1 dataset.</span>
+
+<span class="sd">    &gt;&gt;&gt; from sklearn.datasets import make_friedman1</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.feature_selection import RFE</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.svm import SVR</span>
+<span class="sd">    &gt;&gt;&gt; X, y = make_friedman1(n_samples=50, n_features=10, random_state=0)</span>
+<span class="sd">    &gt;&gt;&gt; estimator = SVR(kernel=&quot;linear&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; selector = RFE(estimator, 5, step=1)</span>
+<span class="sd">    &gt;&gt;&gt; selector = selector.fit(X, y)</span>
+<span class="sd">    &gt;&gt;&gt; selector.support_ # doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    array([ True,  True,  True,  True,  True,</span>
+<span class="sd">            False, False, False, False, False], dtype=bool)</span>
+<span class="sd">    &gt;&gt;&gt; selector.ranking_</span>
+<span class="sd">    array([1, 1, 1, 1, 1, 6, 4, 3, 2, 5])</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    .. [1] Guyon, I., Weston, J., Barnhill, S., &amp; Vapnik, V., &quot;Gene selection</span>
+<span class="sd">           for cancer classification using support vector machines&quot;,</span>
+<span class="sd">           Mach. Learn., 46(1-3), 389--422, 2002.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">estimator</span><span class="p">,</span> <span class="n">n_features_to_select</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                 <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator</span> <span class="o">=</span> <span class="n">estimator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_features_to_select</span> <span class="o">=</span> <span class="n">n_features_to_select</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="n">step</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_estimator_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="o">.</span><span class="n">_estimator_type</span>
+
+<div class="viewcode-block" id="RFE.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_feature_selection_rfe.html#ibex.sklearn.feature_selection.RFE.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the RFE model and then the underlying estimator on the selected</span>
+<span class="sd">           features.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape = [n_samples, n_features]</span>
+<span class="sd">            The training input samples.</span>
+
+<span class="sd">        y : array-like, shape = [n_samples]</span>
+<span class="sd">            The target values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">step_score</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># Parameter step_score controls the calculation of self.scores_</span>
+        <span class="c1"># step_score is not exposed to users</span>
+        <span class="c1"># and is used when implementing RFECV</span>
+        <span class="c1"># self.scores_ will not be calculated when calling _fit through fit</span>
+
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;csc&quot;</span><span class="p">)</span>
+        <span class="c1"># Initialization</span>
+        <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_features_to_select</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">n_features_to_select</span> <span class="o">=</span> <span class="n">n_features</span> <span class="o">//</span> <span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">n_features_to_select</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_features_to_select</span>
+
+        <span class="k">if</span> <span class="mf">0.0</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">:</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">*</span> <span class="n">n_features</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">step</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Step must be &gt;0&quot;</span><span class="p">)</span>
+
+        <span class="n">support_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_features</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+        <span class="n">ranking_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_features</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">step_score</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scores_</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Elimination</span>
+        <span class="k">while</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">support_</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">n_features_to_select</span><span class="p">:</span>
+            <span class="c1"># Remaining features</span>
+            <span class="n">features</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_features</span><span class="p">)[</span><span class="n">support_</span><span class="p">]</span>
+
+            <span class="c1"># Rank the remaining features</span>
+            <span class="n">estimator</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Fitting estimator with </span><span class="si">%d</span><span class="s2"> features.&quot;</span> <span class="o">%</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">support_</span><span class="p">))</span>
+
+            <span class="n">estimator</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">[:,</span> <span class="n">features</span><span class="p">],</span> <span class="n">y</span><span class="p">)</span>
+
+            <span class="c1"># Get coefs</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">estimator</span><span class="p">,</span> <span class="s1">&#39;coef_&#39;</span><span class="p">):</span>
+                <span class="n">coefs</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">coef_</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">coefs</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">estimator</span><span class="p">,</span> <span class="s1">&#39;feature_importances_&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">coefs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;The classifier does not expose &#39;</span>
+                                   <span class="s1">&#39;&quot;coef_&quot; or &quot;feature_importances_&quot; &#39;</span>
+                                   <span class="s1">&#39;attributes&#39;</span><span class="p">)</span>
+
+            <span class="c1"># Get ranks</span>
+            <span class="k">if</span> <span class="n">coefs</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">ranks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">safe_sqr</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ranks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">safe_sqr</span><span class="p">(</span><span class="n">coefs</span><span class="p">))</span>
+
+            <span class="c1"># for sparse case ranks is matrix</span>
+            <span class="n">ranks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">ranks</span><span class="p">)</span>
+
+            <span class="c1"># Eliminate the worse features</span>
+            <span class="n">threshold</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">support_</span><span class="p">)</span> <span class="o">-</span> <span class="n">n_features_to_select</span><span class="p">)</span>
+
+            <span class="c1"># Compute step score on the previous selection iteration</span>
+            <span class="c1"># because &#39;estimator&#39; must use features</span>
+            <span class="c1"># that have not been eliminated yet</span>
+            <span class="k">if</span> <span class="n">step_score</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scores_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">step_score</span><span class="p">(</span><span class="n">estimator</span><span class="p">,</span> <span class="n">features</span><span class="p">))</span>
+            <span class="n">support_</span><span class="p">[</span><span class="n">features</span><span class="p">[</span><span class="n">ranks</span><span class="p">][:</span><span class="n">threshold</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">ranking_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">logical_not</span><span class="p">(</span><span class="n">support_</span><span class="p">)]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># Set final attributes</span>
+        <span class="n">features</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_features</span><span class="p">)[</span><span class="n">support_</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">[:,</span> <span class="n">features</span><span class="p">],</span> <span class="n">y</span><span class="p">)</span>
+
+        <span class="c1"># Compute step score when only n_features_to_select features left</span>
+        <span class="k">if</span> <span class="n">step_score</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scores_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">step_score</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="p">,</span> <span class="n">features</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_features_</span> <span class="o">=</span> <span class="n">support_</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">support_</span> <span class="o">=</span> <span class="n">support_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ranking_</span> <span class="o">=</span> <span class="n">ranking_</span>
+
+        <span class="k">return</span> <span class="bp">self</span>
+
+<div class="viewcode-block" id="RFE.predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_feature_selection_rfe.html#ibex.sklearn.feature_selection.RFE.predict">[docs]</a>    <span class="nd">@if_delegate_has_method</span><span class="p">(</span><span class="n">delegate</span><span class="o">=</span><span class="s1">&#39;estimator&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reduce X to the selected features and then predict using the</span>
+<span class="sd">           underlying estimator.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array of shape [n_samples, n_features]</span>
+<span class="sd">            The input samples.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y : array of shape [n_samples]</span>
+<span class="sd">            The predicted target values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;estimator_&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RFE.score"><a class="viewcode-back" href="../../../api_ibex_sklearn_feature_selection_rfe.html#ibex.sklearn.feature_selection.RFE.score">[docs]</a>    <span class="nd">@if_delegate_has_method</span><span class="p">(</span><span class="n">delegate</span><span class="o">=</span><span class="s1">&#39;estimator&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reduce X to the selected features and then return the score of the</span>
+<span class="sd">           underlying estimator.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array of shape [n_samples, n_features]</span>
+<span class="sd">            The input samples.</span>
+
+<span class="sd">        y : array of shape [n_samples]</span>
+<span class="sd">            The target values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;estimator_&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">y</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_support_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;support_&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">support_</span>
+
+<div class="viewcode-block" id="RFE.decision_function"><a class="viewcode-back" href="../../../api_ibex_sklearn_feature_selection_rfe.html#ibex.sklearn.feature_selection.RFE.decision_function">[docs]</a>    <span class="nd">@if_delegate_has_method</span><span class="p">(</span><span class="n">delegate</span><span class="o">=</span><span class="s1">&#39;estimator&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;estimator_&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">decision_function</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RFE.predict_proba"><a class="viewcode-back" href="../../../api_ibex_sklearn_feature_selection_rfe.html#ibex.sklearn.feature_selection.RFE.predict_proba">[docs]</a>    <span class="nd">@if_delegate_has_method</span><span class="p">(</span><span class="n">delegate</span><span class="o">=</span><span class="s1">&#39;estimator&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;estimator_&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RFE.predict_log_proba"><a class="viewcode-back" href="../../../api_ibex_sklearn_feature_selection_rfe.html#ibex.sklearn.feature_selection.RFE.predict_log_proba">[docs]</a>    <span class="nd">@if_delegate_has_method</span><span class="p">(</span><span class="n">delegate</span><span class="o">=</span><span class="s1">&#39;estimator&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;estimator_&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
+
+
+<span class="k">class</span> <span class="nc">RFECV</span><span class="p">(</span><span class="n">RFE</span><span class="p">,</span> <span class="n">MetaEstimatorMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Feature ranking with recursive feature elimination and cross-validated</span>
+<span class="sd">    selection of the best number of features.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;rfe&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    estimator : object</span>
+<span class="sd">        A supervised learning estimator with a ``fit`` method that provides</span>
+<span class="sd">        information about feature importance either through a ``coef_``</span>
+<span class="sd">        attribute or through a ``feature_importances_`` attribute.</span>
+
+<span class="sd">    step : int or float, optional (default=1)</span>
+<span class="sd">        If greater than or equal to 1, then `step` corresponds to the (integer)</span>
+<span class="sd">        number of features to remove at each iteration.</span>
+<span class="sd">        If within (0.0, 1.0), then `step` corresponds to the percentage</span>
+<span class="sd">        (rounded down) of features to remove at each iteration.</span>
+
+<span class="sd">    cv : int, cross-validation generator or an iterable, optional</span>
+<span class="sd">        Determines the cross-validation splitting strategy.</span>
+<span class="sd">        Possible inputs for cv are:</span>
+
+<span class="sd">        - None, to use the default 3-fold cross-validation,</span>
+<span class="sd">        - integer, to specify the number of folds.</span>
+<span class="sd">        - An object to be used as a cross-validation generator.</span>
+<span class="sd">        - An iterable yielding train/test splits.</span>
+
+<span class="sd">        For integer/None inputs, if ``y`` is binary or multiclass,</span>
+<span class="sd">        :class:`sklearn.model_selection.StratifiedKFold` is used. If the</span>
+<span class="sd">        estimator is a classifier or if ``y`` is neither binary nor multiclass,</span>
+<span class="sd">        :class:`sklearn.model_selection.KFold` is used.</span>
+
+<span class="sd">        Refer :ref:`User Guide &lt;cross_validation&gt;` for the various</span>
+<span class="sd">        cross-validation strategies that can be used here.</span>
+
+<span class="sd">    scoring : string, callable or None, optional, default: None</span>
+<span class="sd">        A string (see model evaluation documentation) or</span>
+<span class="sd">        a scorer callable object / function with signature</span>
+<span class="sd">        ``scorer(estimator, X, y)``.</span>
+
+<span class="sd">    verbose : int, default=0</span>
+<span class="sd">        Controls verbosity of output.</span>
+
+<span class="sd">    n_jobs : int, default 1</span>
+<span class="sd">        Number of cores to run in parallel while fitting across folds.</span>
+<span class="sd">        Defaults to 1 core. If `n_jobs=-1`, then number of jobs is set</span>
+<span class="sd">        to number of cores.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_features_ : int</span>
+<span class="sd">        The number of selected features with cross-validation.</span>
+
+<span class="sd">    support_ : array of shape [n_features]</span>
+<span class="sd">        The mask of selected features.</span>
+
+<span class="sd">    ranking_ : array of shape [n_features]</span>
+<span class="sd">        The feature ranking, such that `ranking_[i]`</span>
+<span class="sd">        corresponds to the ranking</span>
+<span class="sd">        position of the i-th feature.</span>
+<span class="sd">        Selected (i.e., estimated best)</span>
+<span class="sd">        features are assigned rank 1.</span>
+
+<span class="sd">    grid_scores_ : array of shape [n_subsets_of_features]</span>
+<span class="sd">        The cross-validation scores such that</span>
+<span class="sd">        ``grid_scores_[i]`` corresponds to</span>
+<span class="sd">        the CV score of the i-th subset of features.</span>
+
+<span class="sd">    estimator_ : object</span>
+<span class="sd">        The external estimator fit on the reduced dataset.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The size of ``grid_scores_`` is equal to ceil((n_features - 1) / step) + 1,</span>
+<span class="sd">    where step is the number of features removed at each iteration.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    The following example shows how to retrieve the a-priori not known 5</span>
+<span class="sd">    informative features in the Friedman #1 dataset.</span>
+
+<span class="sd">    &gt;&gt;&gt; from sklearn.datasets import make_friedman1</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.feature_selection import RFECV</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.svm import SVR</span>
+<span class="sd">    &gt;&gt;&gt; X, y = make_friedman1(n_samples=50, n_features=10, random_state=0)</span>
+<span class="sd">    &gt;&gt;&gt; estimator = SVR(kernel=&quot;linear&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; selector = RFECV(estimator, step=1, cv=5)</span>
+<span class="sd">    &gt;&gt;&gt; selector = selector.fit(X, y)</span>
+<span class="sd">    &gt;&gt;&gt; selector.support_ # doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    array([ True,  True,  True,  True,  True,</span>
+<span class="sd">            False, False, False, False, False], dtype=bool)</span>
+<span class="sd">    &gt;&gt;&gt; selector.ranking_</span>
+<span class="sd">    array([1, 1, 1, 1, 1, 6, 4, 3, 2, 5])</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    .. [1] Guyon, I., Weston, J., Barnhill, S., &amp; Vapnik, V., &quot;Gene selection</span>
+<span class="sd">           for cancer classification using support vector machines&quot;,</span>
+<span class="sd">           Mach. Learn., 46(1-3), 389--422, 2002.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">estimator</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator</span> <span class="o">=</span> <span class="n">estimator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="n">step</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cv</span> <span class="o">=</span> <span class="n">cv</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scoring</span> <span class="o">=</span> <span class="n">scoring</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
+
+<div class="viewcode-block" id="RFECV.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_feature_selection_rfecv.html#ibex.sklearn.feature_selection.RFECV.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the RFE model and automatically tune the number of selected</span>
+<span class="sd">           features.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape = [n_samples, n_features]</span>
+<span class="sd">            Training vector, where `n_samples` is the number of samples and</span>
+<span class="sd">            `n_features` is the total number of features.</span>
+
+<span class="sd">        y : array-like, shape = [n_samples]</span>
+<span class="sd">            Target values (integers for classification, real numbers for</span>
+<span class="sd">            regression).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;csr&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Initialization</span>
+        <span class="n">cv</span> <span class="o">=</span> <span class="n">check_cv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cv</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">is_classifier</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">))</span>
+        <span class="n">scorer</span> <span class="o">=</span> <span class="n">check_scoring</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scoring</span><span class="p">)</span>
+        <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">n_features_to_select</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="mf">0.0</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">:</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">*</span> <span class="n">n_features</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">step</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Step must be &gt;0&quot;</span><span class="p">)</span>
+
+        <span class="n">rfe</span> <span class="o">=</span> <span class="n">RFE</span><span class="p">(</span><span class="n">estimator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">,</span>
+                  <span class="n">n_features_to_select</span><span class="o">=</span><span class="n">n_features_to_select</span><span class="p">,</span>
+                  <span class="n">step</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">)</span>
+
+        <span class="c1"># Determine the number of subsets of features by fitting across</span>
+        <span class="c1"># the train folds and choosing the &quot;features_to_select&quot; parameter</span>
+        <span class="c1"># that gives the least averaged error across all folds.</span>
+
+        <span class="c1"># Note that joblib raises a non-picklable error for bound methods</span>
+        <span class="c1"># even if n_jobs is set to 1 with the default multiprocessing</span>
+        <span class="c1"># backend.</span>
+        <span class="c1"># This branching is done so that to</span>
+        <span class="c1"># make sure that user code that sets n_jobs to 1</span>
+        <span class="c1"># and provides bound methods as scorers is not broken with the</span>
+        <span class="c1"># addition of n_jobs parameter in version 0.18.</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">parallel</span><span class="p">,</span> <span class="n">func</span> <span class="o">=</span> <span class="nb">list</span><span class="p">,</span> <span class="n">_rfe_single_fit</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">parallel</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="o">=</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">),</span> <span class="n">delayed</span><span class="p">(</span><span class="n">_rfe_single_fit</span><span class="p">)</span>
+
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">parallel</span><span class="p">(</span>
+            <span class="n">func</span><span class="p">(</span><span class="n">rfe</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">scorer</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span> <span class="ow">in</span> <span class="n">cv</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">n_features_to_select</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span>
+            <span class="n">n_features</span> <span class="o">-</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span> <span class="o">*</span> <span class="n">step</span><span class="p">),</span>
+            <span class="n">n_features_to_select</span><span class="p">)</span>
+
+        <span class="c1"># Re-execute an elimination with best_k over the whole set</span>
+        <span class="n">rfe</span> <span class="o">=</span> <span class="n">RFE</span><span class="p">(</span><span class="n">estimator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">,</span>
+                  <span class="n">n_features_to_select</span><span class="o">=</span><span class="n">n_features_to_select</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
+
+        <span class="n">rfe</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+        <span class="c1"># Set final attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">support_</span> <span class="o">=</span> <span class="n">rfe</span><span class="o">.</span><span class="n">support_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_features_</span> <span class="o">=</span> <span class="n">rfe</span><span class="o">.</span><span class="n">n_features_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ranking_</span> <span class="o">=</span> <span class="n">rfe</span><span class="o">.</span><span class="n">ranking_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">y</span><span class="p">)</span>
+
+        <span class="c1"># Fixing a normalization error, n is equal to get_n_splits(X, y) - 1</span>
+        <span class="c1"># here, the scores are normalized by get_n_splits(X, y)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grid_scores_</span> <span class="o">=</span> <span class="n">scores</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">cv</span><span class="o">.</span><span class="n">get_n_splits</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,272 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>GraphLassoCV &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="graphlassocv">
+<h1><code class="docutils literal"><span class="pre">GraphLassoCV</span></code><a class="headerlink" href="#graphlassocv" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="ibex.sklearn.covariance.GraphLassoCV">
+<em class="property">class </em><code class="descclassname">ibex.sklearn.covariance.</code><code class="descname">GraphLassoCV</code><span class="sig-paren">(</span><em>alphas=4</em>, <em>n_refinements=4</em>, <em>cv=None</em>, <em>tol=0.0001</em>, <em>enet_tol=0.0001</em>, <em>max_iter=100</em>, <em>mode='cd'</em>, <em>n_jobs=1</em>, <em>verbose=False</em>, <em>assume_centered=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.covariance.GraphLassoCV" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.covariance.graph_lasso_.GraphLassoCV</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Sparse inverse covariance w/ cross-validated choice of the l1 penalty</p>
+<blockquote>
+<div><p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/covariance.html#sparse-inverse-covariance" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
+<dl class="docutils">
+<dt>alphas <span class="classifier-delimiter">:</span> <span class="classifier">integer, or list positive float, optional</span></dt>
+<dd>If an integer is given, it fixes the number of points on the
+grids of alpha to be used. If a list is given, it gives the
+grid to be used. See the notes in the class docstring for
+more details.</dd>
+<dt>n_refinements <span class="classifier-delimiter">:</span> <span class="classifier">strictly positive integer</span></dt>
+<dd>The number of times the grid is refined. Not used if explicit
+values of alphas are passed.</dd>
+<dt>cv <span class="classifier-delimiter">:</span> <span class="classifier">int, cross-validation generator or an iterable, optional</span></dt>
+<dd><p class="first">Determines the cross-validation splitting strategy.
+Possible inputs for cv are:</p>
+<ul class="simple">
+<li>None, to use the default 3-fold cross-validation,</li>
+<li>integer, to specify the number of folds.</li>
+<li>An object to be used as a cross-validation generator.</li>
+<li>An iterable yielding train/test splits.</li>
+</ul>
+<p>For integer/None inputs <code class="xref py py-class docutils literal"><span class="pre">KFold</span></code> is used.</p>
+<p class="last">Refer <a class="reference external" href="http://scikit-learn.org/stable/modules/cross_validation.html#cross-validation" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a> for the various
+cross-validation strategies that can be used here.</p>
+</dd>
+<dt>tol <span class="classifier-delimiter">:</span> <span class="classifier">positive float, optional</span></dt>
+<dd>The tolerance to declare convergence: if the dual gap goes below
+this value, iterations are stopped.</dd>
+<dt>enet_tol <span class="classifier-delimiter">:</span> <span class="classifier">positive float, optional</span></dt>
+<dd>The tolerance for the elastic net solver used to calculate the descent
+direction. This parameter controls the accuracy of the search direction
+for a given column update, not of the overall parameter estimate. Only
+used for mode=’cd’.</dd>
+<dt>max_iter <span class="classifier-delimiter">:</span> <span class="classifier">integer, optional</span></dt>
+<dd>Maximum number of iterations.</dd>
+<dt>mode <span class="classifier-delimiter">:</span> <span class="classifier">{‘cd’, ‘lars’}</span></dt>
+<dd>The Lasso solver to use: coordinate descent or LARS. Use LARS for
+very sparse underlying graphs, where number of features is greater
+than number of samples. Elsewhere prefer cd which is more numerically
+stable.</dd>
+<dt>n_jobs <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd>number of jobs to run in parallel (default 1).</dd>
+<dt>verbose <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional</span></dt>
+<dd>If verbose is True, the objective function and duality gap are
+printed at each iteration.</dd>
+<dt>assume_centered <span class="classifier-delimiter">:</span> <span class="classifier">Boolean</span></dt>
+<dd>If True, data are not centered before computation.
+Useful when working with data whose mean is almost, but not exactly
+zero.
+If False, data are centered before computation.</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">covariance_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">numpy.ndarray, shape (n_features, n_features)</span></dt>
+<dd>Estimated covariance matrix.</dd>
+<dt><a href="#id3"><span class="problematic" id="id4">precision_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">numpy.ndarray, shape (n_features, n_features)</span></dt>
+<dd>Estimated precision matrix (inverse covariance).</dd>
+<dt><a href="#id5"><span class="problematic" id="id6">alpha_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>Penalization parameter selected.</dd>
+<dt><a href="#id7"><span class="problematic" id="id8">cv_alphas_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">list of float</span></dt>
+<dd>All penalization parameters explored.</dd>
+<dt><a href="#id9"><span class="problematic" id="id10">grid_scores_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">2D numpy.ndarray (n_alphas, n_folds)</span></dt>
+<dd>Log-likelihood score on left-out data across folds.</dd>
+<dt><a href="#id11"><span class="problematic" id="id12">n_iter_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd>Number of iterations run for the optimal alpha.</dd>
+</dl>
+<p>graph_lasso, GraphLasso</p>
+<p>The search for the optimal penalization parameter (alpha) is done on an
+iteratively refined grid: first the cross-validated scores on a grid are
+computed, then a new refined grid is centered around the maximum, and so
+on.</p>
+<p>One of the challenges which is faced here is that the solvers can
+fail to converge to a well-conditioned estimate. The corresponding
+values of alpha then come out as missing values, but the optimum may
+be close to these missing values.</p>
+</div></blockquote>
+<dl class="method">
+<dt id="ibex.sklearn.covariance.GraphLassoCV.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/covariance/graph_lasso_.html#GraphLassoCV.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.covariance.GraphLassoCV.fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fits the GraphLasso covariance model to X.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">ndarray, shape (n_samples, n_features)</span></dt>
+<dd>Data from which to compute the covariance estimate</dd>
+</dl>
+<p>y : (ignored)</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.covariance.GraphLassoCV.score">
+<code class="descname">score</code><span class="sig-paren">(</span><em>X_test</em>, <em>y=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.covariance.GraphLassoCV.score" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<dl class="docutils">
+<dt>Computes the log-likelihood of a Gaussian data set with</dt>
+<dd><p class="first"><cite>self.covariance_</cite> as an estimator of its covariance matrix.</p>
+<dl class="docutils">
+<dt>X_test <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = [n_samples, n_features]</span></dt>
+<dd>Test data of which we compute the likelihood, where n_samples is
+the number of samples and n_features is the number of features.
+X_test is assumed to be drawn from the same distribution than
+the data used in fit (including centering).</dd>
+</dl>
+<p>y : not used, present for API consistence purpose.</p>
+<dl class="last docutils">
+<dt>res <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>The likelihood of the data set with <cite>self.covariance_</cite> as an
+estimator of its covariance matrix.</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex_sklearn_covariance_graphlassocv.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex_sklearn_covariance_graphlassocv.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

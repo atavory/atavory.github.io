@@ -1,0 +1,982 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.linear_model.omp &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.linear_model.omp</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Orthogonal matching pursuit algorithms</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Author: Vlad Niculae</span>
+<span class="c1">#</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">linalg</span>
+<span class="kn">from</span> <span class="nn">scipy.linalg.lapack</span> <span class="k">import</span> <span class="n">get_lapack_funcs</span>
+
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">LinearModel</span><span class="p">,</span> <span class="n">_pre_fit</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">RegressorMixin</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">as_float_array</span><span class="p">,</span> <span class="n">check_array</span><span class="p">,</span> <span class="n">check_X_y</span>
+<span class="kn">from</span> <span class="nn">..model_selection</span> <span class="k">import</span> <span class="n">check_cv</span>
+<span class="kn">from</span> <span class="nn">..externals.joblib</span> <span class="k">import</span> <span class="n">Parallel</span><span class="p">,</span> <span class="n">delayed</span>
+
+<span class="n">solve_triangular_args</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;check_finite&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+
+<span class="n">premature</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot; Orthogonal matching pursuit ended prematurely due to linear</span>
+<span class="s2">dependence in the dictionary. The requested precision might not have been met.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">_cholesky_omp</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">n_nonzero_coefs</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">copy_X</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                  <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Orthogonal Matching Pursuit step using the Cholesky decomposition.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array, shape (n_samples, n_features)</span>
+<span class="sd">        Input dictionary. Columns are assumed to have unit norm.</span>
+
+<span class="sd">    y : array, shape (n_samples,)</span>
+<span class="sd">        Input targets</span>
+
+<span class="sd">    n_nonzero_coefs : int</span>
+<span class="sd">        Targeted number of non-zero elements</span>
+
+<span class="sd">    tol : float</span>
+<span class="sd">        Targeted squared error, if not None overrides n_nonzero_coefs.</span>
+
+<span class="sd">    copy_X : bool, optional</span>
+<span class="sd">        Whether the design matrix X must be copied by the algorithm. A false</span>
+<span class="sd">        value is only helpful if X is already Fortran-ordered, otherwise a</span>
+<span class="sd">        copy is made anyway.</span>
+
+<span class="sd">    return_path : bool, optional. Default: False</span>
+<span class="sd">        Whether to return every value of the nonzero coefficients along the</span>
+<span class="sd">        forward path. Useful for cross-validation.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    gamma : array, shape (n_nonzero_coefs,)</span>
+<span class="sd">        Non-zero elements of the solution</span>
+
+<span class="sd">    idx : array, shape (n_nonzero_coefs,)</span>
+<span class="sd">        Indices of the positions of the elements in gamma within the solution</span>
+<span class="sd">        vector</span>
+
+<span class="sd">    coef : array, shape (n_features, n_nonzero_coefs)</span>
+<span class="sd">        The first k values of column k correspond to the coefficient value</span>
+<span class="sd">        for the active features at that step. The lower left triangle contains</span>
+<span class="sd">        garbage. Only returned if ``return_path=True``.</span>
+
+<span class="sd">    n_active : int</span>
+<span class="sd">        Number of active features at convergence.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">copy_X</span><span class="p">:</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="s1">&#39;F&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># even if we are allowed to overwrite, still copy it if bad order</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asfortranarray</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+    <span class="n">min_float</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+    <span class="n">nrm2</span><span class="p">,</span> <span class="n">swap</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">get_blas_funcs</span><span class="p">((</span><span class="s1">&#39;nrm2&#39;</span><span class="p">,</span> <span class="s1">&#39;swap&#39;</span><span class="p">),</span> <span class="p">(</span><span class="n">X</span><span class="p">,))</span>
+    <span class="n">potrs</span><span class="p">,</span> <span class="o">=</span> <span class="n">get_lapack_funcs</span><span class="p">((</span><span class="s1">&#39;potrs&#39;</span><span class="p">,),</span> <span class="p">(</span><span class="n">X</span><span class="p">,))</span>
+
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">residual</span> <span class="o">=</span> <span class="n">y</span>
+    <span class="n">gamma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">n_active</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>  <span class="c1"># keeping track of swapping</span>
+
+    <span class="n">max_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">tol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">n_nonzero_coefs</span>
+    <span class="k">if</span> <span class="n">solve_triangular_args</span><span class="p">:</span>
+        <span class="c1"># new scipy, don&#39;t need to initialize because check_finite=False</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">max_features</span><span class="p">,</span> <span class="n">max_features</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># old scipy, we need the garbage upper triangle to be non-Inf</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">max_features</span><span class="p">,</span> <span class="n">max_features</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="n">L</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+    <span class="k">if</span> <span class="n">return_path</span><span class="p">:</span>
+        <span class="n">coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">lam</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">residual</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">lam</span> <span class="o">&lt;</span> <span class="n">n_active</span> <span class="ow">or</span> <span class="n">alpha</span><span class="p">[</span><span class="n">lam</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">&lt;</span> <span class="n">min_float</span><span class="p">:</span>
+            <span class="c1"># atom already selected or inner product too small</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">premature</span><span class="p">,</span> <span class="ne">RuntimeWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="k">break</span>
+        <span class="k">if</span> <span class="n">n_active</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Updates the Cholesky decomposition of X&#39; X</span>
+            <span class="n">L</span><span class="p">[</span><span class="n">n_active</span><span class="p">,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">[:,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">X</span><span class="p">[:,</span> <span class="n">lam</span><span class="p">])</span>
+            <span class="n">linalg</span><span class="o">.</span><span class="n">solve_triangular</span><span class="p">(</span><span class="n">L</span><span class="p">[:</span><span class="n">n_active</span><span class="p">,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">],</span>
+                                    <span class="n">L</span><span class="p">[</span><span class="n">n_active</span><span class="p">,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">],</span>
+                                    <span class="n">trans</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                    <span class="n">overwrite_b</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="o">**</span><span class="n">solve_triangular_args</span><span class="p">)</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">nrm2</span><span class="p">(</span><span class="n">L</span><span class="p">[</span><span class="n">n_active</span><span class="p">,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
+            <span class="k">if</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">v</span> <span class="o">&lt;=</span> <span class="n">min_float</span><span class="p">:</span>  <span class="c1"># selected atoms are dependent</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">premature</span><span class="p">,</span> <span class="ne">RuntimeWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="n">L</span><span class="p">[</span><span class="n">n_active</span><span class="p">,</span> <span class="n">n_active</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span>
+        <span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">n_active</span><span class="p">],</span> <span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">lam</span><span class="p">]</span> <span class="o">=</span> <span class="n">swap</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">n_active</span><span class="p">],</span> <span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">lam</span><span class="p">])</span>
+        <span class="n">alpha</span><span class="p">[</span><span class="n">n_active</span><span class="p">],</span> <span class="n">alpha</span><span class="p">[</span><span class="n">lam</span><span class="p">]</span> <span class="o">=</span> <span class="n">alpha</span><span class="p">[</span><span class="n">lam</span><span class="p">],</span> <span class="n">alpha</span><span class="p">[</span><span class="n">n_active</span><span class="p">]</span>
+        <span class="n">indices</span><span class="p">[</span><span class="n">n_active</span><span class="p">],</span> <span class="n">indices</span><span class="p">[</span><span class="n">lam</span><span class="p">]</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="n">lam</span><span class="p">],</span> <span class="n">indices</span><span class="p">[</span><span class="n">n_active</span><span class="p">]</span>
+        <span class="n">n_active</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="c1"># solves LL&#39;x = y as a composition of two triangular systems</span>
+        <span class="n">gamma</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">potrs</span><span class="p">(</span><span class="n">L</span><span class="p">[:</span><span class="n">n_active</span><span class="p">,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">],</span> <span class="n">alpha</span><span class="p">[:</span><span class="n">n_active</span><span class="p">],</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">overwrite_b</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">return_path</span><span class="p">:</span>
+            <span class="n">coefs</span><span class="p">[:</span><span class="n">n_active</span><span class="p">,</span> <span class="n">n_active</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">gamma</span>
+        <span class="n">residual</span> <span class="o">=</span> <span class="n">y</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">[:,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">],</span> <span class="n">gamma</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">nrm2</span><span class="p">(</span><span class="n">residual</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">&lt;=</span> <span class="n">tol</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="k">elif</span> <span class="n">n_active</span> <span class="o">==</span> <span class="n">max_features</span><span class="p">:</span>
+            <span class="k">break</span>
+
+    <span class="k">if</span> <span class="n">return_path</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">indices</span><span class="p">[:</span><span class="n">n_active</span><span class="p">],</span> <span class="n">coefs</span><span class="p">[:,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">],</span> <span class="n">n_active</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">indices</span><span class="p">[:</span><span class="n">n_active</span><span class="p">],</span> <span class="n">n_active</span>
+
+
+<span class="k">def</span> <span class="nf">_gram_omp</span><span class="p">(</span><span class="n">Gram</span><span class="p">,</span> <span class="n">Xy</span><span class="p">,</span> <span class="n">n_nonzero_coefs</span><span class="p">,</span> <span class="n">tol_0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+              <span class="n">copy_Gram</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">copy_Xy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Orthogonal Matching Pursuit step on a precomputed Gram matrix.</span>
+
+<span class="sd">    This function uses the Cholesky decomposition method.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Gram : array, shape (n_features, n_features)</span>
+<span class="sd">        Gram matrix of the input data matrix</span>
+
+<span class="sd">    Xy : array, shape (n_features,)</span>
+<span class="sd">        Input targets</span>
+
+<span class="sd">    n_nonzero_coefs : int</span>
+<span class="sd">        Targeted number of non-zero elements</span>
+
+<span class="sd">    tol_0 : float</span>
+<span class="sd">        Squared norm of y, required if tol is not None.</span>
+
+<span class="sd">    tol : float</span>
+<span class="sd">        Targeted squared error, if not None overrides n_nonzero_coefs.</span>
+
+<span class="sd">    copy_Gram : bool, optional</span>
+<span class="sd">        Whether the gram matrix must be copied by the algorithm. A false</span>
+<span class="sd">        value is only helpful if it is already Fortran-ordered, otherwise a</span>
+<span class="sd">        copy is made anyway.</span>
+
+<span class="sd">    copy_Xy : bool, optional</span>
+<span class="sd">        Whether the covariance vector Xy must be copied by the algorithm.</span>
+<span class="sd">        If False, it may be overwritten.</span>
+
+<span class="sd">    return_path : bool, optional. Default: False</span>
+<span class="sd">        Whether to return every value of the nonzero coefficients along the</span>
+<span class="sd">        forward path. Useful for cross-validation.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    gamma : array, shape (n_nonzero_coefs,)</span>
+<span class="sd">        Non-zero elements of the solution</span>
+
+<span class="sd">    idx : array, shape (n_nonzero_coefs,)</span>
+<span class="sd">        Indices of the positions of the elements in gamma within the solution</span>
+<span class="sd">        vector</span>
+
+<span class="sd">    coefs : array, shape (n_features, n_nonzero_coefs)</span>
+<span class="sd">        The first k values of column k correspond to the coefficient value</span>
+<span class="sd">        for the active features at that step. The lower left triangle contains</span>
+<span class="sd">        garbage. Only returned if ``return_path=True``.</span>
+
+<span class="sd">    n_active : int</span>
+<span class="sd">        Number of active features at convergence.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">Gram</span> <span class="o">=</span> <span class="n">Gram</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="s1">&#39;F&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">copy_Gram</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">asfortranarray</span><span class="p">(</span><span class="n">Gram</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">copy_Xy</span><span class="p">:</span>
+        <span class="n">Xy</span> <span class="o">=</span> <span class="n">Xy</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="n">min_float</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">Gram</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+    <span class="n">nrm2</span><span class="p">,</span> <span class="n">swap</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">get_blas_funcs</span><span class="p">((</span><span class="s1">&#39;nrm2&#39;</span><span class="p">,</span> <span class="s1">&#39;swap&#39;</span><span class="p">),</span> <span class="p">(</span><span class="n">Gram</span><span class="p">,))</span>
+    <span class="n">potrs</span><span class="p">,</span> <span class="o">=</span> <span class="n">get_lapack_funcs</span><span class="p">((</span><span class="s1">&#39;potrs&#39;</span><span class="p">,),</span> <span class="p">(</span><span class="n">Gram</span><span class="p">,))</span>
+
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Gram</span><span class="p">))</span>  <span class="c1"># keeping track of swapping</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">Xy</span>
+    <span class="n">tol_curr</span> <span class="o">=</span> <span class="n">tol_0</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">gamma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">n_active</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">max_features</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">Gram</span><span class="p">)</span> <span class="k">if</span> <span class="n">tol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">n_nonzero_coefs</span>
+    <span class="k">if</span> <span class="n">solve_triangular_args</span><span class="p">:</span>
+        <span class="c1"># new scipy, don&#39;t need to initialize because check_finite=False</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">max_features</span><span class="p">,</span> <span class="n">max_features</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">Gram</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># old scipy, we need the garbage upper triangle to be non-Inf</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">max_features</span><span class="p">,</span> <span class="n">max_features</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">Gram</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">L</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+    <span class="k">if</span> <span class="n">return_path</span><span class="p">:</span>
+        <span class="n">coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">lam</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">alpha</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">lam</span> <span class="o">&lt;</span> <span class="n">n_active</span> <span class="ow">or</span> <span class="n">alpha</span><span class="p">[</span><span class="n">lam</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">&lt;</span> <span class="n">min_float</span><span class="p">:</span>
+            <span class="c1"># selected same atom twice, or inner product too small</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">premature</span><span class="p">,</span> <span class="ne">RuntimeWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+            <span class="k">break</span>
+        <span class="k">if</span> <span class="n">n_active</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">L</span><span class="p">[</span><span class="n">n_active</span><span class="p">,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">]</span> <span class="o">=</span> <span class="n">Gram</span><span class="p">[</span><span class="n">lam</span><span class="p">,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">]</span>
+            <span class="n">linalg</span><span class="o">.</span><span class="n">solve_triangular</span><span class="p">(</span><span class="n">L</span><span class="p">[:</span><span class="n">n_active</span><span class="p">,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">],</span>
+                                    <span class="n">L</span><span class="p">[</span><span class="n">n_active</span><span class="p">,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">],</span>
+                                    <span class="n">trans</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                    <span class="n">overwrite_b</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="o">**</span><span class="n">solve_triangular_args</span><span class="p">)</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">nrm2</span><span class="p">(</span><span class="n">L</span><span class="p">[</span><span class="n">n_active</span><span class="p">,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
+            <span class="k">if</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">v</span> <span class="o">&lt;=</span> <span class="n">min_float</span><span class="p">:</span>  <span class="c1"># selected atoms are dependent</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">premature</span><span class="p">,</span> <span class="ne">RuntimeWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="n">L</span><span class="p">[</span><span class="n">n_active</span><span class="p">,</span> <span class="n">n_active</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span>
+        <span class="n">Gram</span><span class="p">[</span><span class="n">n_active</span><span class="p">],</span> <span class="n">Gram</span><span class="p">[</span><span class="n">lam</span><span class="p">]</span> <span class="o">=</span> <span class="n">swap</span><span class="p">(</span><span class="n">Gram</span><span class="p">[</span><span class="n">n_active</span><span class="p">],</span> <span class="n">Gram</span><span class="p">[</span><span class="n">lam</span><span class="p">])</span>
+        <span class="n">Gram</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">n_active</span><span class="p">],</span> <span class="n">Gram</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">lam</span><span class="p">]</span> <span class="o">=</span> <span class="n">swap</span><span class="p">(</span><span class="n">Gram</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">n_active</span><span class="p">],</span> <span class="n">Gram</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">lam</span><span class="p">])</span>
+        <span class="n">indices</span><span class="p">[</span><span class="n">n_active</span><span class="p">],</span> <span class="n">indices</span><span class="p">[</span><span class="n">lam</span><span class="p">]</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="n">lam</span><span class="p">],</span> <span class="n">indices</span><span class="p">[</span><span class="n">n_active</span><span class="p">]</span>
+        <span class="n">Xy</span><span class="p">[</span><span class="n">n_active</span><span class="p">],</span> <span class="n">Xy</span><span class="p">[</span><span class="n">lam</span><span class="p">]</span> <span class="o">=</span> <span class="n">Xy</span><span class="p">[</span><span class="n">lam</span><span class="p">],</span> <span class="n">Xy</span><span class="p">[</span><span class="n">n_active</span><span class="p">]</span>
+        <span class="n">n_active</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="c1"># solves LL&#39;x = y as a composition of two triangular systems</span>
+        <span class="n">gamma</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">potrs</span><span class="p">(</span><span class="n">L</span><span class="p">[:</span><span class="n">n_active</span><span class="p">,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">],</span> <span class="n">Xy</span><span class="p">[:</span><span class="n">n_active</span><span class="p">],</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">overwrite_b</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">return_path</span><span class="p">:</span>
+            <span class="n">coefs</span><span class="p">[:</span><span class="n">n_active</span><span class="p">,</span> <span class="n">n_active</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">gamma</span>
+        <span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Gram</span><span class="p">[:,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">],</span> <span class="n">gamma</span><span class="p">)</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">Xy</span> <span class="o">-</span> <span class="n">beta</span>
+        <span class="k">if</span> <span class="n">tol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">tol_curr</span> <span class="o">+=</span> <span class="n">delta</span>
+            <span class="n">delta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inner</span><span class="p">(</span><span class="n">gamma</span><span class="p">,</span> <span class="n">beta</span><span class="p">[:</span><span class="n">n_active</span><span class="p">])</span>
+            <span class="n">tol_curr</span> <span class="o">-=</span> <span class="n">delta</span>
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">tol_curr</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">tol</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">elif</span> <span class="n">n_active</span> <span class="o">==</span> <span class="n">max_features</span><span class="p">:</span>
+            <span class="k">break</span>
+
+    <span class="k">if</span> <span class="n">return_path</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">indices</span><span class="p">[:</span><span class="n">n_active</span><span class="p">],</span> <span class="n">coefs</span><span class="p">[:,</span> <span class="p">:</span><span class="n">n_active</span><span class="p">],</span> <span class="n">n_active</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">indices</span><span class="p">[:</span><span class="n">n_active</span><span class="p">],</span> <span class="n">n_active</span>
+
+
+<span class="k">def</span> <span class="nf">orthogonal_mp</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">n_nonzero_coefs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">precompute</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                  <span class="n">copy_X</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                  <span class="n">return_n_iter</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Orthogonal Matching Pursuit (OMP)</span>
+
+<span class="sd">    Solves n_targets Orthogonal Matching Pursuit problems.</span>
+<span class="sd">    An instance of the problem has the form:</span>
+
+<span class="sd">    When parametrized by the number of non-zero coefficients using</span>
+<span class="sd">    `n_nonzero_coefs`:</span>
+<span class="sd">    argmin ||y - X\gamma||^2 subject to ||\gamma||_0 &lt;= n_{nonzero coefs}</span>
+
+<span class="sd">    When parametrized by error using the parameter `tol`:</span>
+<span class="sd">    argmin ||\gamma||_0 subject to ||y - X\gamma||^2 &lt;= tol</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;omp&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array, shape (n_samples, n_features)</span>
+<span class="sd">        Input data. Columns are assumed to have unit norm.</span>
+
+<span class="sd">    y : array, shape (n_samples,) or (n_samples, n_targets)</span>
+<span class="sd">        Input targets</span>
+
+<span class="sd">    n_nonzero_coefs : int</span>
+<span class="sd">        Desired number of non-zero entries in the solution. If None (by</span>
+<span class="sd">        default) this value is set to 10% of n_features.</span>
+
+<span class="sd">    tol : float</span>
+<span class="sd">        Maximum norm of the residual. If not None, overrides n_nonzero_coefs.</span>
+
+<span class="sd">    precompute : {True, False, &#39;auto&#39;},</span>
+<span class="sd">        Whether to perform precomputations. Improves performance when n_targets</span>
+<span class="sd">        or n_samples is very large.</span>
+
+<span class="sd">    copy_X : bool, optional</span>
+<span class="sd">        Whether the design matrix X must be copied by the algorithm. A false</span>
+<span class="sd">        value is only helpful if X is already Fortran-ordered, otherwise a</span>
+<span class="sd">        copy is made anyway.</span>
+
+<span class="sd">    return_path : bool, optional. Default: False</span>
+<span class="sd">        Whether to return every value of the nonzero coefficients along the</span>
+<span class="sd">        forward path. Useful for cross-validation.</span>
+
+<span class="sd">    return_n_iter : bool, optional default False</span>
+<span class="sd">        Whether or not to return the number of iterations.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    coef : array, shape (n_features,) or (n_features, n_targets)</span>
+<span class="sd">        Coefficients of the OMP solution. If `return_path=True`, this contains</span>
+<span class="sd">        the whole coefficient path. In this case its shape is</span>
+<span class="sd">        (n_features, n_features) or (n_features, n_targets, n_features) and</span>
+<span class="sd">        iterating over the last axis yields coefficients in increasing order</span>
+<span class="sd">        of active features.</span>
+
+<span class="sd">    n_iters : array-like or int</span>
+<span class="sd">        Number of active features across every target. Returned only if</span>
+<span class="sd">        `return_n_iter` is set to True.</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    OrthogonalMatchingPursuit</span>
+<span class="sd">    orthogonal_mp_gram</span>
+<span class="sd">    lars_path</span>
+<span class="sd">    decomposition.sparse_encode</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Orthogonal matching pursuit was introduced in S. Mallat, Z. Zhang,</span>
+<span class="sd">    Matching pursuits with time-frequency dictionaries, IEEE Transactions on</span>
+<span class="sd">    Signal Processing, Vol. 41, No. 12. (December 1993), pp. 3397-3415.</span>
+<span class="sd">    (http://blanche.polytechnique.fr/~mallat/papiers/MallatPursuit93.pdf)</span>
+
+<span class="sd">    This implementation is based on Rubinstein, R., Zibulevsky, M. and Elad,</span>
+<span class="sd">    M., Efficient Implementation of the K-SVD Algorithm using Batch Orthogonal</span>
+<span class="sd">    Matching Pursuit Technical Report - CS Technion, April 2008.</span>
+<span class="sd">    http://www.cs.technion.ac.il/~ronrubin/Publications/KSVD-OMP-v2.pdf</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;F&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="n">copy_X</span><span class="p">)</span>
+    <span class="n">copy_X</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">y</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># subsequent targets will be affected</span>
+        <span class="n">copy_X</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="n">n_nonzero_coefs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">tol</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># default for n_nonzero_coefs is 0.1 * n_features</span>
+        <span class="c1"># but at least one.</span>
+        <span class="n">n_nonzero_coefs</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mf">0.1</span> <span class="o">*</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">tol</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Epsilon cannot be negative&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tol</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">n_nonzero_coefs</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of atoms must be positive&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tol</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">n_nonzero_coefs</span> <span class="o">&gt;</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of atoms cannot be more than the number &quot;</span>
+                         <span class="s2">&quot;of features&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">precompute</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+        <span class="n">precompute</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">precompute</span><span class="p">:</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asfortranarray</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
+        <span class="n">Xy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">norms_squared</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">y</span> <span class="o">**</span> <span class="mi">2</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">norms_squared</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">orthogonal_mp_gram</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">Xy</span><span class="p">,</span> <span class="n">n_nonzero_coefs</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">norms_squared</span><span class="p">,</span>
+                                  <span class="n">copy_Gram</span><span class="o">=</span><span class="n">copy_X</span><span class="p">,</span> <span class="n">copy_Xy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                  <span class="n">return_path</span><span class="o">=</span><span class="n">return_path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">return_path</span><span class="p">:</span>
+        <span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">n_iters</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">_cholesky_omp</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">[:,</span> <span class="n">k</span><span class="p">],</span> <span class="n">n_nonzero_coefs</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span>
+            <span class="n">copy_X</span><span class="o">=</span><span class="n">copy_X</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="n">return_path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">return_path</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="n">n_iter</span> <span class="o">=</span> <span class="n">out</span>
+            <span class="n">coef</span> <span class="o">=</span> <span class="n">coef</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)]</span>
+            <span class="k">for</span> <span class="n">n_active</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">coefs</span><span class="o">.</span><span class="n">T</span><span class="p">):</span>
+                <span class="n">coef</span><span class="p">[</span><span class="n">idx</span><span class="p">[:</span><span class="n">n_active</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">k</span><span class="p">,</span> <span class="n">n_active</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:</span><span class="n">n_active</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">n_iter</span> <span class="o">=</span> <span class="n">out</span>
+            <span class="n">coef</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="n">n_iters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n_iter</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">n_iters</span> <span class="o">=</span> <span class="n">n_iters</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">return_n_iter</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">coef</span><span class="p">),</span> <span class="n">n_iters</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">coef</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">orthogonal_mp_gram</span><span class="p">(</span><span class="n">Gram</span><span class="p">,</span> <span class="n">Xy</span><span class="p">,</span> <span class="n">n_nonzero_coefs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                       <span class="n">norms_squared</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">copy_Gram</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                       <span class="n">copy_Xy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                       <span class="n">return_n_iter</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Gram Orthogonal Matching Pursuit (OMP)</span>
+
+<span class="sd">    Solves n_targets Orthogonal Matching Pursuit problems using only</span>
+<span class="sd">    the Gram matrix X.T * X and the product X.T * y.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;omp&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Gram : array, shape (n_features, n_features)</span>
+<span class="sd">        Gram matrix of the input data: X.T * X</span>
+
+<span class="sd">    Xy : array, shape (n_features,) or (n_features, n_targets)</span>
+<span class="sd">        Input targets multiplied by X: X.T * y</span>
+
+<span class="sd">    n_nonzero_coefs : int</span>
+<span class="sd">        Desired number of non-zero entries in the solution. If None (by</span>
+<span class="sd">        default) this value is set to 10% of n_features.</span>
+
+<span class="sd">    tol : float</span>
+<span class="sd">        Maximum norm of the residual. If not None, overrides n_nonzero_coefs.</span>
+
+<span class="sd">    norms_squared : array-like, shape (n_targets,)</span>
+<span class="sd">        Squared L2 norms of the lines of y. Required if tol is not None.</span>
+
+<span class="sd">    copy_Gram : bool, optional</span>
+<span class="sd">        Whether the gram matrix must be copied by the algorithm. A false</span>
+<span class="sd">        value is only helpful if it is already Fortran-ordered, otherwise a</span>
+<span class="sd">        copy is made anyway.</span>
+
+<span class="sd">    copy_Xy : bool, optional</span>
+<span class="sd">        Whether the covariance vector Xy must be copied by the algorithm.</span>
+<span class="sd">        If False, it may be overwritten.</span>
+
+<span class="sd">    return_path : bool, optional. Default: False</span>
+<span class="sd">        Whether to return every value of the nonzero coefficients along the</span>
+<span class="sd">        forward path. Useful for cross-validation.</span>
+
+<span class="sd">    return_n_iter : bool, optional default False</span>
+<span class="sd">        Whether or not to return the number of iterations.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    coef : array, shape (n_features,) or (n_features, n_targets)</span>
+<span class="sd">        Coefficients of the OMP solution. If `return_path=True`, this contains</span>
+<span class="sd">        the whole coefficient path. In this case its shape is</span>
+<span class="sd">        (n_features, n_features) or (n_features, n_targets, n_features) and</span>
+<span class="sd">        iterating over the last axis yields coefficients in increasing order</span>
+<span class="sd">        of active features.</span>
+
+<span class="sd">    n_iters : array-like or int</span>
+<span class="sd">        Number of active features across every target. Returned only if</span>
+<span class="sd">        `return_n_iter` is set to True.</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    OrthogonalMatchingPursuit</span>
+<span class="sd">    orthogonal_mp</span>
+<span class="sd">    lars_path</span>
+<span class="sd">    decomposition.sparse_encode</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Orthogonal matching pursuit was introduced in G. Mallat, Z. Zhang,</span>
+<span class="sd">    Matching pursuits with time-frequency dictionaries, IEEE Transactions on</span>
+<span class="sd">    Signal Processing, Vol. 41, No. 12. (December 1993), pp. 3397-3415.</span>
+<span class="sd">    (http://blanche.polytechnique.fr/~mallat/papiers/MallatPursuit93.pdf)</span>
+
+<span class="sd">    This implementation is based on Rubinstein, R., Zibulevsky, M. and Elad,</span>
+<span class="sd">    M., Efficient Implementation of the K-SVD Algorithm using Batch Orthogonal</span>
+<span class="sd">    Matching Pursuit Technical Report - CS Technion, April 2008.</span>
+<span class="sd">    http://www.cs.technion.ac.il/~ronrubin/Publications/KSVD-OMP-v2.pdf</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">Gram</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">Gram</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;F&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="n">copy_Gram</span><span class="p">)</span>
+    <span class="n">Xy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">Xy</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">Xy</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">Xy</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># or subsequent target will be affected</span>
+        <span class="n">copy_Gram</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="n">Xy</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">Xy</span> <span class="o">=</span> <span class="n">Xy</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">tol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">norms_squared</span> <span class="o">=</span> <span class="p">[</span><span class="n">norms_squared</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">n_nonzero_coefs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">tol</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">n_nonzero_coefs</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">0.1</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">Gram</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">tol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">norms_squared</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Gram OMP needs the precomputed norms in order &#39;</span>
+                         <span class="s1">&#39;to evaluate the error sum of squares.&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">tol</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Epsilon cannot be negative&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tol</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">n_nonzero_coefs</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of atoms must be positive&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tol</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">n_nonzero_coefs</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">Gram</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of atoms cannot be more than the number &quot;</span>
+                         <span class="s2">&quot;of features&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">return_path</span><span class="p">:</span>
+        <span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">Gram</span><span class="p">),</span> <span class="n">Xy</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">Gram</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">Gram</span><span class="p">),</span> <span class="n">Xy</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="n">n_iters</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Xy</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">_gram_omp</span><span class="p">(</span>
+            <span class="n">Gram</span><span class="p">,</span> <span class="n">Xy</span><span class="p">[:,</span> <span class="n">k</span><span class="p">],</span> <span class="n">n_nonzero_coefs</span><span class="p">,</span>
+            <span class="n">norms_squared</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">if</span> <span class="n">tol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span>
+            <span class="n">copy_Gram</span><span class="o">=</span><span class="n">copy_Gram</span><span class="p">,</span> <span class="n">copy_Xy</span><span class="o">=</span><span class="n">copy_Xy</span><span class="p">,</span>
+            <span class="n">return_path</span><span class="o">=</span><span class="n">return_path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">return_path</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="n">n_iter</span> <span class="o">=</span> <span class="n">out</span>
+            <span class="n">coef</span> <span class="o">=</span> <span class="n">coef</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)]</span>
+            <span class="k">for</span> <span class="n">n_active</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">coefs</span><span class="o">.</span><span class="n">T</span><span class="p">):</span>
+                <span class="n">coef</span><span class="p">[</span><span class="n">idx</span><span class="p">[:</span><span class="n">n_active</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">k</span><span class="p">,</span> <span class="n">n_active</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:</span><span class="n">n_active</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">n_iter</span> <span class="o">=</span> <span class="n">out</span>
+            <span class="n">coef</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="n">n_iters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n_iter</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">Xy</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">n_iters</span> <span class="o">=</span> <span class="n">n_iters</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">return_n_iter</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">coef</span><span class="p">),</span> <span class="n">n_iters</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">coef</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">OrthogonalMatchingPursuit</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Orthogonal Matching Pursuit model (OMP)</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;omp&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_nonzero_coefs : int, optional</span>
+<span class="sd">        Desired number of non-zero entries in the solution. If None (by</span>
+<span class="sd">        default) this value is set to 10% of n_features.</span>
+
+<span class="sd">    tol : float, optional</span>
+<span class="sd">        Maximum norm of the residual. If not None, overrides n_nonzero_coefs.</span>
+
+<span class="sd">    fit_intercept : boolean, optional</span>
+<span class="sd">        whether to calculate the intercept for this model. If set</span>
+<span class="sd">        to false, no intercept will be used in calculations</span>
+<span class="sd">        (e.g. data is expected to be already centered).</span>
+
+<span class="sd">    normalize : boolean, optional, default True</span>
+<span class="sd">        This parameter is ignored when ``fit_intercept`` is set to False.</span>
+<span class="sd">        If True, the regressors X will be normalized before regression by</span>
+<span class="sd">        subtracting the mean and dividing by the l2-norm.</span>
+<span class="sd">        If you wish to standardize, please use</span>
+<span class="sd">        :class:`sklearn.preprocessing.StandardScaler` before calling ``fit``</span>
+<span class="sd">        on an estimator with ``normalize=False``.</span>
+
+<span class="sd">    precompute : {True, False, &#39;auto&#39;}, default &#39;auto&#39;</span>
+<span class="sd">        Whether to use a precomputed Gram and Xy matrix to speed up</span>
+<span class="sd">        calculations. Improves performance when `n_targets` or `n_samples` is</span>
+<span class="sd">        very large. Note that if you already have such matrices, you can pass</span>
+<span class="sd">        them directly to the fit method.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coef_ : array, shape (n_features,) or (n_targets, n_features)</span>
+<span class="sd">        parameter vector (w in the formula)</span>
+
+<span class="sd">    intercept_ : float or array, shape (n_targets,)</span>
+<span class="sd">        independent term in decision function.</span>
+
+<span class="sd">    n_iter_ : int or array-like</span>
+<span class="sd">        Number of active features across every target.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Orthogonal matching pursuit was introduced in G. Mallat, Z. Zhang,</span>
+<span class="sd">    Matching pursuits with time-frequency dictionaries, IEEE Transactions on</span>
+<span class="sd">    Signal Processing, Vol. 41, No. 12. (December 1993), pp. 3397-3415.</span>
+<span class="sd">    (http://blanche.polytechnique.fr/~mallat/papiers/MallatPursuit93.pdf)</span>
+
+<span class="sd">    This implementation is based on Rubinstein, R., Zibulevsky, M. and Elad,</span>
+<span class="sd">    M., Efficient Implementation of the K-SVD Algorithm using Batch Orthogonal</span>
+<span class="sd">    Matching Pursuit Technical Report - CS Technion, April 2008.</span>
+<span class="sd">    http://www.cs.technion.ac.il/~ronrubin/Publications/KSVD-OMP-v2.pdf</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    orthogonal_mp</span>
+<span class="sd">    orthogonal_mp_gram</span>
+<span class="sd">    lars_path</span>
+<span class="sd">    Lars</span>
+<span class="sd">    LassoLars</span>
+<span class="sd">    decomposition.sparse_encode</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_nonzero_coefs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">precompute</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_nonzero_coefs</span> <span class="o">=</span> <span class="n">n_nonzero_coefs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span> <span class="o">=</span> <span class="n">fit_intercept</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span> <span class="o">=</span> <span class="n">normalize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">precompute</span> <span class="o">=</span> <span class="n">precompute</span>
+
+<div class="viewcode-block" id="OrthogonalMatchingPursuit.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_orthogonalmatchingpursuit.html#ibex.sklearn.linear_model.OrthogonalMatchingPursuit.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model using X, y as training data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training data.</span>
+
+<span class="sd">        y : array-like, shape (n_samples,) or (n_samples, n_targets)</span>
+<span class="sd">            Target values. Will be cast to X&#39;s dtype if necessary</span>
+
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : object</span>
+<span class="sd">            returns an instance of self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">multi_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">y_numeric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X_offset</span><span class="p">,</span> <span class="n">y_offset</span><span class="p">,</span> <span class="n">X_scale</span><span class="p">,</span> <span class="n">Gram</span><span class="p">,</span> <span class="n">Xy</span> <span class="o">=</span> \
+            <span class="n">_pre_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">precompute</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">,</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">y</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_nonzero_coefs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># default for n_nonzero_coefs is 0.1 * n_features</span>
+            <span class="c1"># but at least one.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_nonzero_coefs_</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mf">0.1</span> <span class="o">*</span> <span class="n">n_features</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_nonzero_coefs_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_nonzero_coefs</span>
+
+        <span class="k">if</span> <span class="n">Gram</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">coef_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">=</span> <span class="n">orthogonal_mp</span><span class="p">(</span>
+                <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_nonzero_coefs_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
+                <span class="n">precompute</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">copy_X</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">return_n_iter</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">norms_sq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">y</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+
+            <span class="n">coef_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">=</span> <span class="n">orthogonal_mp_gram</span><span class="p">(</span>
+                <span class="n">Gram</span><span class="p">,</span> <span class="n">Xy</span><span class="o">=</span><span class="n">Xy</span><span class="p">,</span> <span class="n">n_nonzero_coefs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_nonzero_coefs_</span><span class="p">,</span>
+                <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span> <span class="n">norms_squared</span><span class="o">=</span><span class="n">norms_sq</span><span class="p">,</span>
+                <span class="n">copy_Gram</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">copy_Xy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">return_n_iter</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">coef_</span><span class="o">.</span><span class="n">T</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_intercept</span><span class="p">(</span><span class="n">X_offset</span><span class="p">,</span> <span class="n">y_offset</span><span class="p">,</span> <span class="n">X_scale</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<span class="k">def</span> <span class="nf">_omp_path_residues</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                       <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the residues on left-out data for a full LARS path</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    -----------</span>
+<span class="sd">    X_train : array, shape (n_samples, n_features)</span>
+<span class="sd">        The data to fit the LARS on</span>
+
+<span class="sd">    y_train : array, shape (n_samples)</span>
+<span class="sd">        The target variable to fit LARS on</span>
+
+<span class="sd">    X_test : array, shape (n_samples, n_features)</span>
+<span class="sd">        The data to compute the residues on</span>
+
+<span class="sd">    y_test : array, shape (n_samples)</span>
+<span class="sd">        The target variable to compute the residues on</span>
+
+<span class="sd">    copy : boolean, optional</span>
+<span class="sd">        Whether X_train, X_test, y_train and y_test should be copied.  If</span>
+<span class="sd">        False, they may be overwritten.</span>
+
+<span class="sd">    fit_intercept : boolean</span>
+<span class="sd">        whether to calculate the intercept for this model. If set</span>
+<span class="sd">        to false, no intercept will be used in calculations</span>
+<span class="sd">        (e.g. data is expected to be already centered).</span>
+
+<span class="sd">    normalize : boolean, optional, default True</span>
+<span class="sd">        This parameter is ignored when ``fit_intercept`` is set to False.</span>
+<span class="sd">        If True, the regressors X will be normalized before regression by</span>
+<span class="sd">        subtracting the mean and dividing by the l2-norm.</span>
+<span class="sd">        If you wish to standardize, please use</span>
+<span class="sd">        :class:`sklearn.preprocessing.StandardScaler` before calling ``fit``</span>
+<span class="sd">        on an estimator with ``normalize=False``.</span>
+
+<span class="sd">    max_iter : integer, optional</span>
+<span class="sd">        Maximum numbers of iterations to perform, therefore maximum features</span>
+<span class="sd">        to include. 100 by default.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    residues : array, shape (n_samples, max_features)</span>
+<span class="sd">        Residues of the prediction on the test data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">copy</span><span class="p">:</span>
+        <span class="n">X_train</span> <span class="o">=</span> <span class="n">X_train</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">y_train</span> <span class="o">=</span> <span class="n">y_train</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">X_test</span> <span class="o">=</span> <span class="n">X_test</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">y_test</span> <span class="o">=</span> <span class="n">y_test</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">fit_intercept</span><span class="p">:</span>
+        <span class="n">X_mean</span> <span class="o">=</span> <span class="n">X_train</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">X_train</span> <span class="o">-=</span> <span class="n">X_mean</span>
+        <span class="n">X_test</span> <span class="o">-=</span> <span class="n">X_mean</span>
+        <span class="n">y_mean</span> <span class="o">=</span> <span class="n">y_train</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">y_train</span> <span class="o">=</span> <span class="n">as_float_array</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">y_train</span> <span class="o">-=</span> <span class="n">y_mean</span>
+        <span class="n">y_test</span> <span class="o">=</span> <span class="n">as_float_array</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">y_test</span> <span class="o">-=</span> <span class="n">y_mean</span>
+
+    <span class="k">if</span> <span class="n">normalize</span><span class="p">:</span>
+        <span class="n">norms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">X_train</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+        <span class="n">nonzeros</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">norms</span><span class="p">)</span>
+        <span class="n">X_train</span><span class="p">[:,</span> <span class="n">nonzeros</span><span class="p">]</span> <span class="o">/=</span> <span class="n">norms</span><span class="p">[</span><span class="n">nonzeros</span><span class="p">]</span>
+
+    <span class="n">coefs</span> <span class="o">=</span> <span class="n">orthogonal_mp</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">n_nonzero_coefs</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                          <span class="n">precompute</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">copy_X</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                          <span class="n">return_path</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">coefs</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">coefs</span> <span class="o">=</span> <span class="n">coefs</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">normalize</span><span class="p">:</span>
+        <span class="n">coefs</span><span class="p">[</span><span class="n">nonzeros</span><span class="p">]</span> <span class="o">/=</span> <span class="n">norms</span><span class="p">[</span><span class="n">nonzeros</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">coefs</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">X_test</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">-</span> <span class="n">y_test</span>
+
+
+<span class="k">class</span> <span class="nc">OrthogonalMatchingPursuitCV</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Cross-validated Orthogonal Matching Pursuit model (OMP)</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;omp&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    copy : bool, optional</span>
+<span class="sd">        Whether the design matrix X must be copied by the algorithm. A false</span>
+<span class="sd">        value is only helpful if X is already Fortran-ordered, otherwise a</span>
+<span class="sd">        copy is made anyway.</span>
+
+<span class="sd">    fit_intercept : boolean, optional</span>
+<span class="sd">        whether to calculate the intercept for this model. If set</span>
+<span class="sd">        to false, no intercept will be used in calculations</span>
+<span class="sd">        (e.g. data is expected to be already centered).</span>
+
+<span class="sd">    normalize : boolean, optional, default True</span>
+<span class="sd">        This parameter is ignored when ``fit_intercept`` is set to False.</span>
+<span class="sd">        If True, the regressors X will be normalized before regression by</span>
+<span class="sd">        subtracting the mean and dividing by the l2-norm.</span>
+<span class="sd">        If you wish to standardize, please use</span>
+<span class="sd">        :class:`sklearn.preprocessing.StandardScaler` before calling ``fit``</span>
+<span class="sd">        on an estimator with ``normalize=False``.</span>
+
+<span class="sd">    max_iter : integer, optional</span>
+<span class="sd">        Maximum numbers of iterations to perform, therefore maximum features</span>
+<span class="sd">        to include. 10% of ``n_features`` but at least 5 if available.</span>
+
+<span class="sd">    cv : int, cross-validation generator or an iterable, optional</span>
+<span class="sd">        Determines the cross-validation splitting strategy.</span>
+<span class="sd">        Possible inputs for cv are:</span>
+
+<span class="sd">        - None, to use the default 3-fold cross-validation,</span>
+<span class="sd">        - integer, to specify the number of folds.</span>
+<span class="sd">        - An object to be used as a cross-validation generator.</span>
+<span class="sd">        - An iterable yielding train/test splits.</span>
+
+<span class="sd">        For integer/None inputs, :class:`KFold` is used.</span>
+
+<span class="sd">        Refer :ref:`User Guide &lt;cross_validation&gt;` for the various</span>
+<span class="sd">        cross-validation strategies that can be used here.</span>
+
+<span class="sd">    n_jobs : integer, optional</span>
+<span class="sd">        Number of CPUs to use during the cross validation. If ``-1``, use</span>
+<span class="sd">        all the CPUs</span>
+
+<span class="sd">    verbose : boolean or integer, optional</span>
+<span class="sd">        Sets the verbosity amount</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    intercept_ : float or array, shape (n_targets,)</span>
+<span class="sd">        Independent term in decision function.</span>
+
+<span class="sd">    coef_ : array, shape (n_features,) or (n_targets, n_features)</span>
+<span class="sd">        Parameter vector (w in the problem formulation).</span>
+
+<span class="sd">    n_nonzero_coefs_ : int</span>
+<span class="sd">        Estimated number of non-zero coefficients giving the best mean squared</span>
+<span class="sd">        error over the cross-validation folds.</span>
+
+<span class="sd">    n_iter_ : int or array-like</span>
+<span class="sd">        Number of active features across every target for the model refit with</span>
+<span class="sd">        the best hyperparameters got by cross-validating across all folds.</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    orthogonal_mp</span>
+<span class="sd">    orthogonal_mp_gram</span>
+<span class="sd">    lars_path</span>
+<span class="sd">    Lars</span>
+<span class="sd">    LassoLars</span>
+<span class="sd">    OrthogonalMatchingPursuit</span>
+<span class="sd">    LarsCV</span>
+<span class="sd">    LassoLarsCV</span>
+<span class="sd">    decomposition.sparse_encode</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">max_iter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">copy</span> <span class="o">=</span> <span class="n">copy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span> <span class="o">=</span> <span class="n">fit_intercept</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span> <span class="o">=</span> <span class="n">normalize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cv</span> <span class="o">=</span> <span class="n">cv</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+
+<div class="viewcode-block" id="OrthogonalMatchingPursuitCV.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_orthogonalmatchingpursuitcv.html#ibex.sklearn.linear_model.OrthogonalMatchingPursuitCV.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model using X, y as training data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape [n_samples, n_features]</span>
+<span class="sd">            Training data.</span>
+
+<span class="sd">        y : array-like, shape [n_samples]</span>
+<span class="sd">            Target values. Will be cast to X&#39;s dtype if necessary</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : object</span>
+<span class="sd">            returns an instance of self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">y_numeric</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ensure_min_features</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                         <span class="n">estimator</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">as_float_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">force_all_finite</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">cv</span> <span class="o">=</span> <span class="n">check_cv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cv</span><span class="p">,</span> <span class="n">classifier</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">max_iter</span> <span class="o">=</span> <span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mf">0.1</span> <span class="o">*</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="mi">5</span><span class="p">),</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span>
+                    <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">)</span>
+        <span class="n">cv_paths</span> <span class="o">=</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">)(</span>
+            <span class="n">delayed</span><span class="p">(</span><span class="n">_omp_path_residues</span><span class="p">)(</span>
+                <span class="n">X</span><span class="p">[</span><span class="n">train</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">train</span><span class="p">],</span> <span class="n">X</span><span class="p">[</span><span class="n">test</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">test</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">,</span> <span class="n">max_iter</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span> <span class="ow">in</span> <span class="n">cv</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">X</span><span class="p">))</span>
+
+        <span class="n">min_early_stop</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">fold</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">fold</span> <span class="ow">in</span> <span class="n">cv_paths</span><span class="p">)</span>
+        <span class="n">mse_folds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">fold</span><span class="p">[:</span><span class="n">min_early_stop</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                              <span class="k">for</span> <span class="n">fold</span> <span class="ow">in</span> <span class="n">cv_paths</span><span class="p">])</span>
+        <span class="n">best_n_nonzero_coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">mse_folds</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_nonzero_coefs_</span> <span class="o">=</span> <span class="n">best_n_nonzero_coefs</span>
+        <span class="n">omp</span> <span class="o">=</span> <span class="n">OrthogonalMatchingPursuit</span><span class="p">(</span><span class="n">n_nonzero_coefs</span><span class="o">=</span><span class="n">best_n_nonzero_coefs</span><span class="p">,</span>
+                                        <span class="n">fit_intercept</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">,</span>
+                                        <span class="n">normalize</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">)</span>
+        <span class="n">omp</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">omp</span><span class="o">.</span><span class="n">coef_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">=</span> <span class="n">omp</span><span class="o">.</span><span class="n">intercept_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">=</span> <span class="n">omp</span><span class="o">.</span><span class="n">n_iter_</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

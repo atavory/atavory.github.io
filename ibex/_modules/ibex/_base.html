@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>ibex._base &#8212; ibex 0.1.1 documentation</title>
+    <title>ibex._base &#8212; ibex latest documentation</title>
     <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.1.1',
+        VERSION:     'latest',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -53,8 +53,11 @@
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">base</span>
 <span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">pipeline</span>
-<span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">exceptions</span>
 <span class="kn">from</span> <span class="nn">sklearn.externals</span> <span class="k">import</span> <span class="n">joblib</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">sklearn.exceptions</span> <span class="k">import</span> <span class="n">NotFittedError</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">sklearn.utils.validation</span> <span class="k">import</span> <span class="n">NotFittedError</span> <span class="c1"># Older Versions</span>
 
 <span class="kn">from</span> <span class="nn">._utils</span> <span class="k">import</span> <span class="n">verify_x_type</span><span class="p">,</span> <span class="n">verify_y_type</span>
 
@@ -147,10 +150,13 @@
 
 <span class="sd">        The following ``transform`` will fail, as the estimator was not fitted:</span>
 
-<span class="sd">        &gt;&gt;&gt; from sklearn import exceptions</span>
+<span class="sd">        &gt;&gt;&gt; try:</span>
+<span class="sd">        ...     from sklearn.exceptions import NotFittedError</span>
+<span class="sd">        ... except ImportError:</span>
+<span class="sd">        ...     from sklearn.utils.validation import NotFittedError # Older Versions</span>
 <span class="sd">        &gt;&gt;&gt; try:</span>
 <span class="sd">        ...     Id().transform(X_2)</span>
-<span class="sd">        ... except exceptions.NotFittedError:</span>
+<span class="sd">        ... except NotFittedError:</span>
 <span class="sd">        ...     print(&#39;caught&#39;)</span>
 <span class="sd">        caught</span>
 
@@ -182,7 +188,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__x_cols</span>
         <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">NotFittedError</span><span class="p">()</span>
+            <span class="k">raise</span> <span class="n">NotFittedError</span><span class="p">()</span>
 
     <span class="nd">@x_columns</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">x_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="p">):</span>
@@ -201,7 +207,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__y_cols</span>
         <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">NotFittedError</span><span class="p">()</span>
+            <span class="k">raise</span> <span class="n">NotFittedError</span><span class="p">()</span>
 
     <span class="nd">@y_columns</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">y_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="p">):</span>
@@ -274,7 +280,7 @@
     <span class="k">return</span> <span class="n">res</span>
 
 
-<div class="viewcode-block" id="FeatureUnion"><a class="viewcode-back" href="../../api_ibex_sklearn_pipeline_feature_union.html#ibex.FeatureUnion">[docs]</a><span class="k">class</span> <span class="nc">FeatureUnion</span><span class="p">(</span><span class="n">pipeline</span><span class="o">.</span><span class="n">FeatureUnion</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">TransformerMixin</span><span class="p">,</span> <span class="n">FrameMixin</span><span class="p">):</span>
+<div class="viewcode-block" id="FeatureUnion"><a class="viewcode-back" href="../../api_ibex_sklearn_pipeline_featureunion.html#ibex.FeatureUnion">[docs]</a><span class="k">class</span> <span class="nc">FeatureUnion</span><span class="p">(</span><span class="n">pipeline</span><span class="o">.</span><span class="n">FeatureUnion</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">TransformerMixin</span><span class="p">,</span> <span class="n">FrameMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Concatenates results of multiple transformer objects.</span>
 <span class="sd">    This estimator applies a list of transformer objects in parallel to the</span>
@@ -339,7 +345,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_as_index</span> <span class="o">=</span> <span class="n">as_index</span>
 
     <span class="c1"># Tmp Ami - get docstrings from sklearn.</span>
-<div class="viewcode-block" id="FeatureUnion.fit_transform"><a class="viewcode-back" href="../../api_ibex_sklearn_pipeline_feature_union.html#ibex.FeatureUnion.fit_transform">[docs]</a>    <span class="k">def</span> <span class="nf">fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_params</span><span class="p">):</span>
+<div class="viewcode-block" id="FeatureUnion.fit_transform"><a class="viewcode-back" href="../../api_ibex_sklearn_pipeline_featureunion.html#ibex.FeatureUnion.fit_transform">[docs]</a>    <span class="k">def</span> <span class="nf">fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_params</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fits the transformer using ``X`` (and possibly ``y``). Transforms</span>
 <span class="sd">        ``X`` using the transformers, uses :func:`pandas.concat`</span>
@@ -356,7 +362,7 @@
             <span class="n">joblib</span><span class="o">.</span><span class="n">delayed</span><span class="p">(</span><span class="n">_fit_transform</span><span class="p">)(</span><span class="n">trans</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_params</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">trans</span><span class="p">,</span> <span class="n">weight</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_iter</span><span class="p">())</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__concat</span><span class="p">(</span><span class="n">Xts</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="FeatureUnion.transform"><a class="viewcode-back" href="../../api_ibex_sklearn_pipeline_feature_union.html#ibex.FeatureUnion.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="FeatureUnion.transform"><a class="viewcode-back" href="../../api_ibex_sklearn_pipeline_featureunion.html#ibex.FeatureUnion.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Transforms ``X`` using the transformers, uses :func:`pandas.concat`</span>
 <span class="sd">        to horizontally concatenate the results.</span>

@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Adapting Estimators &#8212; ibex 0.1.1 documentation</title>
+    <title>Adapting Estimators &#8212; ibex latest documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1.1',
+        VERSION:     'latest',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -44,16 +44,16 @@
             
   <div class="section" id="adapting-estimators">
 <span id="adapting"></span><h1>Adapting Estimators<a class="headerlink" href="#adapting-estimators" title="Permalink to this headline">¶</a></h1>
-<p>This chapter describes a low-level function, <a class="reference internal" href="api_ibex_frame.html#ibex.frame" title="ibex.frame"><code class="xref py py-func docutils literal"><span class="pre">ibex.frame()</span></code></a>, which transforms <a class="reference external" href="http://scikit-learn.org/stable/developers/contributing.html#apis-of-scikit-learn-objects">estimators conforming to the sickit-learn protocol</a> to <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/index.html#module-pandas" title="(in pandas v0.20.3)"><code class="xref py py-mod docutils literal"><span class="pre">pandas</span></code></a>-aware estimators.</p>
+<p>This chapter describes a low-level function, <a class="reference internal" href="api_ibex_frame.html#ibex.frame" title="ibex.frame"><code class="xref py py-func docutils literal"><span class="pre">ibex.frame()</span></code></a>, which transforms <a class="reference external" href="http://scikit-learn.org/stable/developers/contributing.html#apis-of-scikit-learn-objects">estimators conforming to the sickit-learn protocol</a> to <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/index.html#module-pandas" title="(in pandas v0.21.0)"><code class="xref py py-mod docutils literal"><span class="pre">pandas</span></code></a>-aware estimators.</p>
 <div class="admonition tip">
 <p class="first admonition-title">Tip</p>
-<p class="last">This chapter describes interfaces required for writing a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/index.html#module-pandas" title="(in pandas v0.20.3)"><code class="xref py py-mod docutils literal"><span class="pre">pandas</span></code></a>-aware estimator from scratch, or for adapting an estimator to be <code class="docutils literal"><span class="pre">pandas</span></code>-aware. As all of <code class="xref py py-mod docutils literal"><span class="pre">sklearn</span></code> is wrapped by Ibex, this can be skipped if you’re not planning on doing either.</p>
+<p class="last">This chapter describes interfaces required for writing a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/index.html#module-pandas" title="(in pandas v0.21.0)"><code class="xref py py-mod docutils literal"><span class="pre">pandas</span></code></a>-aware estimator from scratch, or for adapting an estimator to be <code class="docutils literal"><span class="pre">pandas</span></code>-aware. As all of <code class="xref py py-mod docutils literal"><span class="pre">sklearn</span></code> is wrapped by Ibex, this can be skipped if you’re not planning on doing either.</p>
 </div>
 <p>The <code class="docutils literal"><span class="pre">frame</span></code> function takes an estimator, and returns an <a class="reference external" href="https://en.wikipedia.org/wiki/Adapter_pattern">adapter</a> of that estimator. This adapter does the
 same thing as the adapted class, except that:</p>
 <ol class="arabic simple">
 <li><dl class="first docutils">
-<dt>It expects to take <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> and <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a> objects, not <code class="xref py py-class docutils literal"><span class="pre">numpy.array</span></code> objects. It performs verifications on these inputs,</dt>
+<dt>It expects to take <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> and <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a> objects, not <code class="xref py py-class docutils literal"><span class="pre">numpy.array</span></code> objects. It performs verifications on these inputs,</dt>
 <dd>and processes the outputs, as described in <a class="reference internal" href="input_verification_and_output_processing.html#verification-and-processing"><span class="std std-ref">Verification and Processing</span></a>.</dd>
 </dl>
 </li>

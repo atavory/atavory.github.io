@@ -1,0 +1,361 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>LSHForest &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="lshforest">
+<h1><code class="docutils literal"><span class="pre">LSHForest</span></code><a class="headerlink" href="#lshforest" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="ibex.sklearn.neighbors.LSHForest">
+<em class="property">class </em><code class="descclassname">ibex.sklearn.neighbors.</code><code class="descname">LSHForest</code><span class="sig-paren">(</span><em>n_estimators=10</em>, <em>radius=1.0</em>, <em>n_candidates=50</em>, <em>n_neighbors=5</em>, <em>min_hash_match=4</em>, <em>radius_cutoff_ratio=0.9</em>, <em>random_state=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.neighbors.LSHForest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.neighbors.approximate.LSHForest</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Performs approximate nearest neighbor search using LSH forest.</p>
+<blockquote>
+<div><p>LSH Forest: Locality Sensitive Hashing forest [1] is an alternative
+method for vanilla approximate nearest neighbor search methods.
+LSH forest data structure has been implemented using sorted
+arrays and binary search and 32 bit fixed-length hashes.
+Random projection is used as the hash family which approximates
+cosine distance.</p>
+<p>The cosine distance is defined as <code class="docutils literal"><span class="pre">1</span> <span class="pre">-</span> <span class="pre">cosine_similarity</span></code>: the lowest
+value is 0 (identical point) but it is bounded above by 2 for the farthest
+points. Its value does not depend on the norm of the vector points but
+only on their relative angles.</p>
+<dl class="docutils">
+<dt>n_estimators <span class="classifier-delimiter">:</span> <span class="classifier">int (default = 10)</span></dt>
+<dd>Number of trees in the LSH Forest.</dd>
+<dt>radius <span class="classifier-delimiter">:</span> <span class="classifier">float, optinal (default = 1.0)</span></dt>
+<dd>Radius from the data point to its neighbors. This is the parameter
+space to use by default for the <code class="xref py py-meth docutils literal"><span class="pre">radius_neighbors()</span></code> queries.</dd>
+<dt>n_candidates <span class="classifier-delimiter">:</span> <span class="classifier">int (default = 50)</span></dt>
+<dd>Minimum number of candidates evaluated per estimator, assuming enough
+items meet the <cite>min_hash_match</cite> constraint.</dd>
+<dt>n_neighbors <span class="classifier-delimiter">:</span> <span class="classifier">int (default = 5)</span></dt>
+<dd>Number of neighbors to be returned from query function when
+it is not provided to the <code class="xref py py-meth docutils literal"><span class="pre">kneighbors()</span></code> method.</dd>
+<dt>min_hash_match <span class="classifier-delimiter">:</span> <span class="classifier">int (default = 4)</span></dt>
+<dd>lowest hash length to be searched when candidate selection is
+performed for nearest neighbors.</dd>
+<dt>radius_cutoff_ratio <span class="classifier-delimiter">:</span> <span class="classifier">float, optional (default = 0.9)</span></dt>
+<dd>A value ranges from 0 to 1. Radius neighbors will be searched until
+the ratio between total neighbors within the radius and the total
+candidates becomes less than this value unless it is terminated by
+hash length reaching <cite>min_hash_match</cite>.</dd>
+<dt>random_state <span class="classifier-delimiter">:</span> <span class="classifier">int, RandomState instance or None, optional (default=None)</span></dt>
+<dd>If int, random_state is the seed used by the random number generator;
+If RandomState instance, random_state is the random number generator;
+If None, the random number generator is the RandomState instance used
+by <cite>np.random</cite>.</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id2"><span class="problematic" id="id3">hash_functions_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">list of GaussianRandomProjectionHash objects</span></dt>
+<dd>Hash function g(p,x) for a tree is an array of 32 randomly generated
+float arrays with the same dimension as the data set. This array is
+stored in GaussianRandomProjectionHash object and can be obtained
+from <code class="docutils literal"><span class="pre">components_</span></code> attribute.</dd>
+<dt><a href="#id4"><span class="problematic" id="id5">trees_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_estimators, n_samples)</span></dt>
+<dd>Each tree (corresponding to a hash function) contains an array of
+sorted hashed values. The array representation may change in future
+versions.</dd>
+<dt><a href="#id6"><span class="problematic" id="id7">original_indices_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_estimators, n_samples)</span></dt>
+<dd>Original indices of sorted hashed values in the fitted index.</dd>
+</dl>
+<table class="docutils footnote" frame="void" id="id1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[1]</td><td>M. Bawa, T. Condie and P. Ganesan, “LSH Forest: Self-Tuning
+Indexes for Similarity Search”, WWW ‘05 Proceedings of the
+14th international conference on World Wide Web,  651-660,
+2005.</td></tr>
+</tbody>
+</table>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.neighbors</span> <span class="k">import</span> <span class="n">LSHForest</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">X_train</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">21</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">2</span><span class="p">]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X_test</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lshf</span> <span class="o">=</span> <span class="n">LSHForest</span><span class="p">(</span><span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lshf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">)</span>  
+<span class="go">LSHForest(min_hash_match=4, n_candidates=50, n_estimators=10,</span>
+<span class="go">          n_neighbors=5, radius=1.0, radius_cutoff_ratio=0.9,</span>
+<span class="go">          random_state=42)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">distances</span><span class="p">,</span> <span class="n">indices</span> <span class="o">=</span> <span class="n">lshf</span><span class="o">.</span><span class="n">kneighbors</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">n_neighbors</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">distances</span>                                        
+<span class="go">array([[ 0.069...,  0.149...],</span>
+<span class="go">       [ 0.229...,  0.481...],</span>
+<span class="go">       [ 0.004...,  0.014...]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">indices</span>
+<span class="go">array([[1, 2],</span>
+<span class="go">       [2, 0],</span>
+<span class="go">       [4, 0]])</span>
+</pre></div>
+</div>
+</div></blockquote>
+<dl class="method">
+<dt id="ibex.sklearn.neighbors.LSHForest.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/neighbors/approximate.html#LSHForest.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.neighbors.LSHForest.fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit the LSH forest on the data.</p>
+<blockquote>
+<div><p>This creates binary hashes of input data points by getting the
+dot product of input points and hash_function then
+transforming the projection into a binary string array based
+on the sign (positive/negative) of the projection.
+A sorted array of binary hashes is created.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array_like or sparse (CSR) matrix, shape (n_samples, n_features)</span></dt>
+<dd>List of n_features-dimensional data points. Each row
+corresponds to a single data point.</dd>
+</dl>
+<dl class="docutils">
+<dt>self <span class="classifier-delimiter">:</span> <span class="classifier">object</span></dt>
+<dd>Returns self.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.neighbors.LSHForest.kneighbors">
+<code class="descname">kneighbors</code><span class="sig-paren">(</span><em>X</em>, <em>n_neighbors=None</em>, <em>return_distance=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/neighbors/approximate.html#LSHForest.kneighbors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.neighbors.LSHForest.kneighbors" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Returns n_neighbors of approximate nearest neighbors.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array_like or sparse (CSR) matrix, shape (n_samples, n_features)</span></dt>
+<dd>List of n_features-dimensional data points.  Each row
+corresponds to a single query.</dd>
+<dt>n_neighbors <span class="classifier-delimiter">:</span> <span class="classifier">int, optional (default = None)</span></dt>
+<dd>Number of neighbors required. If not provided, this will
+return the number specified at the initialization.</dd>
+<dt>return_distance <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional (default = True)</span></dt>
+<dd>Returns the distances of neighbors if set to True.</dd>
+</dl>
+<dl class="docutils">
+<dt>dist <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_samples, n_neighbors)</span></dt>
+<dd>Array representing the cosine distances to each point,
+only present if return_distance=True.</dd>
+<dt>ind <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_samples, n_neighbors)</span></dt>
+<dd>Indices of the approximate nearest points in the population
+matrix.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.neighbors.LSHForest.partial_fit">
+<code class="descname">partial_fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/neighbors/approximate.html#LSHForest.partial_fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.neighbors.LSHForest.partial_fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<blockquote>
+<div><p>Inserts new data into the already fitted LSH Forest.
+Cost is proportional to new total size, so additions
+should be batched.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array_like or sparse (CSR) matrix, shape (n_samples, n_features)</span></dt>
+<dd>New data point to be inserted into the LSH Forest.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.neighbors.LSHForest.radius_neighbors">
+<code class="descname">radius_neighbors</code><span class="sig-paren">(</span><em>X</em>, <em>radius=None</em>, <em>return_distance=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/neighbors/approximate.html#LSHForest.radius_neighbors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.neighbors.LSHForest.radius_neighbors" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Finds the neighbors within a given radius of a point or points.</p>
+<blockquote>
+<div><p>Return the indices and distances of some points from the dataset
+lying in a ball with size <code class="docutils literal"><span class="pre">radius</span></code> around the points of the query
+array. Points lying on the boundary are included in the results.</p>
+<p>The result points are <em>not</em> necessarily sorted by distance to their
+query point.</p>
+<p>LSH Forest being an approximate method, some true neighbors from the
+indexed dataset might be missing from the results.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array_like or sparse (CSR) matrix, shape (n_samples, n_features)</span></dt>
+<dd>List of n_features-dimensional data points. Each row
+corresponds to a single query.</dd>
+<dt>radius <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>Limiting distance of neighbors to return.
+(default is the value passed to the constructor).</dd>
+<dt>return_distance <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional (default = False)</span></dt>
+<dd>Returns the distances of neighbors if set to True.</dd>
+</dl>
+<dl class="docutils">
+<dt>dist <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_samples,) of arrays</span></dt>
+<dd>Each element is an array representing the cosine distances
+to some points found within <code class="docutils literal"><span class="pre">radius</span></code> of the respective query.
+Only present if <code class="docutils literal"><span class="pre">return_distance=True</span></code>.</dd>
+<dt>ind <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_samples,) of arrays</span></dt>
+<dd>Each element is an array of indices for neighbors within <code class="docutils literal"><span class="pre">radius</span></code>
+of the respective query.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex_sklearn_neighbors_lshforest.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex_sklearn_neighbors_lshforest.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

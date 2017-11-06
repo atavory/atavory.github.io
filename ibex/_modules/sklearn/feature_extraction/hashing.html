@@ -1,0 +1,284 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.feature_extraction.hashing &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.feature_extraction.hashing</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Author: Lars Buitinck</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+<span class="kn">import</span> <span class="nn">numbers</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span> <span class="k">as</span> <span class="nn">sp</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">_hashing</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span>
+
+
+<span class="k">def</span> <span class="nf">_iteritems</span><span class="p">(</span><span class="n">d</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Like d.iteritems, but accepts any collections.Mapping.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">d</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;iteritems&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">d</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">FeatureHasher</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Implements feature hashing, aka the hashing trick.</span>
+
+<span class="sd">    This class turns sequences of symbolic feature names (strings) into</span>
+<span class="sd">    scipy.sparse matrices, using a hash function to compute the matrix column</span>
+<span class="sd">    corresponding to a name. The hash function employed is the signed 32-bit</span>
+<span class="sd">    version of Murmurhash3.</span>
+
+<span class="sd">    Feature names of type byte string are used as-is. Unicode strings are</span>
+<span class="sd">    converted to UTF-8 first, but no Unicode normalization is done.</span>
+<span class="sd">    Feature values must be (finite) numbers.</span>
+
+<span class="sd">    This class is a low-memory alternative to DictVectorizer and</span>
+<span class="sd">    CountVectorizer, intended for large-scale (online) learning and situations</span>
+<span class="sd">    where memory is tight, e.g. when running prediction code on embedded</span>
+<span class="sd">    devices.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;feature_hashing&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_features : integer, optional</span>
+<span class="sd">        The number of features (columns) in the output matrices. Small numbers</span>
+<span class="sd">        of features are likely to cause hash collisions, but large numbers</span>
+<span class="sd">        will cause larger coefficient dimensions in linear learners.</span>
+<span class="sd">    input_type : string, optional, default &quot;dict&quot;</span>
+<span class="sd">        Either &quot;dict&quot; (the default) to accept dictionaries over</span>
+<span class="sd">        (feature_name, value); &quot;pair&quot; to accept pairs of (feature_name, value);</span>
+<span class="sd">        or &quot;string&quot; to accept single strings.</span>
+<span class="sd">        feature_name should be a string, while value should be a number.</span>
+<span class="sd">        In the case of &quot;string&quot;, a value of 1 is implied.</span>
+<span class="sd">        The feature_name is hashed to find the appropriate column for the</span>
+<span class="sd">        feature. The value&#39;s sign might be flipped in the output (but see</span>
+<span class="sd">        non_negative, below).</span>
+<span class="sd">    dtype : numpy type, optional, default np.float64</span>
+<span class="sd">        The type of feature values. Passed to scipy.sparse matrix constructors</span>
+<span class="sd">        as the dtype argument. Do not set this to bool, np.boolean or any</span>
+<span class="sd">        unsigned integer type.</span>
+<span class="sd">    alternate_sign : boolean, optional, default True</span>
+<span class="sd">        When True, an alternating sign is added to the features as to</span>
+<span class="sd">        approximately conserve the inner product in the hashed space even for</span>
+<span class="sd">        small n_features. This approach is similar to sparse random projection.</span>
+
+<span class="sd">    non_negative : boolean, optional, default False</span>
+<span class="sd">        When True, an absolute value is applied to the features matrix prior to</span>
+<span class="sd">        returning it. When used in conjunction with alternate_sign=True, this</span>
+<span class="sd">        significantly reduces the inner product preservation property.</span>
+
+<span class="sd">        .. deprecated:: 0.19</span>
+<span class="sd">            This option will be removed in 0.21.</span>
+
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.feature_extraction import FeatureHasher</span>
+<span class="sd">    &gt;&gt;&gt; h = FeatureHasher(n_features=10)</span>
+<span class="sd">    &gt;&gt;&gt; D = [{&#39;dog&#39;: 1, &#39;cat&#39;:2, &#39;elephant&#39;:4},{&#39;dog&#39;: 2, &#39;run&#39;: 5}]</span>
+<span class="sd">    &gt;&gt;&gt; f = h.transform(D)</span>
+<span class="sd">    &gt;&gt;&gt; f.toarray()</span>
+<span class="sd">    array([[ 0.,  0., -4., -1.,  0.,  0.,  0.,  0.,  0.,  2.],</span>
+<span class="sd">           [ 0.,  0.,  0., -2., -5.,  0.,  0.,  0.,  0.,  0.]])</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    DictVectorizer : vectorizes string-valued features using a hash table.</span>
+<span class="sd">    sklearn.preprocessing.OneHotEncoder : handles nominal/categorical features</span>
+<span class="sd">        encoded as columns of integers.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_features</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="mi">20</span><span class="p">),</span> <span class="n">input_type</span><span class="o">=</span><span class="s2">&quot;dict&quot;</span><span class="p">,</span>
+                 <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">alternate_sign</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">non_negative</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_params</span><span class="p">(</span><span class="n">n_features</span><span class="p">,</span> <span class="n">input_type</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">non_negative</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;the option non_negative=True has been deprecated&quot;</span>
+                          <span class="s2">&quot; in 0.19 and will be removed&quot;</span>
+                          <span class="s2">&quot; in version 0.21.&quot;</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_type</span> <span class="o">=</span> <span class="n">input_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_features</span> <span class="o">=</span> <span class="n">n_features</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alternate_sign</span> <span class="o">=</span> <span class="n">alternate_sign</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">non_negative</span> <span class="o">=</span> <span class="n">non_negative</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_validate_params</span><span class="p">(</span><span class="n">n_features</span><span class="p">,</span> <span class="n">input_type</span><span class="p">):</span>
+        <span class="c1"># strangely, np.int16 instances are not instances of Integral,</span>
+        <span class="c1"># while np.int64 instances are...</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_features</span><span class="p">,</span> <span class="p">(</span><span class="n">numbers</span><span class="o">.</span><span class="n">Integral</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;n_features must be integral, got </span><span class="si">%r</span><span class="s2"> (</span><span class="si">%s</span><span class="s2">).&quot;</span>
+                            <span class="o">%</span> <span class="p">(</span><span class="n">n_features</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">n_features</span><span class="p">)))</span>
+        <span class="k">elif</span> <span class="n">n_features</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">n_features</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="o">**</span> <span class="mi">31</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid number of features (</span><span class="si">%d</span><span class="s2">).&quot;</span> <span class="o">%</span> <span class="n">n_features</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">input_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;dict&quot;</span><span class="p">,</span> <span class="s2">&quot;pair&quot;</span><span class="p">,</span> <span class="s2">&quot;string&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;input_type must be &#39;dict&#39;, &#39;pair&#39; or &#39;string&#39;,&quot;</span>
+                             <span class="s2">&quot; got </span><span class="si">%r</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="n">input_type</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FeatureHasher.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_feature_extraction_featurehasher.html#ibex.sklearn.feature_extraction.FeatureHasher.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;No-op.</span>
+
+<span class="sd">        This method doesn&#39;t do anything. It exists purely for compatibility</span>
+<span class="sd">        with the scikit-learn transformer API.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : FeatureHasher</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># repeat input validation for grid search (which calls set_params)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_features</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="FeatureHasher.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_feature_extraction_featurehasher.html#ibex.sklearn.feature_extraction.FeatureHasher.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw_X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Transform a sequence of instances to a scipy.sparse matrix.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        raw_X : iterable over iterable over raw features, length = n_samples</span>
+<span class="sd">            Samples. Each sample must be iterable an (e.g., a list or tuple)</span>
+<span class="sd">            containing/generating feature names (and optionally values, see</span>
+<span class="sd">            the input_type constructor argument) which will be hashed.</span>
+<span class="sd">            raw_X need not support the len function, so it can be the result</span>
+<span class="sd">            of a generator; n_samples is determined on the fly.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X : scipy.sparse matrix, shape = (n_samples, self.n_features)</span>
+<span class="sd">            Feature matrix, for use with estimators or further transformers.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">raw_X</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">raw_X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_type</span> <span class="o">==</span> <span class="s2">&quot;dict&quot;</span><span class="p">:</span>
+            <span class="n">raw_X</span> <span class="o">=</span> <span class="p">(</span><span class="n">_iteritems</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">raw_X</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_type</span> <span class="o">==</span> <span class="s2">&quot;string&quot;</span><span class="p">:</span>
+            <span class="n">raw_X</span> <span class="o">=</span> <span class="p">(((</span><span class="n">f</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">raw_X</span><span class="p">)</span>
+        <span class="n">indices</span><span class="p">,</span> <span class="n">indptr</span><span class="p">,</span> <span class="n">values</span> <span class="o">=</span> \
+            <span class="n">_hashing</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">raw_X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_features</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">alternate_sign</span><span class="p">)</span>
+        <span class="n">n_samples</span> <span class="o">=</span> <span class="n">indptr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">n_samples</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot vectorize empty sequence.&quot;</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">((</span><span class="n">values</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">indptr</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+                          <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_features</span><span class="p">))</span>
+        <span class="n">X</span><span class="o">.</span><span class="n">sum_duplicates</span><span class="p">()</span>  <span class="c1"># also sorts the indices</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_negative</span><span class="p">:</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">X</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

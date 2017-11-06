@@ -1,0 +1,965 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.mixture.gmm &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.mixture.gmm</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Gaussian Mixture Models.</span>
+
+<span class="sd">This implementation corresponds to frequentist (non-Bayesian) formulation</span>
+<span class="sd">of Gaussian Mixture Models.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Author: Ron Weiss &lt;ronweiss@gmail.com&gt;</span>
+<span class="c1">#         Fabian Pedregosa &lt;fabian.pedregosa@inria.fr&gt;</span>
+<span class="c1">#         Bertrand Thirion &lt;bertrand.thirion@inria.fr&gt;</span>
+
+<span class="c1"># Important note for the deprecation cleaning of 0.20 :</span>
+<span class="c1"># All the functions and classes of this file have been deprecated in 0.18.</span>
+<span class="c1"># When you remove this file please also remove the related files</span>
+<span class="c1"># - &#39;sklearn/mixture/dpgmm.py&#39;</span>
+<span class="c1"># - &#39;sklearn/mixture/test_dpgmm.py&#39;</span>
+<span class="c1"># - &#39;sklearn/mixture/test_gmm.py&#39;</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="k">import</span> <span class="n">time</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">linalg</span>
+
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_random_state</span><span class="p">,</span> <span class="n">check_array</span><span class="p">,</span> <span class="n">deprecated</span>
+<span class="kn">from</span> <span class="nn">..utils.fixes</span> <span class="k">import</span> <span class="n">logsumexp</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_is_fitted</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="k">import</span> <span class="n">cluster</span>
+
+<span class="kn">from</span> <span class="nn">sklearn.externals.six.moves</span> <span class="k">import</span> <span class="nb">zip</span>
+
+<span class="n">EPS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The function log_multivariate_normal_density is deprecated in 0.18&quot;</span>
+            <span class="s2">&quot; and will be removed in 0.20.&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">log_multivariate_normal_density</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">means</span><span class="p">,</span> <span class="n">covars</span><span class="p">,</span> <span class="n">covariance_type</span><span class="o">=</span><span class="s1">&#39;diag&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the log probability under a multivariate Gaussian distribution.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array_like, shape (n_samples, n_features)</span>
+<span class="sd">        List of n_features-dimensional data points. Each row corresponds to a</span>
+<span class="sd">        single data point.</span>
+
+<span class="sd">    means : array_like, shape (n_components, n_features)</span>
+<span class="sd">        List of n_features-dimensional mean vectors for n_components Gaussians.</span>
+<span class="sd">        Each row corresponds to a single mean vector.</span>
+
+<span class="sd">    covars : array_like</span>
+<span class="sd">        List of n_components covariance parameters for each Gaussian. The shape</span>
+<span class="sd">        depends on `covariance_type`:</span>
+<span class="sd">            (n_components, n_features)      if &#39;spherical&#39;,</span>
+<span class="sd">            (n_features, n_features)    if &#39;tied&#39;,</span>
+<span class="sd">            (n_components, n_features)    if &#39;diag&#39;,</span>
+<span class="sd">            (n_components, n_features, n_features) if &#39;full&#39;</span>
+
+<span class="sd">    covariance_type : string</span>
+<span class="sd">        Type of the covariance parameters.  Must be one of</span>
+<span class="sd">        &#39;spherical&#39;, &#39;tied&#39;, &#39;diag&#39;, &#39;full&#39;.  Defaults to &#39;diag&#39;.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    lpr : array_like, shape (n_samples, n_components)</span>
+<span class="sd">        Array containing the log probabilities of each data point in</span>
+<span class="sd">        X under each of the n_components multivariate Gaussian distributions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log_multivariate_normal_density_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;spherical&#39;</span><span class="p">:</span> <span class="n">_log_multivariate_normal_density_spherical</span><span class="p">,</span>
+        <span class="s1">&#39;tied&#39;</span><span class="p">:</span> <span class="n">_log_multivariate_normal_density_tied</span><span class="p">,</span>
+        <span class="s1">&#39;diag&#39;</span><span class="p">:</span> <span class="n">_log_multivariate_normal_density_diag</span><span class="p">,</span>
+        <span class="s1">&#39;full&#39;</span><span class="p">:</span> <span class="n">_log_multivariate_normal_density_full</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">log_multivariate_normal_density_dict</span><span class="p">[</span><span class="n">covariance_type</span><span class="p">](</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">means</span><span class="p">,</span> <span class="n">covars</span><span class="p">)</span>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The function sample_gaussian is deprecated in 0.18&quot;</span>
+            <span class="s2">&quot; and will be removed in 0.20.&quot;</span>
+            <span class="s2">&quot; Use numpy.random.multivariate_normal instead.&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">sample_gaussian</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">covar</span><span class="p">,</span> <span class="n">covariance_type</span><span class="o">=</span><span class="s1">&#39;diag&#39;</span><span class="p">,</span> <span class="n">n_samples</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate random samples from a Gaussian distribution.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mean : array_like, shape (n_features,)</span>
+<span class="sd">        Mean of the distribution.</span>
+
+<span class="sd">    covar : array_like</span>
+<span class="sd">        Covariance of the distribution. The shape depends on `covariance_type`:</span>
+<span class="sd">            scalar if &#39;spherical&#39;,</span>
+<span class="sd">            (n_features) if &#39;diag&#39;,</span>
+<span class="sd">            (n_features, n_features)  if &#39;tied&#39;, or &#39;full&#39;</span>
+
+<span class="sd">    covariance_type : string, optional</span>
+<span class="sd">        Type of the covariance parameters. Must be one of</span>
+<span class="sd">        &#39;spherical&#39;, &#39;tied&#39;, &#39;diag&#39;, &#39;full&#39;. Defaults to &#39;diag&#39;.</span>
+
+<span class="sd">    n_samples : int, optional</span>
+<span class="sd">        Number of samples to generate. Defaults to 1.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    X : array</span>
+<span class="sd">        Randomly generated sample. The shape depends on `n_samples`:</span>
+<span class="sd">        (n_features,) if `1`</span>
+<span class="sd">        (n_features, n_samples) otherwise</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_sample_gaussian</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">covar</span><span class="p">,</span> <span class="n">covariance_type</span><span class="o">=</span><span class="s1">&#39;diag&#39;</span><span class="p">,</span> <span class="n">n_samples</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                     <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_sample_gaussian</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">covar</span><span class="p">,</span> <span class="n">covariance_type</span><span class="o">=</span><span class="s1">&#39;diag&#39;</span><span class="p">,</span> <span class="n">n_samples</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                     <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">rng</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+    <span class="n">n_dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mean</span><span class="p">)</span>
+    <span class="n">rand</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_dim</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_samples</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">rand</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_dim</span><span class="p">,)</span>
+
+    <span class="k">if</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;spherical&#39;</span><span class="p">:</span>
+        <span class="n">rand</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">covar</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;diag&#39;</span><span class="p">:</span>
+        <span class="n">rand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">covar</span><span class="p">)),</span> <span class="n">rand</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">s</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">covar</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">s</span><span class="p">)</span>  <span class="c1"># get rid of tiny negatives</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">s</span><span class="p">)</span>
+        <span class="n">U</span> <span class="o">*=</span> <span class="n">s</span>
+        <span class="n">rand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">rand</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">rand</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">mean</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+
+<span class="k">class</span> <span class="nc">_GMMBase</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Gaussian Mixture Model.</span>
+
+<span class="sd">    Representation of a Gaussian mixture model probability distribution.</span>
+<span class="sd">    This class allows for easy evaluation of, sampling from, and</span>
+<span class="sd">    maximum-likelihood estimation of the parameters of a GMM distribution.</span>
+
+<span class="sd">    Initializes parameters such that every mixture component has zero</span>
+<span class="sd">    mean and identity covariance.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;gmm&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_components : int, optional</span>
+<span class="sd">        Number of mixture components. Defaults to 1.</span>
+
+<span class="sd">    covariance_type : string, optional</span>
+<span class="sd">        String describing the type of covariance parameters to</span>
+<span class="sd">        use.  Must be one of &#39;spherical&#39;, &#39;tied&#39;, &#39;diag&#39;, &#39;full&#39;.</span>
+<span class="sd">        Defaults to &#39;diag&#39;.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional (default=None)</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`.</span>
+
+<span class="sd">    min_covar : float, optional</span>
+<span class="sd">        Floor on the diagonal of the covariance matrix to prevent</span>
+<span class="sd">        overfitting. Defaults to 1e-3.</span>
+
+<span class="sd">    tol : float, optional</span>
+<span class="sd">        Convergence threshold. EM iterations will stop when average</span>
+<span class="sd">        gain in log-likelihood is below this threshold. Defaults to 1e-3.</span>
+
+<span class="sd">    n_iter : int, optional</span>
+<span class="sd">        Number of EM iterations to perform.</span>
+
+<span class="sd">    n_init : int, optional</span>
+<span class="sd">        Number of initializations to perform. The best results is kept.</span>
+
+<span class="sd">    params : string, optional</span>
+<span class="sd">        Controls which parameters are updated in the training</span>
+<span class="sd">        process.  Can contain any combination of &#39;w&#39; for weights,</span>
+<span class="sd">        &#39;m&#39; for means, and &#39;c&#39; for covars. Defaults to &#39;wmc&#39;.</span>
+
+<span class="sd">    init_params : string, optional</span>
+<span class="sd">        Controls which parameters are updated in the initialization</span>
+<span class="sd">        process.  Can contain any combination of &#39;w&#39; for weights,</span>
+<span class="sd">        &#39;m&#39; for means, and &#39;c&#39; for covars. Defaults to &#39;wmc&#39;.</span>
+
+<span class="sd">    verbose : int, default: 0</span>
+<span class="sd">        Enable verbose output. If 1 then it always prints the current</span>
+<span class="sd">        initialization and iteration step. If greater than 1 then</span>
+<span class="sd">        it prints additionally the change and time needed for each step.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    weights_ : array, shape (`n_components`,)</span>
+<span class="sd">        This attribute stores the mixing weights for each mixture component.</span>
+
+<span class="sd">    means_ : array, shape (`n_components`, `n_features`)</span>
+<span class="sd">        Mean parameters for each mixture component.</span>
+
+<span class="sd">    covars_ : array</span>
+<span class="sd">        Covariance parameters for each mixture component.  The shape</span>
+<span class="sd">        depends on `covariance_type`::</span>
+
+<span class="sd">            (n_components, n_features)             if &#39;spherical&#39;,</span>
+<span class="sd">            (n_features, n_features)               if &#39;tied&#39;,</span>
+<span class="sd">            (n_components, n_features)             if &#39;diag&#39;,</span>
+<span class="sd">            (n_components, n_features, n_features) if &#39;full&#39;</span>
+
+<span class="sd">    converged_ : bool</span>
+<span class="sd">        True when convergence was reached in fit(), False otherwise.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    DPGMM : Infinite gaussian mixture model, using the Dirichlet</span>
+<span class="sd">        process, fit with a variational algorithm</span>
+
+
+<span class="sd">    VBGMM : Finite gaussian mixture model fit with a variational</span>
+<span class="sd">        algorithm, better for situations where there might be too little</span>
+<span class="sd">        data to get a good estimate of the covariance matrix.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn import mixture</span>
+<span class="sd">    &gt;&gt;&gt; np.random.seed(1)</span>
+<span class="sd">    &gt;&gt;&gt; g = mixture.GMM(n_components=2)</span>
+<span class="sd">    &gt;&gt;&gt; # Generate random observations with two modes centered on 0</span>
+<span class="sd">    &gt;&gt;&gt; # and 10 to use for training.</span>
+<span class="sd">    &gt;&gt;&gt; obs = np.concatenate((np.random.randn(100, 1),</span>
+<span class="sd">    ...                       10 + np.random.randn(300, 1)))</span>
+<span class="sd">    &gt;&gt;&gt; g.fit(obs)  # doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    GMM(covariance_type=&#39;diag&#39;, init_params=&#39;wmc&#39;, min_covar=0.001,</span>
+<span class="sd">            n_components=2, n_init=1, n_iter=100, params=&#39;wmc&#39;,</span>
+<span class="sd">            random_state=None, tol=0.001, verbose=0)</span>
+<span class="sd">    &gt;&gt;&gt; np.round(g.weights_, 2)</span>
+<span class="sd">    array([ 0.75,  0.25])</span>
+<span class="sd">    &gt;&gt;&gt; np.round(g.means_, 2)</span>
+<span class="sd">    array([[ 10.05],</span>
+<span class="sd">           [  0.06]])</span>
+<span class="sd">    &gt;&gt;&gt; np.round(g.covars_, 2) # doctest: +SKIP</span>
+<span class="sd">    array([[[ 1.02]],</span>
+<span class="sd">           [[ 0.96]]])</span>
+<span class="sd">    &gt;&gt;&gt; g.predict([[0], [2], [9], [10]]) # doctest: +ELLIPSIS</span>
+<span class="sd">    array([1, 1, 0, 0]...)</span>
+<span class="sd">    &gt;&gt;&gt; np.round(g.score([[0], [2], [9], [10]]), 2)</span>
+<span class="sd">    array([-2.19, -4.58, -1.75, -1.21])</span>
+<span class="sd">    &gt;&gt;&gt; # Refit the model on new data (initial parameters remain the</span>
+<span class="sd">    &gt;&gt;&gt; # same), this time with an even split between the two modes.</span>
+<span class="sd">    &gt;&gt;&gt; g.fit(20 * [[0]] + 20 * [[10]])  # doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    GMM(covariance_type=&#39;diag&#39;, init_params=&#39;wmc&#39;, min_covar=0.001,</span>
+<span class="sd">            n_components=2, n_init=1, n_iter=100, params=&#39;wmc&#39;,</span>
+<span class="sd">            random_state=None, tol=0.001, verbose=0)</span>
+<span class="sd">    &gt;&gt;&gt; np.round(g.weights_, 2)</span>
+<span class="sd">    array([ 0.5,  0.5])</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">covariance_type</span><span class="o">=</span><span class="s1">&#39;diag&#39;</span><span class="p">,</span>
+                 <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">min_covar</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+                 <span class="n">n_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="s1">&#39;wmc&#39;</span><span class="p">,</span> <span class="n">init_params</span><span class="o">=</span><span class="s1">&#39;wmc&#39;</span><span class="p">,</span>
+                 <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">=</span> <span class="n">n_components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">=</span> <span class="n">covariance_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_covar</span> <span class="o">=</span> <span class="n">min_covar</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_iter</span> <span class="o">=</span> <span class="n">n_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_init</span> <span class="o">=</span> <span class="n">n_init</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_params</span> <span class="o">=</span> <span class="n">init_params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+
+        <span class="k">if</span> <span class="n">covariance_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;spherical&#39;</span><span class="p">,</span> <span class="s1">&#39;tied&#39;</span><span class="p">,</span> <span class="s1">&#39;diag&#39;</span><span class="p">,</span> <span class="s1">&#39;full&#39;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Invalid value for covariance_type: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span>
+                             <span class="n">covariance_type</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">n_init</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;GMM estimation requires at least one run&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_covars</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Covariance parameters for each mixture component.</span>
+
+<span class="sd">        The shape depends on ``cvtype``::</span>
+
+<span class="sd">            (n_states, n_features)                if &#39;spherical&#39;,</span>
+<span class="sd">            (n_features, n_features)              if &#39;tied&#39;,</span>
+<span class="sd">            (n_states, n_features)                if &#39;diag&#39;,</span>
+<span class="sd">            (n_states, n_features, n_features)    if &#39;full&#39;</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;full&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">covars_</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;diag&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span> <span class="k">for</span> <span class="n">cov</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">covars_</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;tied&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">covars_</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;spherical&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span> <span class="k">for</span> <span class="n">cov</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">covars_</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_set_covars</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">covars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Provide values for covariance.&quot;&quot;&quot;</span>
+        <span class="n">covars</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">covars</span><span class="p">)</span>
+        <span class="n">_validate_covars</span><span class="p">(</span><span class="n">covars</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covars_</span> <span class="o">=</span> <span class="n">covars</span>
+
+    <span class="k">def</span> <span class="nf">score_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the per-sample likelihood of the data under the model.</span>
+
+<span class="sd">        Compute the log probability of X under the model and</span>
+<span class="sd">        return the posterior distribution (responsibilities) of each</span>
+<span class="sd">        mixture component for each element of X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array_like, shape (n_samples, n_features)</span>
+<span class="sd">            List of n_features-dimensional data points. Each row</span>
+<span class="sd">            corresponds to a single data point.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        logprob : array_like, shape (n_samples,)</span>
+<span class="sd">            Log probabilities of each data point in X.</span>
+
+<span class="sd">        responsibilities : array_like, shape (n_samples, n_components)</span>
+<span class="sd">            Posterior probabilities of each mixture component for each</span>
+<span class="sd">            observation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;means_&#39;</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([]),</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The shape of X  is not compatible with self&#39;</span><span class="p">)</span>
+
+        <span class="n">lpr</span> <span class="o">=</span> <span class="p">(</span><span class="n">log_multivariate_normal_density</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">covars_</span><span class="p">,</span>
+                                               <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="p">)</span> <span class="o">+</span>
+               <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="p">))</span>
+        <span class="n">logprob</span> <span class="o">=</span> <span class="n">logsumexp</span><span class="p">(</span><span class="n">lpr</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">responsibilities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">lpr</span> <span class="o">-</span> <span class="n">logprob</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">logprob</span><span class="p">,</span> <span class="n">responsibilities</span>
+
+    <span class="k">def</span> <span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the log probability under the model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array_like, shape (n_samples, n_features)</span>
+<span class="sd">            List of n_features-dimensional data points. Each row</span>
+<span class="sd">            corresponds to a single data point.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        logprob : array_like, shape (n_samples,)</span>
+<span class="sd">            Log probabilities of each data point in X</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logprob</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">score_samples</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">logprob</span>
+
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Predict label for data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        C : array, shape = (n_samples,) component memberships</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logprob</span><span class="p">,</span> <span class="n">responsibilities</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">score_samples</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">responsibilities</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Predict posterior probability of data under each Gaussian</span>
+<span class="sd">        in the model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        responsibilities : array-like, shape = (n_samples, n_components)</span>
+<span class="sd">            Returns the probability of the sample for each Gaussian</span>
+<span class="sd">            (state) in the model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logprob</span><span class="p">,</span> <span class="n">responsibilities</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">score_samples</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">responsibilities</span>
+
+    <span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_samples</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate random samples from the model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_samples : int, optional</span>
+<span class="sd">            Number of samples to generate. Defaults to 1.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X : array_like, shape (n_samples, n_features)</span>
+<span class="sd">            List of samples</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;means_&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">random_state</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">random_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span>
+        <span class="n">random_state</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="n">weight_cdf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n_samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">rand</span> <span class="o">=</span> <span class="n">random_state</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span>
+        <span class="c1"># decide which component to use for each sample</span>
+        <span class="n">comps</span> <span class="o">=</span> <span class="n">weight_cdf</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">rand</span><span class="p">)</span>
+        <span class="c1"># for each component, generate all needed samples</span>
+        <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+            <span class="c1"># occurrences of current component in X</span>
+            <span class="n">comp_in_X</span> <span class="o">=</span> <span class="p">(</span><span class="n">comp</span> <span class="o">==</span> <span class="n">comps</span><span class="p">)</span>
+            <span class="c1"># number of those occurrences</span>
+            <span class="n">num_comp_in_X</span> <span class="o">=</span> <span class="n">comp_in_X</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">num_comp_in_X</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;tied&#39;</span><span class="p">:</span>
+                    <span class="n">cv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">covars_</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;spherical&#39;</span><span class="p">:</span>
+                    <span class="n">cv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">covars_</span><span class="p">[</span><span class="n">comp</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">cv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">covars_</span><span class="p">[</span><span class="n">comp</span><span class="p">]</span>
+                <span class="n">X</span><span class="p">[</span><span class="n">comp_in_X</span><span class="p">]</span> <span class="o">=</span> <span class="n">_sample_gaussian</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">[</span><span class="n">comp</span><span class="p">],</span> <span class="n">cv</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="p">,</span>
+                    <span class="n">num_comp_in_X</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">return</span> <span class="n">X</span>
+
+    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit and then predict labels for data.</span>
+
+<span class="sd">        Warning: Due to the final maximization step in the EM algorithm,</span>
+<span class="sd">        with low iterations the prediction may not be 100%  accurate.</span>
+
+<span class="sd">        .. versionadded:: 0.17</span>
+<span class="sd">           *fit_predict* method in Gaussian Mixture Model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        C : array, shape = (n_samples,) component memberships</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">do_prediction</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Estimate model parameters with the EM algorithm.</span>
+
+<span class="sd">        A initialization step is performed before entering the</span>
+<span class="sd">        expectation-maximization (EM) algorithm. If you want to avoid</span>
+<span class="sd">        this step, set the keyword argument init_params to the empty</span>
+<span class="sd">        string &#39;&#39; when creating the GMM object. Likewise, if you would</span>
+<span class="sd">        like just to do an initialization, set n_iter=0.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array_like, shape (n, n_features)</span>
+<span class="sd">            List of n_features-dimensional data points. Each row</span>
+<span class="sd">            corresponds to a single data point.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        responsibilities : array, shape (n_samples, n_components)</span>
+<span class="sd">            Posterior probabilities of each mixture component for each</span>
+<span class="sd">            observation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># initialization step</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">ensure_min_samples</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                        <span class="n">estimator</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;GMM estimation with </span><span class="si">%s</span><span class="s1"> components, but got only </span><span class="si">%s</span><span class="s1"> samples&#39;</span> <span class="o">%</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+        <span class="n">max_log_prob</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">infty</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Expectation-maximization algorithm started.&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">init</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_init</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Initialization &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">init</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+                <span class="n">start_init_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="s1">&#39;m&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_params</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;means_&#39;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">means_</span> <span class="o">=</span> <span class="n">cluster</span><span class="o">.</span><span class="n">KMeans</span><span class="p">(</span>
+                    <span class="n">n_clusters</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span>
+                    <span class="n">random_state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">cluster_centers_</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">Means have been initialized.&#39;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="s1">&#39;w&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_params</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;weights_&#39;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">Weights have been initialized.&#39;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="s1">&#39;c&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_params</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;covars_&#39;</span><span class="p">):</span>
+                <span class="n">cv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_covar</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">cv</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+                    <span class="n">cv</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">covars_</span> <span class="o">=</span> \
+                    <span class="n">distribute_covar_matrix_to_match_covariance_type</span><span class="p">(</span>
+                        <span class="n">cv</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">Covariance matrices have been initialized.&#39;</span><span class="p">)</span>
+
+            <span class="c1"># EM algorithms</span>
+            <span class="n">current_log_likelihood</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="c1"># reset self.converged_ to False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">converged_</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_iter</span><span class="p">):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">EM iteration &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+                    <span class="n">start_iter_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+                <span class="n">prev_log_likelihood</span> <span class="o">=</span> <span class="n">current_log_likelihood</span>
+                <span class="c1"># Expectation step</span>
+                <span class="n">log_likelihoods</span><span class="p">,</span> <span class="n">responsibilities</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">score_samples</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+                <span class="n">current_log_likelihood</span> <span class="o">=</span> <span class="n">log_likelihoods</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+                <span class="c1"># Check for convergence.</span>
+                <span class="k">if</span> <span class="n">prev_log_likelihood</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">change</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">current_log_likelihood</span> <span class="o">-</span> <span class="n">prev_log_likelihood</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t</span><span class="s1">Change: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">change</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">change</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">converged_</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t</span><span class="s1">EM algorithm converged.&#39;</span><span class="p">)</span>
+                        <span class="k">break</span>
+
+                <span class="c1"># Maximization step</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_do_mstep</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">responsibilities</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">,</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">min_covar</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t</span><span class="s1">EM iteration &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; took </span><span class="si">{0:.5f}</span><span class="s1">s&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_iter_time</span><span class="p">))</span>
+
+            <span class="c1"># if the results are better, keep it</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_iter</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">current_log_likelihood</span> <span class="o">&gt;</span> <span class="n">max_log_prob</span><span class="p">:</span>
+                    <span class="n">max_log_prob</span> <span class="o">=</span> <span class="n">current_log_likelihood</span>
+                    <span class="n">best_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;weights&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="p">,</span>
+                                   <span class="s1">&#39;means&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">,</span>
+                                   <span class="s1">&#39;covars&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">covars_</span><span class="p">}</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">Better parameters were found.&#39;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">Initialization &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">init</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; took </span><span class="si">{0:.5f}</span><span class="s1">s&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_init_time</span><span class="p">))</span>
+
+        <span class="c1"># check the existence of an init param that was not subject to</span>
+        <span class="c1"># likelihood computation issue.</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isneginf</span><span class="p">(</span><span class="n">max_log_prob</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_iter</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="s2">&quot;EM algorithm was never able to compute a valid likelihood &quot;</span> <span class="o">+</span>
+                <span class="s2">&quot;given initial parameters. Try different init parameters &quot;</span> <span class="o">+</span>
+                <span class="s2">&quot;(or increasing n_init) or check for degenerate data.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_iter</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">covars_</span> <span class="o">=</span> <span class="n">best_params</span><span class="p">[</span><span class="s1">&#39;covars&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">means_</span> <span class="o">=</span> <span class="n">best_params</span><span class="p">[</span><span class="s1">&#39;means&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">=</span> <span class="n">best_params</span><span class="p">[</span><span class="s1">&#39;weights&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># self.n_iter == 0 occurs when using GMM within HMM</span>
+            <span class="c1"># Need to make sure that there are responsibilities to output</span>
+            <span class="c1"># Output zeros because it was just a quick initialization</span>
+            <span class="n">responsibilities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">responsibilities</span>
+
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Estimate model parameters with the EM algorithm.</span>
+
+<span class="sd">        A initialization step is performed before entering the</span>
+<span class="sd">        expectation-maximization (EM) algorithm. If you want to avoid</span>
+<span class="sd">        this step, set the keyword argument init_params to the empty</span>
+<span class="sd">        string &#39;&#39; when creating the GMM object. Likewise, if you would</span>
+<span class="sd">        like just to do an initialization, set n_iter=0.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array_like, shape (n, n_features)</span>
+<span class="sd">            List of n_features-dimensional data points.  Each row</span>
+<span class="sd">            corresponds to a single data point.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">_do_mstep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">responsibilities</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">min_covar</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Perform the Mstep of the EM algorithm and return the cluster weights.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">responsibilities</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">weighted_X_sum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">responsibilities</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+        <span class="n">inverse_weights</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">weights</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">+</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">EPS</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s1">&#39;w&#39;</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">=</span> <span class="p">(</span><span class="n">weights</span> <span class="o">/</span> <span class="p">(</span><span class="n">weights</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">EPS</span><span class="p">)</span> <span class="o">+</span> <span class="n">EPS</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s1">&#39;m&#39;</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">means_</span> <span class="o">=</span> <span class="n">weighted_X_sum</span> <span class="o">*</span> <span class="n">inverse_weights</span>
+        <span class="k">if</span> <span class="s1">&#39;c&#39;</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+            <span class="n">covar_mstep_func</span> <span class="o">=</span> <span class="n">_covar_mstep_funcs</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">covars_</span> <span class="o">=</span> <span class="n">covar_mstep_func</span><span class="p">(</span>
+                <span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">responsibilities</span><span class="p">,</span> <span class="n">weighted_X_sum</span><span class="p">,</span> <span class="n">inverse_weights</span><span class="p">,</span>
+                <span class="n">min_covar</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">weights</span>
+
+    <span class="k">def</span> <span class="nf">_n_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the number of free parameters in the model.&quot;&quot;&quot;</span>
+        <span class="n">ndim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;full&#39;</span><span class="p">:</span>
+            <span class="n">cov_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">*</span> <span class="n">ndim</span> <span class="o">*</span> <span class="p">(</span><span class="n">ndim</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;diag&#39;</span><span class="p">:</span>
+            <span class="n">cov_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">*</span> <span class="n">ndim</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;tied&#39;</span><span class="p">:</span>
+            <span class="n">cov_params</span> <span class="o">=</span> <span class="n">ndim</span> <span class="o">*</span> <span class="p">(</span><span class="n">ndim</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;spherical&#39;</span><span class="p">:</span>
+            <span class="n">cov_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span>
+        <span class="n">mean_params</span> <span class="o">=</span> <span class="n">ndim</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">cov_params</span> <span class="o">+</span> <span class="n">mean_params</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">bic</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Bayesian information criterion for the current model fit</span>
+<span class="sd">        and the proposed data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array of shape(n_samples, n_dimensions)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        bic : float (the lower the better)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_n_parameters</span><span class="p">()</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="k">def</span> <span class="nf">aic</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Akaike information criterion for the current model fit</span>
+<span class="sd">        and the proposed data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array of shape(n_samples, n_dimensions)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        aic : float (the lower the better)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_parameters</span><span class="p">()</span>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The class GMM is deprecated in 0.18 and will be &quot;</span>
+            <span class="s2">&quot; removed in 0.20. Use class GaussianMixture instead.&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">GMM</span><span class="p">(</span><span class="n">_GMMBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Legacy Gaussian Mixture Model</span>
+
+<span class="sd">    .. deprecated:: 0.18</span>
+<span class="sd">        This class will be removed in 0.20.</span>
+<span class="sd">        Use :class:`sklearn.mixture.GaussianMixture` instead.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_components</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">covariance_type</span><span class="o">=</span><span class="s1">&#39;diag&#39;</span><span class="p">,</span>
+                 <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">min_covar</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+                 <span class="n">n_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="s1">&#39;wmc&#39;</span><span class="p">,</span> <span class="n">init_params</span><span class="o">=</span><span class="s1">&#39;wmc&#39;</span><span class="p">,</span>
+                 <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GMM</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">n_components</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span> <span class="n">covariance_type</span><span class="o">=</span><span class="n">covariance_type</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">min_covar</span><span class="o">=</span><span class="n">min_covar</span><span class="p">,</span>
+            <span class="n">n_iter</span><span class="o">=</span><span class="n">n_iter</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="n">n_init</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
+            <span class="n">init_params</span><span class="o">=</span><span class="n">init_params</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+
+<span class="c1">#########################################################################</span>
+<span class="c1"># some helper routines</span>
+<span class="c1">#########################################################################</span>
+
+
+<span class="k">def</span> <span class="nf">_log_multivariate_normal_density_diag</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">means</span><span class="p">,</span> <span class="n">covars</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute Gaussian log-density at X for a diagonal model.&quot;&quot;&quot;</span>
+    <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_dim</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">lpr</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_dim</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">covars</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+                  <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">means</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">covars</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                  <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="p">(</span><span class="n">means</span> <span class="o">/</span> <span class="n">covars</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+                  <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">covars</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">lpr</span>
+
+
+<span class="k">def</span> <span class="nf">_log_multivariate_normal_density_spherical</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">means</span><span class="p">,</span> <span class="n">covars</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute Gaussian log-density at X for a spherical model.&quot;&quot;&quot;</span>
+    <span class="n">cv</span> <span class="o">=</span> <span class="n">covars</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">covars</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">cv</span> <span class="o">=</span> <span class="n">cv</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">cv</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">cv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">cv</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="n">_log_multivariate_normal_density_diag</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">means</span><span class="p">,</span> <span class="n">cv</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_log_multivariate_normal_density_tied</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">means</span><span class="p">,</span> <span class="n">covars</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute Gaussian log-density at X for a tied model.&quot;&quot;&quot;</span>
+    <span class="n">cv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">covars</span><span class="p">,</span> <span class="p">(</span><span class="n">means</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">_log_multivariate_normal_density_full</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">means</span><span class="p">,</span> <span class="n">cv</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_log_multivariate_normal_density_full</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">means</span><span class="p">,</span> <span class="n">covars</span><span class="p">,</span> <span class="n">min_covar</span><span class="o">=</span><span class="mf">1.e-7</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Log probability for full covariance matrices.&quot;&quot;&quot;</span>
+    <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_dim</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">nmix</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">means</span><span class="p">)</span>
+    <span class="n">log_prob</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">nmix</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">cv</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">means</span><span class="p">,</span> <span class="n">covars</span><span class="p">)):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cv_chol</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="n">cv</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+            <span class="c1"># The model is most probably stuck in a component with too</span>
+            <span class="c1"># few observations, we need to reinitialize this components</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">cv_chol</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="n">cv</span> <span class="o">+</span> <span class="n">min_covar</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n_dim</span><span class="p">),</span>
+                                          <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;covars&#39; must be symmetric, &quot;</span>
+                                 <span class="s2">&quot;positive-definite&quot;</span><span class="p">)</span>
+
+        <span class="n">cv_log_det</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">cv_chol</span><span class="p">)))</span>
+        <span class="n">cv_sol</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">solve_triangular</span><span class="p">(</span><span class="n">cv_chol</span><span class="p">,</span> <span class="p">(</span><span class="n">X</span> <span class="o">-</span> <span class="n">mu</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">log_prob</span><span class="p">[:,</span> <span class="n">c</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span> <span class="o">.</span><span class="mi">5</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cv_sol</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span>
+                                 <span class="n">n_dim</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">+</span> <span class="n">cv_log_det</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">log_prob</span>
+
+
+<span class="k">def</span> <span class="nf">_validate_covars</span><span class="p">(</span><span class="n">covars</span><span class="p">,</span> <span class="n">covariance_type</span><span class="p">,</span> <span class="n">n_components</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Do basic checks on matrix covariance sizes and values.&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">linalg</span>
+    <span class="k">if</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;spherical&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">covars</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_components</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;spherical&#39; covars have length n_components&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">covars</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;spherical&#39; covars must be non-negative&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;tied&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">covars</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">covars</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;tied&#39; covars must have shape (n_dim, n_dim)&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">covars</span><span class="p">,</span> <span class="n">covars</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+              <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvalsh</span><span class="p">(</span><span class="n">covars</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;tied&#39; covars must be symmetric, &quot;</span>
+                             <span class="s2">&quot;positive-definite&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;diag&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">covars</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;diag&#39; covars must have shape &quot;</span>
+                             <span class="s2">&quot;(n_components, n_dim)&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">covars</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;diag&#39; covars must be non-negative&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;full&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">covars</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;full&#39; covars must have shape &quot;</span>
+                             <span class="s2">&quot;(n_components, n_dim, n_dim)&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">covars</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">covars</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;full&#39; covars must have shape &quot;</span>
+                             <span class="s2">&quot;(n_components, n_dim, n_dim)&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">cv</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">covars</span><span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">cv</span><span class="p">,</span> <span class="n">cv</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+                    <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvalsh</span><span class="p">(</span><span class="n">cv</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;component </span><span class="si">%d</span><span class="s2"> of &#39;full&#39; covars must be &quot;</span>
+                                 <span class="s2">&quot;symmetric, positive-definite&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;covariance_type must be one of &quot;</span> <span class="o">+</span>
+                         <span class="s2">&quot;&#39;spherical&#39;, &#39;tied&#39;, &#39;diag&#39;, &#39;full&#39;&quot;</span><span class="p">)</span>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The function distribute_covar_matrix_to_match_covariance_type&quot;</span>
+            <span class="s2">&quot;is deprecated in 0.18 and will be removed in 0.20.&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">distribute_covar_matrix_to_match_covariance_type</span><span class="p">(</span>
+        <span class="n">tied_cv</span><span class="p">,</span> <span class="n">covariance_type</span><span class="p">,</span> <span class="n">n_components</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create all the covariance matrices from a given template.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;spherical&#39;</span><span class="p">:</span>
+        <span class="n">cv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">tied_cv</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">tied_cv</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                     <span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;tied&#39;</span><span class="p">:</span>
+        <span class="n">cv</span> <span class="o">=</span> <span class="n">tied_cv</span>
+    <span class="k">elif</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;diag&#39;</span><span class="p">:</span>
+        <span class="n">cv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">tied_cv</span><span class="p">),</span> <span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;full&#39;</span><span class="p">:</span>
+        <span class="n">cv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">tied_cv</span><span class="p">,</span> <span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;covariance_type must be one of &quot;</span> <span class="o">+</span>
+                         <span class="s2">&quot;&#39;spherical&#39;, &#39;tied&#39;, &#39;diag&#39;, &#39;full&#39;&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cv</span>
+
+
+<span class="k">def</span> <span class="nf">_covar_mstep_diag</span><span class="p">(</span><span class="n">gmm</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">responsibilities</span><span class="p">,</span> <span class="n">weighted_X_sum</span><span class="p">,</span> <span class="n">norm</span><span class="p">,</span>
+                      <span class="n">min_covar</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform the covariance M step for diagonal cases.&quot;&quot;&quot;</span>
+    <span class="n">avg_X2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">responsibilities</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">X</span> <span class="o">*</span> <span class="n">X</span><span class="p">)</span> <span class="o">*</span> <span class="n">norm</span>
+    <span class="n">avg_means2</span> <span class="o">=</span> <span class="n">gmm</span><span class="o">.</span><span class="n">means_</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">avg_X_means</span> <span class="o">=</span> <span class="n">gmm</span><span class="o">.</span><span class="n">means_</span> <span class="o">*</span> <span class="n">weighted_X_sum</span> <span class="o">*</span> <span class="n">norm</span>
+    <span class="k">return</span> <span class="n">avg_X2</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">avg_X_means</span> <span class="o">+</span> <span class="n">avg_means2</span> <span class="o">+</span> <span class="n">min_covar</span>
+
+
+<span class="k">def</span> <span class="nf">_covar_mstep_spherical</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform the covariance M step for spherical cases.&quot;&quot;&quot;</span>
+    <span class="n">cv</span> <span class="o">=</span> <span class="n">_covar_mstep_diag</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">cv</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">cv</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+
+<span class="k">def</span> <span class="nf">_covar_mstep_full</span><span class="p">(</span><span class="n">gmm</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">responsibilities</span><span class="p">,</span> <span class="n">weighted_X_sum</span><span class="p">,</span> <span class="n">norm</span><span class="p">,</span>
+                      <span class="n">min_covar</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform the covariance M step for full cases.&quot;&quot;&quot;</span>
+    <span class="c1"># Eq. 12 from K. Murphy, &quot;Fitting a Conditional Linear Gaussian</span>
+    <span class="c1"># Distribution&quot;</span>
+    <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">cv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">gmm</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span> <span class="n">n_features</span><span class="p">,</span> <span class="n">n_features</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">gmm</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+        <span class="n">post</span> <span class="o">=</span> <span class="n">responsibilities</span><span class="p">[:,</span> <span class="n">c</span><span class="p">]</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="n">gmm</span><span class="o">.</span><span class="n">means_</span><span class="p">[</span><span class="n">c</span><span class="p">]</span>
+        <span class="n">diff</span> <span class="o">=</span> <span class="n">X</span> <span class="o">-</span> <span class="n">mu</span>
+        <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">under</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">):</span>
+            <span class="c1"># Underflow Errors in doing post * X.T are  not important</span>
+            <span class="n">avg_cv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">post</span> <span class="o">*</span> <span class="n">diff</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">diff</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">post</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">EPS</span><span class="p">)</span>
+        <span class="n">cv</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">=</span> <span class="n">avg_cv</span> <span class="o">+</span> <span class="n">min_covar</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n_features</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cv</span>
+
+
+<span class="k">def</span> <span class="nf">_covar_mstep_tied</span><span class="p">(</span><span class="n">gmm</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">responsibilities</span><span class="p">,</span> <span class="n">weighted_X_sum</span><span class="p">,</span> <span class="n">norm</span><span class="p">,</span>
+                      <span class="n">min_covar</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform the covariance M step for tied cases.&quot;&quot;&quot;</span>
+    <span class="c1"># Eq. 15 from K. Murphy, &quot;Fitting a Conditional Linear Gaussian</span>
+    <span class="c1"># Distribution&quot;</span>
+    <span class="n">avg_X2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+    <span class="n">avg_means2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">gmm</span><span class="o">.</span><span class="n">means_</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">weighted_X_sum</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">avg_X2</span> <span class="o">-</span> <span class="n">avg_means2</span>
+    <span class="n">out</span> <span class="o">*=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span><span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">min_covar</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+<span class="n">_covar_mstep_funcs</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;spherical&#39;</span><span class="p">:</span> <span class="n">_covar_mstep_spherical</span><span class="p">,</span>
+                      <span class="s1">&#39;diag&#39;</span><span class="p">:</span> <span class="n">_covar_mstep_diag</span><span class="p">,</span>
+                      <span class="s1">&#39;tied&#39;</span><span class="p">:</span> <span class="n">_covar_mstep_tied</span><span class="p">,</span>
+                      <span class="s1">&#39;full&#39;</span><span class="p">:</span> <span class="n">_covar_mstep_full</span><span class="p">,</span>
+                      <span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

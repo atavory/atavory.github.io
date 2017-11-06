@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>KerasRegressor &#8212; ibex 0.1.1 documentation</title>
+    <title>KerasRegressor &#8212; ibex latest documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1.1',
+        VERSION:     'latest',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -45,7 +45,7 @@
 <dl class="class">
 <dt id="ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor">
 <em class="property">class </em><code class="descclassname">ibex.tensorflow.contrib.keras.wrappers.scikit_learn.</code><code class="descname">KerasRegressor</code><span class="sig-paren">(</span><em>build_fn</em>, <em>**sk_params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibex/tensorflow/contrib/keras/wrappers/scikit_learn.html#KerasRegressor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasEstimator</span></code>, <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.RegressorMixin.html#sklearn.base.RegressorMixin" title="(in scikit-learn v0.19.0)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.RegressorMixin</span></code></a></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasEstimator</span></code>, <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.RegressorMixin.html#sklearn.base.RegressorMixin" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.RegressorMixin</span></code></a></p>
 <p>A tensorflow/keras regressor.</p>
 <p class="rubric">Example</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
@@ -74,7 +74,7 @@
 <span class="gp">... </span>    <span class="n">build_fn</span><span class="o">=</span><span class="n">build_regressor_nn</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="go">Adapter[KerasRegressor](verbose=0,build_fn=&lt;function build_regressor_nn at ...&gt;)</span>
+<span class="go">Adapter[KerasRegressor](...build_fn=&lt;function build_regressor_nn at ...)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span><span class="o">.</span><span class="n">history_</span>
 <span class="go">&lt;tensorflow.contrib.keras.python.keras.callbacks.History object at ...&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
@@ -94,8 +94,8 @@
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>X</strong> – A <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> object.</li>
-<li><strong>y</strong> – A <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a> object.</li>
+<li><strong>X</strong> – A <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> object.</li>
+<li><strong>y</strong> – A <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a> object.</li>
 </ul>
 </td>
 </tr>
@@ -115,8 +115,8 @@
 are some changes, in particular:</p>
 <blockquote class="last">
 <div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
 </ul>
 </div></blockquote>
 </div>

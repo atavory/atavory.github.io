@@ -1,0 +1,812 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.covariance.graph_lasso_ &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.covariance.graph_lasso_</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;GraphLasso: sparse inverse covariance estimation with an l1-penalized</span>
+<span class="sd">estimator.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Author: Gael Varoquaux &lt;gael.varoquaux@normalesup.org&gt;</span>
+<span class="c1"># License: BSD 3 clause</span>
+<span class="c1"># Copyright: INRIA</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">operator</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">linalg</span>
+
+<span class="kn">from</span> <span class="nn">.empirical_covariance_</span> <span class="k">import</span> <span class="p">(</span><span class="n">empirical_covariance</span><span class="p">,</span> <span class="n">EmpiricalCovariance</span><span class="p">,</span>
+                                    <span class="n">log_likelihood</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">..exceptions</span> <span class="k">import</span> <span class="n">ConvergenceWarning</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_random_state</span><span class="p">,</span> <span class="n">check_array</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">deprecated</span>
+<span class="kn">from</span> <span class="nn">..linear_model</span> <span class="k">import</span> <span class="n">lars_path</span>
+<span class="kn">from</span> <span class="nn">..linear_model</span> <span class="k">import</span> <span class="n">cd_fast</span>
+<span class="kn">from</span> <span class="nn">..model_selection</span> <span class="k">import</span> <span class="n">check_cv</span><span class="p">,</span> <span class="n">cross_val_score</span>
+<span class="kn">from</span> <span class="nn">..externals.joblib</span> <span class="k">import</span> <span class="n">Parallel</span><span class="p">,</span> <span class="n">delayed</span>
+<span class="kn">import</span> <span class="nn">collections</span>
+
+
+<span class="c1"># Helper functions to compute the objective and dual objective functions</span>
+<span class="c1"># of the l1-penalized estimator</span>
+<span class="k">def</span> <span class="nf">_objective</span><span class="p">(</span><span class="n">mle</span><span class="p">,</span> <span class="n">precision_</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Evaluation of the graph-lasso objective function</span>
+
+<span class="sd">    the objective function is made of a shifted scaled version of the</span>
+<span class="sd">    normalized log-likelihood (i.e. its empirical mean over the samples) and a</span>
+<span class="sd">    penalisation term to promote sparsity</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">precision_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">cost</span> <span class="o">=</span> <span class="o">-</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">log_likelihood</span><span class="p">(</span><span class="n">mle</span><span class="p">,</span> <span class="n">precision_</span><span class="p">)</span> <span class="o">+</span> <span class="n">p</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+    <span class="n">cost</span> <span class="o">+=</span> <span class="n">alpha</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">precision_</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                     <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">precision_</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">cost</span>
+
+
+<span class="k">def</span> <span class="nf">_dual_gap</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">,</span> <span class="n">precision_</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Expression of the dual gap convergence criterion</span>
+
+<span class="sd">    The specific definition is given in Duchi &quot;Projected Subgradient Methods</span>
+<span class="sd">    for Learning Sparse Gaussians&quot;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">gap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">emp_cov</span> <span class="o">*</span> <span class="n">precision_</span><span class="p">)</span>
+    <span class="n">gap</span> <span class="o">-=</span> <span class="n">precision_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">gap</span> <span class="o">+=</span> <span class="n">alpha</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">precision_</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                    <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">precision_</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">gap</span>
+
+
+<span class="k">def</span> <span class="nf">alpha_max</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Find the maximum alpha for which there are some non-zeros off-diagonal.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    emp_cov : 2D array, (n_features, n_features)</span>
+<span class="sd">        The sample covariance matrix</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+
+<span class="sd">    This results from the bound for the all the Lasso that are solved</span>
+<span class="sd">    in GraphLasso: each time, the row of cov corresponds to Xy. As the</span>
+<span class="sd">    bound for alpha is given by `max(abs(Xy))`, the result follows.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">)</span>
+    <span class="n">A</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span><span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">A</span><span class="p">))</span>
+
+
+<span class="c1"># The g-lasso algorithm</span>
+
+<span class="k">def</span> <span class="nf">graph_lasso</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">cov_init</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;cd&#39;</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span>
+                <span class="n">enet_tol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">return_costs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span>
+                <span class="n">return_n_iter</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;l1-penalized covariance estimator</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;sparse_inverse_covariance&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    emp_cov : 2D ndarray, shape (n_features, n_features)</span>
+<span class="sd">        Empirical covariance from which to compute the covariance estimate.</span>
+
+<span class="sd">    alpha : positive float</span>
+<span class="sd">        The regularization parameter: the higher alpha, the more</span>
+<span class="sd">        regularization, the sparser the inverse covariance.</span>
+
+<span class="sd">    cov_init : 2D array (n_features, n_features), optional</span>
+<span class="sd">        The initial guess for the covariance.</span>
+
+<span class="sd">    mode : {&#39;cd&#39;, &#39;lars&#39;}</span>
+<span class="sd">        The Lasso solver to use: coordinate descent or LARS. Use LARS for</span>
+<span class="sd">        very sparse underlying graphs, where p &gt; n. Elsewhere prefer cd</span>
+<span class="sd">        which is more numerically stable.</span>
+
+<span class="sd">    tol : positive float, optional</span>
+<span class="sd">        The tolerance to declare convergence: if the dual gap goes below</span>
+<span class="sd">        this value, iterations are stopped.</span>
+
+<span class="sd">    enet_tol : positive float, optional</span>
+<span class="sd">        The tolerance for the elastic net solver used to calculate the descent</span>
+<span class="sd">        direction. This parameter controls the accuracy of the search direction</span>
+<span class="sd">        for a given column update, not of the overall parameter estimate. Only</span>
+<span class="sd">        used for mode=&#39;cd&#39;.</span>
+
+<span class="sd">    max_iter : integer, optional</span>
+<span class="sd">        The maximum number of iterations.</span>
+
+<span class="sd">    verbose : boolean, optional</span>
+<span class="sd">        If verbose is True, the objective function and dual gap are</span>
+<span class="sd">        printed at each iteration.</span>
+
+<span class="sd">    return_costs : boolean, optional</span>
+<span class="sd">        If return_costs is True, the objective function and dual gap</span>
+<span class="sd">        at each iteration are returned.</span>
+
+<span class="sd">    eps : float, optional</span>
+<span class="sd">        The machine-precision regularization in the computation of the</span>
+<span class="sd">        Cholesky diagonal factors. Increase this for very ill-conditioned</span>
+<span class="sd">        systems.</span>
+
+<span class="sd">    return_n_iter : bool, optional</span>
+<span class="sd">        Whether or not to return the number of iterations.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    covariance : 2D ndarray, shape (n_features, n_features)</span>
+<span class="sd">        The estimated covariance matrix.</span>
+
+<span class="sd">    precision : 2D ndarray, shape (n_features, n_features)</span>
+<span class="sd">        The estimated (sparse) precision matrix.</span>
+
+<span class="sd">    costs : list of (objective, dual_gap) pairs</span>
+<span class="sd">        The list of values of the objective function and the dual gap at</span>
+<span class="sd">        each iteration. Returned only if return_costs is True.</span>
+
+<span class="sd">    n_iter : int</span>
+<span class="sd">        Number of iterations. Returned only if `return_n_iter` is set to True.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    GraphLasso, GraphLassoCV</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The algorithm employed to solve this problem is the GLasso algorithm,</span>
+<span class="sd">    from the Friedman 2008 Biostatistics paper. It is the same algorithm</span>
+<span class="sd">    as in the R `glasso` package.</span>
+
+<span class="sd">    One possible difference with the `glasso` R package is that the</span>
+<span class="sd">    diagonal coefficients are not penalized.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">emp_cov</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">if</span> <span class="n">alpha</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">return_costs</span><span class="p">:</span>
+            <span class="n">precision_</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">)</span>
+            <span class="n">cost</span> <span class="o">=</span> <span class="o">-</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">log_likelihood</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">,</span> <span class="n">precision_</span><span class="p">)</span>
+            <span class="n">cost</span> <span class="o">+=</span> <span class="n">n_features</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+            <span class="n">d_gap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">emp_cov</span> <span class="o">*</span> <span class="n">precision_</span><span class="p">)</span> <span class="o">-</span> <span class="n">n_features</span>
+            <span class="k">if</span> <span class="n">return_n_iter</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">emp_cov</span><span class="p">,</span> <span class="n">precision_</span><span class="p">,</span> <span class="p">(</span><span class="n">cost</span><span class="p">,</span> <span class="n">d_gap</span><span class="p">),</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">emp_cov</span><span class="p">,</span> <span class="n">precision_</span><span class="p">,</span> <span class="p">(</span><span class="n">cost</span><span class="p">,</span> <span class="n">d_gap</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">return_n_iter</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">emp_cov</span><span class="p">,</span> <span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">),</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">emp_cov</span><span class="p">,</span> <span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cov_init</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">covariance_</span> <span class="o">=</span> <span class="n">emp_cov</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">covariance_</span> <span class="o">=</span> <span class="n">cov_init</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="c1"># As a trivial regularization (Tikhonov like), we scale down the</span>
+    <span class="c1"># off-diagonal coefficients of our starting point: This is needed, as</span>
+    <span class="c1"># in the cross-validation the cov_init can easily be</span>
+    <span class="c1"># ill-conditioned, and the CV loop blows. Beside, this takes</span>
+    <span class="c1"># conservative stand-point on the initial conditions, and it tends to</span>
+    <span class="c1"># make the convergence go faster.</span>
+    <span class="n">covariance_</span> <span class="o">*=</span> <span class="mf">0.95</span>
+    <span class="n">diagonal</span> <span class="o">=</span> <span class="n">emp_cov</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span><span class="n">n_features</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">covariance_</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span><span class="n">n_features</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">diagonal</span>
+    <span class="n">precision_</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">pinvh</span><span class="p">(</span><span class="n">covariance_</span><span class="p">)</span>
+
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_features</span><span class="p">)</span>
+    <span class="n">costs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="c1"># The different l1 regression solver have different numerical errors</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;cd&#39;</span><span class="p">:</span>
+        <span class="n">errors</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">over</span><span class="o">=</span><span class="s1">&#39;raise&#39;</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">errors</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">invalid</span><span class="o">=</span><span class="s1">&#39;raise&#39;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># be robust to the max_iter=0 edge case, see:</span>
+        <span class="c1"># https://github.com/scikit-learn/scikit-learn/issues/4134</span>
+        <span class="n">d_gap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_iter</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_features</span><span class="p">):</span>
+                <span class="n">sub_covariance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span>
+                    <span class="n">covariance_</span><span class="p">[</span><span class="n">indices</span> <span class="o">!=</span> <span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">indices</span> <span class="o">!=</span> <span class="n">idx</span><span class="p">])</span>
+                <span class="n">row</span> <span class="o">=</span> <span class="n">emp_cov</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">indices</span> <span class="o">!=</span> <span class="n">idx</span><span class="p">]</span>
+                <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="o">**</span><span class="n">errors</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;cd&#39;</span><span class="p">:</span>
+                        <span class="c1"># Use coordinate descent</span>
+                        <span class="n">coefs</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">precision_</span><span class="p">[</span><span class="n">indices</span> <span class="o">!=</span> <span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span>
+                                  <span class="o">/</span> <span class="p">(</span><span class="n">precision_</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1000</span> <span class="o">*</span> <span class="n">eps</span><span class="p">))</span>
+                        <span class="n">coefs</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">cd_fast</span><span class="o">.</span><span class="n">enet_coordinate_descent_gram</span><span class="p">(</span>
+                            <span class="n">coefs</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sub_covariance</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span>
+                            <span class="n">max_iter</span><span class="p">,</span> <span class="n">enet_tol</span><span class="p">,</span> <span class="n">check_random_state</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="kc">False</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c1"># Use LARS</span>
+                        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">coefs</span> <span class="o">=</span> <span class="n">lars_path</span><span class="p">(</span>
+                            <span class="n">sub_covariance</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">Xy</span><span class="o">=</span><span class="n">row</span><span class="p">,</span> <span class="n">Gram</span><span class="o">=</span><span class="n">sub_covariance</span><span class="p">,</span>
+                            <span class="n">alpha_min</span><span class="o">=</span><span class="n">alpha</span> <span class="o">/</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span> <span class="n">copy_Gram</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                            <span class="n">eps</span><span class="o">=</span><span class="n">eps</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;lars&#39;</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="c1"># Update the precision matrix</span>
+                <span class="n">precision_</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">covariance_</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span>
+                          <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">covariance_</span><span class="p">[</span><span class="n">indices</span> <span class="o">!=</span> <span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="p">],</span> <span class="n">coefs</span><span class="p">)))</span>
+                <span class="n">precision_</span><span class="p">[</span><span class="n">indices</span> <span class="o">!=</span> <span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span> <span class="n">precision_</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span>
+                                                   <span class="o">*</span> <span class="n">coefs</span><span class="p">)</span>
+                <span class="n">precision_</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">indices</span> <span class="o">!=</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span> <span class="n">precision_</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span>
+                                                   <span class="o">*</span> <span class="n">coefs</span><span class="p">)</span>
+                <span class="n">coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sub_covariance</span><span class="p">,</span> <span class="n">coefs</span><span class="p">)</span>
+                <span class="n">covariance_</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">indices</span> <span class="o">!=</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">coefs</span>
+                <span class="n">covariance_</span><span class="p">[</span><span class="n">indices</span> <span class="o">!=</span> <span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">coefs</span>
+            <span class="n">d_gap</span> <span class="o">=</span> <span class="n">_dual_gap</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">,</span> <span class="n">precision_</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+            <span class="n">cost</span> <span class="o">=</span> <span class="n">_objective</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">,</span> <span class="n">precision_</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="s1">&#39;[graph_lasso] Iteration </span><span class="si">% 3i</span><span class="s1">, cost </span><span class="si">% 3.2e</span><span class="s1">, dual gap </span><span class="si">%.3e</span><span class="s1">&#39;</span>
+                    <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">cost</span><span class="p">,</span> <span class="n">d_gap</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">return_costs</span><span class="p">:</span>
+                <span class="n">costs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">cost</span><span class="p">,</span> <span class="n">d_gap</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">d_gap</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">tol</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">cost</span><span class="p">)</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">FloatingPointError</span><span class="p">(</span><span class="s1">&#39;Non SPD result: the system is &#39;</span>
+                                         <span class="s1">&#39;too ill-conditioned for this solver&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;graph_lasso: did not converge after </span><span class="si">%i</span><span class="s1"> iteration:&#39;</span>
+                          <span class="s1">&#39; dual gap: </span><span class="si">%.3e</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">d_gap</span><span class="p">),</span>
+                          <span class="n">ConvergenceWarning</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">FloatingPointError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">e</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                  <span class="o">+</span> <span class="s1">&#39;. The system is too ill-conditioned for this solver&#39;</span><span class="p">,)</span>
+        <span class="k">raise</span> <span class="n">e</span>
+
+    <span class="k">if</span> <span class="n">return_costs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">return_n_iter</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">covariance_</span><span class="p">,</span> <span class="n">precision_</span><span class="p">,</span> <span class="n">costs</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">covariance_</span><span class="p">,</span> <span class="n">precision_</span><span class="p">,</span> <span class="n">costs</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">return_n_iter</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">covariance_</span><span class="p">,</span> <span class="n">precision_</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">covariance_</span><span class="p">,</span> <span class="n">precision_</span>
+
+
+<span class="k">class</span> <span class="nc">GraphLasso</span><span class="p">(</span><span class="n">EmpiricalCovariance</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Sparse inverse covariance estimation with an l1-penalized estimator.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;sparse_inverse_covariance&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    alpha : positive float, default 0.01</span>
+<span class="sd">        The regularization parameter: the higher alpha, the more</span>
+<span class="sd">        regularization, the sparser the inverse covariance.</span>
+
+<span class="sd">    mode : {&#39;cd&#39;, &#39;lars&#39;}, default &#39;cd&#39;</span>
+<span class="sd">        The Lasso solver to use: coordinate descent or LARS. Use LARS for</span>
+<span class="sd">        very sparse underlying graphs, where p &gt; n. Elsewhere prefer cd</span>
+<span class="sd">        which is more numerically stable.</span>
+
+<span class="sd">    tol : positive float, default 1e-4</span>
+<span class="sd">        The tolerance to declare convergence: if the dual gap goes below</span>
+<span class="sd">        this value, iterations are stopped.</span>
+
+<span class="sd">    enet_tol : positive float, optional</span>
+<span class="sd">        The tolerance for the elastic net solver used to calculate the descent</span>
+<span class="sd">        direction. This parameter controls the accuracy of the search direction</span>
+<span class="sd">        for a given column update, not of the overall parameter estimate. Only</span>
+<span class="sd">        used for mode=&#39;cd&#39;.</span>
+
+<span class="sd">    max_iter : integer, default 100</span>
+<span class="sd">        The maximum number of iterations.</span>
+
+<span class="sd">    verbose : boolean, default False</span>
+<span class="sd">        If verbose is True, the objective function and dual gap are</span>
+<span class="sd">        plotted at each iteration.</span>
+
+<span class="sd">    assume_centered : boolean, default False</span>
+<span class="sd">        If True, data are not centered before computation.</span>
+<span class="sd">        Useful when working with data whose mean is almost, but not exactly</span>
+<span class="sd">        zero.</span>
+<span class="sd">        If False, data are centered before computation.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    covariance_ : array-like, shape (n_features, n_features)</span>
+<span class="sd">        Estimated covariance matrix</span>
+
+<span class="sd">    precision_ : array-like, shape (n_features, n_features)</span>
+<span class="sd">        Estimated pseudo inverse matrix.</span>
+
+<span class="sd">    n_iter_ : int</span>
+<span class="sd">        Number of iterations run.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    graph_lasso, GraphLassoCV</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">01</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;cd&#39;</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">enet_tol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span>
+                 <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">assume_centered</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GraphLasso</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">assume_centered</span><span class="o">=</span><span class="n">assume_centered</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enet_tol</span> <span class="o">=</span> <span class="n">enet_tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+
+<div class="viewcode-block" id="GraphLasso.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_covariance_graphlasso.html#ibex.sklearn.covariance.GraphLasso.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fits the GraphLasso model to X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : ndarray, shape (n_samples, n_features)</span>
+<span class="sd">            Data from which to compute the covariance estimate</span>
+<span class="sd">        y : (ignored)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Covariance does not make sense for a single feature</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">ensure_min_features</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ensure_min_samples</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                        <span class="n">estimator</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">assume_centered</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">location_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">location_</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">emp_cov</span> <span class="o">=</span> <span class="n">empirical_covariance</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">assume_centered</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">assume_centered</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covariance_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">=</span> <span class="n">graph_lasso</span><span class="p">(</span>
+            <span class="n">emp_cov</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
+            <span class="n">enet_tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">enet_tol</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span> <span class="n">return_n_iter</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<span class="c1"># Cross-validation with GraphLasso</span>
+<span class="k">def</span> <span class="nf">graph_lasso_path</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">alphas</span><span class="p">,</span> <span class="n">cov_init</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">X_test</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;cd&#39;</span><span class="p">,</span>
+                     <span class="n">tol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">enet_tol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;l1-penalized covariance estimator along a path of decreasing alphas</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;sparse_inverse_covariance&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : 2D ndarray, shape (n_samples, n_features)</span>
+<span class="sd">        Data from which to compute the covariance estimate.</span>
+
+<span class="sd">    alphas : list of positive floats</span>
+<span class="sd">        The list of regularization parameters, decreasing order.</span>
+
+<span class="sd">    X_test : 2D array, shape (n_test_samples, n_features), optional</span>
+<span class="sd">        Optional test matrix to measure generalisation error.</span>
+
+<span class="sd">    mode : {&#39;cd&#39;, &#39;lars&#39;}</span>
+<span class="sd">        The Lasso solver to use: coordinate descent or LARS. Use LARS for</span>
+<span class="sd">        very sparse underlying graphs, where p &gt; n. Elsewhere prefer cd</span>
+<span class="sd">        which is more numerically stable.</span>
+
+<span class="sd">    tol : positive float, optional</span>
+<span class="sd">        The tolerance to declare convergence: if the dual gap goes below</span>
+<span class="sd">        this value, iterations are stopped.</span>
+
+<span class="sd">    enet_tol : positive float, optional</span>
+<span class="sd">        The tolerance for the elastic net solver used to calculate the descent</span>
+<span class="sd">        direction. This parameter controls the accuracy of the search direction</span>
+<span class="sd">        for a given column update, not of the overall parameter estimate. Only</span>
+<span class="sd">        used for mode=&#39;cd&#39;.</span>
+
+<span class="sd">    max_iter : integer, optional</span>
+<span class="sd">        The maximum number of iterations.</span>
+
+<span class="sd">    verbose : integer, optional</span>
+<span class="sd">        The higher the verbosity flag, the more information is printed</span>
+<span class="sd">        during the fitting.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    covariances_ : List of 2D ndarray, shape (n_features, n_features)</span>
+<span class="sd">        The estimated covariance matrices.</span>
+
+<span class="sd">    precisions_ : List of 2D ndarray, shape (n_features, n_features)</span>
+<span class="sd">        The estimated (sparse) precision matrices.</span>
+
+<span class="sd">    scores_ : List of float</span>
+<span class="sd">        The generalisation error (log-likelihood) on the test data.</span>
+<span class="sd">        Returned only if test data is passed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">inner_verbose</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">verbose</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">emp_cov</span> <span class="o">=</span> <span class="n">empirical_covariance</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cov_init</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">covariance_</span> <span class="o">=</span> <span class="n">emp_cov</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">covariance_</span> <span class="o">=</span> <span class="n">cov_init</span>
+    <span class="n">covariances_</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">precisions_</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">scores_</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">X_test</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">test_emp_cov</span> <span class="o">=</span> <span class="n">empirical_covariance</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">alpha</span> <span class="ow">in</span> <span class="n">alphas</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Capture the errors, and move on</span>
+            <span class="n">covariance_</span><span class="p">,</span> <span class="n">precision_</span> <span class="o">=</span> <span class="n">graph_lasso</span><span class="p">(</span>
+                <span class="n">emp_cov</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span> <span class="n">cov_init</span><span class="o">=</span><span class="n">covariance_</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span>
+                <span class="n">enet_tol</span><span class="o">=</span><span class="n">enet_tol</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">inner_verbose</span><span class="p">)</span>
+            <span class="n">covariances_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">covariance_</span><span class="p">)</span>
+            <span class="n">precisions_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">precision_</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">X_test</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">this_score</span> <span class="o">=</span> <span class="n">log_likelihood</span><span class="p">(</span><span class="n">test_emp_cov</span><span class="p">,</span> <span class="n">precision_</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">FloatingPointError</span><span class="p">:</span>
+            <span class="n">this_score</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+            <span class="n">covariances_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+            <span class="n">precisions_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">X_test</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">this_score</span><span class="p">):</span>
+                <span class="n">this_score</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+            <span class="n">scores_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">this_score</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">X_test</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;[graph_lasso_path] alpha: </span><span class="si">%.2e</span><span class="s1">, score: </span><span class="si">%.2e</span><span class="s1">&#39;</span>
+                      <span class="o">%</span> <span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">this_score</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;[graph_lasso_path] alpha: </span><span class="si">%.2e</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">alpha</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">X_test</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">covariances_</span><span class="p">,</span> <span class="n">precisions_</span><span class="p">,</span> <span class="n">scores_</span>
+    <span class="k">return</span> <span class="n">covariances_</span><span class="p">,</span> <span class="n">precisions_</span>
+
+
+<span class="k">class</span> <span class="nc">GraphLassoCV</span><span class="p">(</span><span class="n">GraphLasso</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Sparse inverse covariance w/ cross-validated choice of the l1 penalty</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;sparse_inverse_covariance&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    alphas : integer, or list positive float, optional</span>
+<span class="sd">        If an integer is given, it fixes the number of points on the</span>
+<span class="sd">        grids of alpha to be used. If a list is given, it gives the</span>
+<span class="sd">        grid to be used. See the notes in the class docstring for</span>
+<span class="sd">        more details.</span>
+
+<span class="sd">    n_refinements : strictly positive integer</span>
+<span class="sd">        The number of times the grid is refined. Not used if explicit</span>
+<span class="sd">        values of alphas are passed.</span>
+
+<span class="sd">    cv : int, cross-validation generator or an iterable, optional</span>
+<span class="sd">        Determines the cross-validation splitting strategy.</span>
+<span class="sd">        Possible inputs for cv are:</span>
+
+<span class="sd">        - None, to use the default 3-fold cross-validation,</span>
+<span class="sd">        - integer, to specify the number of folds.</span>
+<span class="sd">        - An object to be used as a cross-validation generator.</span>
+<span class="sd">        - An iterable yielding train/test splits.</span>
+
+<span class="sd">        For integer/None inputs :class:`KFold` is used.</span>
+
+<span class="sd">        Refer :ref:`User Guide &lt;cross_validation&gt;` for the various</span>
+<span class="sd">        cross-validation strategies that can be used here.</span>
+
+<span class="sd">    tol : positive float, optional</span>
+<span class="sd">        The tolerance to declare convergence: if the dual gap goes below</span>
+<span class="sd">        this value, iterations are stopped.</span>
+
+<span class="sd">    enet_tol : positive float, optional</span>
+<span class="sd">        The tolerance for the elastic net solver used to calculate the descent</span>
+<span class="sd">        direction. This parameter controls the accuracy of the search direction</span>
+<span class="sd">        for a given column update, not of the overall parameter estimate. Only</span>
+<span class="sd">        used for mode=&#39;cd&#39;.</span>
+
+<span class="sd">    max_iter : integer, optional</span>
+<span class="sd">        Maximum number of iterations.</span>
+
+<span class="sd">    mode : {&#39;cd&#39;, &#39;lars&#39;}</span>
+<span class="sd">        The Lasso solver to use: coordinate descent or LARS. Use LARS for</span>
+<span class="sd">        very sparse underlying graphs, where number of features is greater</span>
+<span class="sd">        than number of samples. Elsewhere prefer cd which is more numerically</span>
+<span class="sd">        stable.</span>
+
+<span class="sd">    n_jobs : int, optional</span>
+<span class="sd">        number of jobs to run in parallel (default 1).</span>
+
+<span class="sd">    verbose : boolean, optional</span>
+<span class="sd">        If verbose is True, the objective function and duality gap are</span>
+<span class="sd">        printed at each iteration.</span>
+
+<span class="sd">    assume_centered : Boolean</span>
+<span class="sd">        If True, data are not centered before computation.</span>
+<span class="sd">        Useful when working with data whose mean is almost, but not exactly</span>
+<span class="sd">        zero.</span>
+<span class="sd">        If False, data are centered before computation.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    covariance_ : numpy.ndarray, shape (n_features, n_features)</span>
+<span class="sd">        Estimated covariance matrix.</span>
+
+<span class="sd">    precision_ : numpy.ndarray, shape (n_features, n_features)</span>
+<span class="sd">        Estimated precision matrix (inverse covariance).</span>
+
+<span class="sd">    alpha_ : float</span>
+<span class="sd">        Penalization parameter selected.</span>
+
+<span class="sd">    cv_alphas_ : list of float</span>
+<span class="sd">        All penalization parameters explored.</span>
+
+<span class="sd">    grid_scores_ : 2D numpy.ndarray (n_alphas, n_folds)</span>
+<span class="sd">        Log-likelihood score on left-out data across folds.</span>
+
+<span class="sd">    n_iter_ : int</span>
+<span class="sd">        Number of iterations run for the optimal alpha.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    graph_lasso, GraphLasso</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The search for the optimal penalization parameter (alpha) is done on an</span>
+<span class="sd">    iteratively refined grid: first the cross-validated scores on a grid are</span>
+<span class="sd">    computed, then a new refined grid is centered around the maximum, and so</span>
+<span class="sd">    on.</span>
+
+<span class="sd">    One of the challenges which is faced here is that the solvers can</span>
+<span class="sd">    fail to converge to a well-conditioned estimate. The corresponding</span>
+<span class="sd">    values of alpha then come out as missing values, but the optimum may</span>
+<span class="sd">    be close to these missing values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alphas</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">n_refinements</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span>
+                 <span class="n">enet_tol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;cd&#39;</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                 <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">assume_centered</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GraphLassoCV</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span> <span class="n">enet_tol</span><span class="o">=</span><span class="n">enet_tol</span><span class="p">,</span>
+            <span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">assume_centered</span><span class="o">=</span><span class="n">assume_centered</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alphas</span> <span class="o">=</span> <span class="n">alphas</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_refinements</span> <span class="o">=</span> <span class="n">n_refinements</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cv</span> <span class="o">=</span> <span class="n">cv</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;Attribute grid_scores was deprecated in version 0.19 and &quot;</span>
+                <span class="s2">&quot;will be removed in 0.21. Use ``grid_scores_`` instead&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">grid_scores</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_scores_</span>
+
+<div class="viewcode-block" id="GraphLassoCV.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_covariance_graphlassocv.html#ibex.sklearn.covariance.GraphLassoCV.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fits the GraphLasso covariance model to X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : ndarray, shape (n_samples, n_features)</span>
+<span class="sd">            Data from which to compute the covariance estimate</span>
+<span class="sd">        y : (ignored)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Covariance does not make sense for a single feature</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">ensure_min_features</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">estimator</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">assume_centered</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">location_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">location_</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">emp_cov</span> <span class="o">=</span> <span class="n">empirical_covariance</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">assume_centered</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">assume_centered</span><span class="p">)</span>
+
+        <span class="n">cv</span> <span class="o">=</span> <span class="n">check_cv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cv</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">classifier</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># List of (alpha, scores, covs)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="n">n_alphas</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alphas</span>
+        <span class="n">inner_verbose</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_alphas</span><span class="p">,</span> <span class="n">collections</span><span class="o">.</span><span class="n">Sequence</span><span class="p">):</span>
+            <span class="n">alphas</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alphas</span>
+            <span class="n">n_refinements</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">n_refinements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_refinements</span>
+            <span class="n">alpha_1</span> <span class="o">=</span> <span class="n">alpha_max</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">)</span>
+            <span class="n">alpha_0</span> <span class="o">=</span> <span class="mf">1e-2</span> <span class="o">*</span> <span class="n">alpha_1</span>
+            <span class="n">alphas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">alpha_0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">alpha_1</span><span class="p">),</span>
+                                 <span class="n">n_alphas</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_refinements</span><span class="p">):</span>
+            <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+                <span class="c1"># No need to see the convergence warnings on this grid:</span>
+                <span class="c1"># they will always be points that will not converge</span>
+                <span class="c1"># during the cross-validation</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">ConvergenceWarning</span><span class="p">)</span>
+                <span class="c1"># Compute the cross-validated loss on the current grid</span>
+
+                <span class="c1"># NOTE: Warm-restarting graph_lasso_path has been tried, and</span>
+                <span class="c1"># this did not allow to gain anything (same execution time with</span>
+                <span class="c1"># or without).</span>
+                <span class="n">this_path</span> <span class="o">=</span> <span class="n">Parallel</span><span class="p">(</span>
+                    <span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">,</span>
+                    <span class="n">verbose</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verbose</span>
+                <span class="p">)(</span><span class="n">delayed</span><span class="p">(</span><span class="n">graph_lasso_path</span><span class="p">)(</span><span class="n">X</span><span class="p">[</span><span class="n">train</span><span class="p">],</span> <span class="n">alphas</span><span class="o">=</span><span class="n">alphas</span><span class="p">,</span>
+                                            <span class="n">X_test</span><span class="o">=</span><span class="n">X</span><span class="p">[</span><span class="n">test</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span>
+                                            <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
+                                            <span class="n">enet_tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">enet_tol</span><span class="p">,</span>
+                                            <span class="n">max_iter</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="o">.</span><span class="mi">1</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">),</span>
+                                            <span class="n">verbose</span><span class="o">=</span><span class="n">inner_verbose</span><span class="p">)</span>
+                  <span class="k">for</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span> <span class="ow">in</span> <span class="n">cv</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+
+            <span class="c1"># Little danse to transform the list in what we need</span>
+            <span class="n">covs</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">scores</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">this_path</span><span class="p">)</span>
+            <span class="n">covs</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">covs</span><span class="p">)</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">scores</span><span class="p">)</span>
+            <span class="n">path</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">alphas</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">covs</span><span class="p">))</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="c1"># Find the maximum (avoid using built in &#39;max&#39; function to</span>
+            <span class="c1"># have a fully-reproducible selection of the smallest alpha</span>
+            <span class="c1"># in case of equality)</span>
+            <span class="n">best_score</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+            <span class="n">last_finite_idx</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+                <span class="n">this_score</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">this_score</span> <span class="o">&gt;=</span> <span class="o">.</span><span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">:</span>
+                    <span class="n">this_score</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">this_score</span><span class="p">):</span>
+                    <span class="n">last_finite_idx</span> <span class="o">=</span> <span class="n">index</span>
+                <span class="k">if</span> <span class="n">this_score</span> <span class="o">&gt;=</span> <span class="n">best_score</span><span class="p">:</span>
+                    <span class="n">best_score</span> <span class="o">=</span> <span class="n">this_score</span>
+                    <span class="n">best_index</span> <span class="o">=</span> <span class="n">index</span>
+
+            <span class="c1"># Refine the grid</span>
+            <span class="k">if</span> <span class="n">best_index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># We do not need to go back: we have chosen</span>
+                <span class="c1"># the highest value of alpha for which there are</span>
+                <span class="c1"># non-zero coefficients</span>
+                <span class="n">alpha_1</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">alpha_0</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">best_index</span> <span class="o">==</span> <span class="n">last_finite_idx</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="n">best_index</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="c1"># We have non-converged models on the upper bound of the</span>
+                <span class="c1"># grid, we need to refine the grid there</span>
+                <span class="n">alpha_1</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="n">best_index</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">alpha_0</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="n">best_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">best_index</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">alpha_1</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="n">best_index</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">alpha_0</span> <span class="o">=</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">path</span><span class="p">[</span><span class="n">best_index</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">alpha_1</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="n">best_index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">alpha_0</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="n">best_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_alphas</span><span class="p">,</span> <span class="n">collections</span><span class="o">.</span><span class="n">Sequence</span><span class="p">):</span>
+                <span class="n">alphas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">alpha_1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">alpha_0</span><span class="p">),</span>
+                                     <span class="n">n_alphas</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="n">alphas</span> <span class="o">=</span> <span class="n">alphas</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="ow">and</span> <span class="n">n_refinements</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;[GraphLassoCV] Done refinement </span><span class="si">% 2i</span><span class="s1"> out of </span><span class="si">%i</span><span class="s1">: </span><span class="si">% 3i</span><span class="s1">s&#39;</span>
+                      <span class="o">%</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_refinements</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span><span class="p">))</span>
+
+        <span class="n">path</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">path</span><span class="p">))</span>
+        <span class="n">grid_scores</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">path</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">alphas</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="c1"># Finally, compute the score with alpha = 0</span>
+        <span class="n">alphas</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">grid_scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cross_val_score</span><span class="p">(</span><span class="n">EmpiricalCovariance</span><span class="p">(),</span> <span class="n">X</span><span class="p">,</span>
+                                           <span class="n">cv</span><span class="o">=</span><span class="n">cv</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">,</span>
+                                           <span class="n">verbose</span><span class="o">=</span><span class="n">inner_verbose</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grid_scores_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">grid_scores</span><span class="p">)</span>
+        <span class="n">best_alpha</span> <span class="o">=</span> <span class="n">alphas</span><span class="p">[</span><span class="n">best_index</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span> <span class="o">=</span> <span class="n">best_alpha</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cv_alphas_</span> <span class="o">=</span> <span class="n">alphas</span>
+
+        <span class="c1"># Finally fit the model with the selected alpha</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covariance_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">=</span> <span class="n">graph_lasso</span><span class="p">(</span>
+            <span class="n">emp_cov</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">best_alpha</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
+            <span class="n">enet_tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">enet_tol</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="n">inner_verbose</span><span class="p">,</span> <span class="n">return_n_iter</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

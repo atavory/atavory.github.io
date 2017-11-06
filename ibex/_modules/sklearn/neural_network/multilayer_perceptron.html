@@ -1,0 +1,1419 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.neural_network.multilayer_perceptron &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.neural_network.multilayer_perceptron</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Multi-layer Perceptron</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Authors: Issam H. Laradji &lt;issam.laradji@gmail.com&gt;</span>
+<span class="c1">#          Andreas Mueller</span>
+<span class="c1">#          Jiyuan Qian</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="k">import</span> <span class="n">fmin_l_bfgs_b</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">,</span> <span class="n">RegressorMixin</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">is_classifier</span>
+<span class="kn">from</span> <span class="nn">._base</span> <span class="k">import</span> <span class="n">ACTIVATIONS</span><span class="p">,</span> <span class="n">DERIVATIVES</span><span class="p">,</span> <span class="n">LOSS_FUNCTIONS</span>
+<span class="kn">from</span> <span class="nn">._stochastic_optimizers</span> <span class="k">import</span> <span class="n">SGDOptimizer</span><span class="p">,</span> <span class="n">AdamOptimizer</span>
+<span class="kn">from</span> <span class="nn">..model_selection</span> <span class="k">import</span> <span class="n">train_test_split</span>
+<span class="kn">from</span> <span class="nn">..externals</span> <span class="k">import</span> <span class="n">six</span>
+<span class="kn">from</span> <span class="nn">..preprocessing</span> <span class="k">import</span> <span class="n">LabelBinarizer</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">gen_batches</span><span class="p">,</span> <span class="n">check_random_state</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">shuffle</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_array</span><span class="p">,</span> <span class="n">check_X_y</span><span class="p">,</span> <span class="n">column_or_1d</span>
+<span class="kn">from</span> <span class="nn">..exceptions</span> <span class="k">import</span> <span class="n">ConvergenceWarning</span>
+<span class="kn">from</span> <span class="nn">..utils.extmath</span> <span class="k">import</span> <span class="n">safe_sparse_dot</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_is_fitted</span>
+<span class="kn">from</span> <span class="nn">..utils.multiclass</span> <span class="k">import</span> <span class="n">_check_partial_fit_first_call</span><span class="p">,</span> <span class="n">unique_labels</span>
+<span class="kn">from</span> <span class="nn">..utils.multiclass</span> <span class="k">import</span> <span class="n">type_of_target</span>
+
+
+<span class="n">_STOCHASTIC_SOLVERS</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sgd&#39;</span><span class="p">,</span> <span class="s1">&#39;adam&#39;</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_pack</span><span class="p">(</span><span class="n">coefs_</span><span class="p">,</span> <span class="n">intercepts_</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Pack the parameters into a single vector.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">l</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">coefs_</span> <span class="o">+</span> <span class="n">intercepts_</span><span class="p">])</span>
+
+
+<span class="k">class</span> <span class="nc">BaseMultilayerPerceptron</span><span class="p">(</span><span class="n">six</span><span class="o">.</span><span class="n">with_metaclass</span><span class="p">(</span><span class="n">ABCMeta</span><span class="p">,</span> <span class="n">BaseEstimator</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Base class for MLP classification and regression.</span>
+
+<span class="sd">    Warning: This class should not be used directly.</span>
+<span class="sd">    Use derived classes instead.</span>
+
+<span class="sd">    .. versionadded:: 0.18</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_layer_sizes</span><span class="p">,</span> <span class="n">activation</span><span class="p">,</span> <span class="n">solver</span><span class="p">,</span>
+                 <span class="n">alpha</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">learning_rate</span><span class="p">,</span> <span class="n">learning_rate_init</span><span class="p">,</span> <span class="n">power_t</span><span class="p">,</span>
+                 <span class="n">max_iter</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">shuffle</span><span class="p">,</span> <span class="n">random_state</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span>
+                 <span class="n">warm_start</span><span class="p">,</span> <span class="n">momentum</span><span class="p">,</span> <span class="n">nesterovs_momentum</span><span class="p">,</span> <span class="n">early_stopping</span><span class="p">,</span>
+                 <span class="n">validation_fraction</span><span class="p">,</span> <span class="n">beta_1</span><span class="p">,</span> <span class="n">beta_2</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">activation</span> <span class="o">=</span> <span class="n">activation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">=</span> <span class="n">solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">=</span> <span class="n">batch_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">=</span> <span class="n">learning_rate</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate_init</span> <span class="o">=</span> <span class="n">learning_rate_init</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">power_t</span> <span class="o">=</span> <span class="n">power_t</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loss</span> <span class="o">=</span> <span class="n">loss</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hidden_layer_sizes</span> <span class="o">=</span> <span class="n">hidden_layer_sizes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shuffle</span> <span class="o">=</span> <span class="n">shuffle</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warm_start</span> <span class="o">=</span> <span class="n">warm_start</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">momentum</span> <span class="o">=</span> <span class="n">momentum</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nesterovs_momentum</span> <span class="o">=</span> <span class="n">nesterovs_momentum</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">early_stopping</span> <span class="o">=</span> <span class="n">early_stopping</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">validation_fraction</span> <span class="o">=</span> <span class="n">validation_fraction</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">beta_1</span> <span class="o">=</span> <span class="n">beta_1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">beta_2</span> <span class="o">=</span> <span class="n">beta_2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="n">epsilon</span>
+
+    <span class="k">def</span> <span class="nf">_unpack</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">packed_parameters</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Extract the coefficients and intercepts from packed_parameters.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_layers_</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coef_indptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coefs_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">packed_parameters</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">],</span> <span class="n">shape</span><span class="p">)</span>
+
+            <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intercept_indptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">intercepts_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">packed_parameters</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_forward_pass</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Perform a forward pass on the network by computing the values</span>
+<span class="sd">        of the neurons in the hidden layers and the output layer.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        activations : list, length = n_layers - 1</span>
+<span class="sd">            The ith element of the list holds the values of the ith layer.</span>
+
+<span class="sd">        with_output_activation : bool, default True</span>
+<span class="sd">            If True, the output passes through the output activation</span>
+<span class="sd">            function, which is either the softmax function or the</span>
+<span class="sd">            logistic function</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">hidden_activation</span> <span class="o">=</span> <span class="n">ACTIVATIONS</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">activation</span><span class="p">]</span>
+        <span class="c1"># Iterate over the hidden layers</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_layers_</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">activations</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">activations</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                                 <span class="bp">self</span><span class="o">.</span><span class="n">coefs_</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">activations</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">intercepts_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+            <span class="c1"># For the hidden layers</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">!=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_layers_</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">activations</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">hidden_activation</span><span class="p">(</span><span class="n">activations</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+
+        <span class="c1"># For the last layer</span>
+        <span class="n">output_activation</span> <span class="o">=</span> <span class="n">ACTIVATIONS</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">out_activation_</span><span class="p">]</span>
+        <span class="n">activations</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">output_activation</span><span class="p">(</span><span class="n">activations</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">activations</span>
+
+    <span class="k">def</span> <span class="nf">_compute_loss_grad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span> <span class="n">activations</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span>
+                           <span class="n">coef_grads</span><span class="p">,</span> <span class="n">intercept_grads</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the gradient of loss with respect to coefs and intercept for</span>
+<span class="sd">        specified layer.</span>
+
+<span class="sd">        This function does backpropagation for the specified one layer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">coef_grads</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span> <span class="o">=</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">activations</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+                                            <span class="n">deltas</span><span class="p">[</span><span class="n">layer</span><span class="p">])</span>
+        <span class="n">coef_grads</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs_</span><span class="p">[</span><span class="n">layer</span><span class="p">])</span>
+        <span class="n">coef_grads</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span> <span class="o">/=</span> <span class="n">n_samples</span>
+
+        <span class="n">intercept_grads</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">deltas</span><span class="p">[</span><span class="n">layer</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">coef_grads</span><span class="p">,</span> <span class="n">intercept_grads</span>
+
+    <span class="k">def</span> <span class="nf">_loss_grad_lbfgs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">packed_coef_inter</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">activations</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span>
+                         <span class="n">coef_grads</span><span class="p">,</span> <span class="n">intercept_grads</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the MLP loss function and its corresponding derivatives</span>
+<span class="sd">        with respect to the different parameters given in the initialization.</span>
+
+<span class="sd">        Returned gradients are packed in a single vector so it can be used</span>
+<span class="sd">        in lbfgs</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        packed_parameters : array-like</span>
+<span class="sd">            A vector comprising the flattened coefficients and intercepts.</span>
+
+<span class="sd">        X : {array-like, sparse matrix}, shape (n_samples, n_features)</span>
+<span class="sd">            The input data.</span>
+
+<span class="sd">        y : array-like, shape (n_samples,)</span>
+<span class="sd">            The target values.</span>
+
+<span class="sd">        activations : list, length = n_layers - 1</span>
+<span class="sd">            The ith element of the list holds the values of the ith layer.</span>
+
+<span class="sd">        deltas : list, length = n_layers - 1</span>
+<span class="sd">            The ith element of the list holds the difference between the</span>
+<span class="sd">            activations of the i + 1 layer and the backpropagated error.</span>
+<span class="sd">            More specifically, deltas are gradients of loss with respect to z</span>
+<span class="sd">            in each layer, where z = wx + b is the value of a particular layer</span>
+<span class="sd">            before passing through the activation function</span>
+
+<span class="sd">        coef_grad : list, length = n_layers - 1</span>
+<span class="sd">            The ith element contains the amount of change used to update the</span>
+<span class="sd">            coefficient parameters of the ith layer in an iteration.</span>
+
+<span class="sd">        intercept_grads : list, length = n_layers - 1</span>
+<span class="sd">            The ith element contains the amount of change used to update the</span>
+<span class="sd">            intercept parameters of the ith layer in an iteration.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        loss : float</span>
+<span class="sd">        grad : array-like, shape (number of nodes of all layers,)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_unpack</span><span class="p">(</span><span class="n">packed_coef_inter</span><span class="p">)</span>
+        <span class="n">loss</span><span class="p">,</span> <span class="n">coef_grads</span><span class="p">,</span> <span class="n">intercept_grads</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_backprop</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">activations</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">coef_grads</span><span class="p">,</span> <span class="n">intercept_grads</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="n">_pack</span><span class="p">(</span><span class="n">coef_grads</span><span class="p">,</span> <span class="n">intercept_grads</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">loss</span><span class="p">,</span> <span class="n">grad</span>
+
+    <span class="k">def</span> <span class="nf">_backprop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">activations</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">coef_grads</span><span class="p">,</span>
+                  <span class="n">intercept_grads</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the MLP loss function and its corresponding derivatives</span>
+<span class="sd">        with respect to each parameter: weights and bias vectors.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape (n_samples, n_features)</span>
+<span class="sd">            The input data.</span>
+
+<span class="sd">        y : array-like, shape (n_samples,)</span>
+<span class="sd">            The target values.</span>
+
+<span class="sd">        activations : list, length = n_layers - 1</span>
+<span class="sd">             The ith element of the list holds the values of the ith layer.</span>
+
+<span class="sd">        deltas : list, length = n_layers - 1</span>
+<span class="sd">            The ith element of the list holds the difference between the</span>
+<span class="sd">            activations of the i + 1 layer and the backpropagated error.</span>
+<span class="sd">            More specifically, deltas are gradients of loss with respect to z</span>
+<span class="sd">            in each layer, where z = wx + b is the value of a particular layer</span>
+<span class="sd">            before passing through the activation function</span>
+
+<span class="sd">        coef_grad : list, length = n_layers - 1</span>
+<span class="sd">            The ith element contains the amount of change used to update the</span>
+<span class="sd">            coefficient parameters of the ith layer in an iteration.</span>
+
+<span class="sd">        intercept_grads : list, length = n_layers - 1</span>
+<span class="sd">            The ith element contains the amount of change used to update the</span>
+<span class="sd">            intercept parameters of the ith layer in an iteration.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        loss : float</span>
+<span class="sd">        coef_grads : list, length = n_layers - 1</span>
+<span class="sd">        intercept_grads : list, length = n_layers - 1</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">n_samples</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Forward propagate</span>
+        <span class="n">activations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_pass</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
+
+        <span class="c1"># Get loss</span>
+        <span class="n">loss_func_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss</span>
+        <span class="k">if</span> <span class="n">loss_func_name</span> <span class="o">==</span> <span class="s1">&#39;log_loss&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_activation_</span> <span class="o">==</span> <span class="s1">&#39;logistic&#39;</span><span class="p">:</span>
+            <span class="n">loss_func_name</span> <span class="o">=</span> <span class="s1">&#39;binary_log_loss&#39;</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">LOSS_FUNCTIONS</span><span class="p">[</span><span class="n">loss_func_name</span><span class="p">](</span><span class="n">y</span><span class="p">,</span> <span class="n">activations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="c1"># Add L2 regularization term to loss</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">s</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs_</span><span class="p">]))</span>
+        <span class="n">loss</span> <span class="o">+=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span> <span class="o">*</span> <span class="n">values</span> <span class="o">/</span> <span class="n">n_samples</span>
+
+        <span class="c1"># Backward propagate</span>
+        <span class="n">last</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_layers_</span> <span class="o">-</span> <span class="mi">2</span>
+
+        <span class="c1"># The calculation of delta[last] here works with following</span>
+        <span class="c1"># combinations of output activation and loss function:</span>
+        <span class="c1"># sigmoid and binary cross entropy, softmax and categorical cross</span>
+        <span class="c1"># entropy, and identity with squared loss</span>
+        <span class="n">deltas</span><span class="p">[</span><span class="n">last</span><span class="p">]</span> <span class="o">=</span> <span class="n">activations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">y</span>
+
+        <span class="c1"># Compute gradient for the last layer</span>
+        <span class="n">coef_grads</span><span class="p">,</span> <span class="n">intercept_grads</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_loss_grad</span><span class="p">(</span>
+            <span class="n">last</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span> <span class="n">activations</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">coef_grads</span><span class="p">,</span> <span class="n">intercept_grads</span><span class="p">)</span>
+
+        <span class="c1"># Iterate over the hidden layers</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_layers_</span> <span class="o">-</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">deltas</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">deltas</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+            <span class="n">inplace_derivative</span> <span class="o">=</span> <span class="n">DERIVATIVES</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">activation</span><span class="p">]</span>
+            <span class="n">inplace_derivative</span><span class="p">(</span><span class="n">activations</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">deltas</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span>
+
+            <span class="n">coef_grads</span><span class="p">,</span> <span class="n">intercept_grads</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_loss_grad</span><span class="p">(</span>
+                <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span> <span class="n">activations</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">coef_grads</span><span class="p">,</span>
+                <span class="n">intercept_grads</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">loss</span><span class="p">,</span> <span class="n">coef_grads</span><span class="p">,</span> <span class="n">intercept_grads</span>
+
+    <span class="k">def</span> <span class="nf">_initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">layer_units</span><span class="p">):</span>
+        <span class="c1"># set all attributes, allocate weights etc for first call</span>
+        <span class="c1"># Initialize parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_outputs_</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># Compute the number of layers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_layers_</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">layer_units</span><span class="p">)</span>
+
+        <span class="c1"># Output for regression</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_classifier</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out_activation_</span> <span class="o">=</span> <span class="s1">&#39;identity&#39;</span>
+        <span class="c1"># Output for multi class</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">y_type_</span> <span class="o">==</span> <span class="s1">&#39;multiclass&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out_activation_</span> <span class="o">=</span> <span class="s1">&#39;softmax&#39;</span>
+        <span class="c1"># Output for binary class and multi-label</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out_activation_</span> <span class="o">=</span> <span class="s1">&#39;logistic&#39;</span>
+
+        <span class="c1"># Initialize coefficient and intercept layers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coefs_</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intercepts_</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_layers_</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">coef_init</span><span class="p">,</span> <span class="n">intercept_init</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_init_coef</span><span class="p">(</span><span class="n">layer_units</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                                        <span class="n">layer_units</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coefs_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coef_init</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">intercepts_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">intercept_init</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="ow">in</span> <span class="n">_STOCHASTIC_SOLVERS</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">loss_curve_</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_no_improvement_count</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">early_stopping</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">validation_scores_</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">best_validation_score_</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">best_loss_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+
+    <span class="k">def</span> <span class="nf">_init_coef</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fan_in</span><span class="p">,</span> <span class="n">fan_out</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">activation</span> <span class="o">==</span> <span class="s1">&#39;logistic&#39;</span><span class="p">:</span>
+            <span class="c1"># Use the initialization method recommended by</span>
+            <span class="c1"># Glorot et al.</span>
+            <span class="n">init_bound</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.</span> <span class="o">/</span> <span class="p">(</span><span class="n">fan_in</span> <span class="o">+</span> <span class="n">fan_out</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">activation</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;identity&#39;</span><span class="p">,</span> <span class="s1">&#39;tanh&#39;</span><span class="p">,</span> <span class="s1">&#39;relu&#39;</span><span class="p">):</span>
+            <span class="n">init_bound</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">6.</span> <span class="o">/</span> <span class="p">(</span><span class="n">fan_in</span> <span class="o">+</span> <span class="n">fan_out</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># this was caught earlier, just to make sure</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknown activation function </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">activation</span><span class="p">)</span>
+
+        <span class="n">coef_init</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_random_state</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">init_bound</span><span class="p">,</span> <span class="n">init_bound</span><span class="p">,</span>
+                                               <span class="p">(</span><span class="n">fan_in</span><span class="p">,</span> <span class="n">fan_out</span><span class="p">))</span>
+        <span class="n">intercept_init</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_random_state</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">init_bound</span><span class="p">,</span> <span class="n">init_bound</span><span class="p">,</span>
+                                                    <span class="n">fan_out</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">coef_init</span><span class="p">,</span> <span class="n">intercept_init</span>
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">incremental</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="c1"># Make sure self.hidden_layer_sizes is a list</span>
+        <span class="n">hidden_layer_sizes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hidden_layer_sizes</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">hidden_layer_sizes</span><span class="p">,</span> <span class="s2">&quot;__iter__&quot;</span><span class="p">):</span>
+            <span class="n">hidden_layer_sizes</span> <span class="o">=</span> <span class="p">[</span><span class="n">hidden_layer_sizes</span><span class="p">]</span>
+        <span class="n">hidden_layer_sizes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">hidden_layer_sizes</span><span class="p">)</span>
+
+        <span class="c1"># Validate input parameters.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_hyperparameters</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">hidden_layer_sizes</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;hidden_layer_sizes must be &gt; 0, got </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span>
+                             <span class="n">hidden_layer_sizes</span><span class="p">)</span>
+
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_input</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">incremental</span><span class="p">)</span>
+        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># Ensure y is 2D</span>
+        <span class="k">if</span> <span class="n">y</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_outputs_</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">layer_units</span> <span class="o">=</span> <span class="p">([</span><span class="n">n_features</span><span class="p">]</span> <span class="o">+</span> <span class="n">hidden_layer_sizes</span> <span class="o">+</span>
+                       <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n_outputs_</span><span class="p">])</span>
+
+        <span class="c1"># check random state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_random_state</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;coefs_&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">warm_start</span> <span class="ow">and</span> <span class="ow">not</span>
+                                           <span class="n">incremental</span><span class="p">):</span>
+            <span class="c1"># First time training the model</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_initialize</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">layer_units</span><span class="p">)</span>
+
+        <span class="c1"># lbfgs does not support mini-batches</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;lbfgs&#39;</span><span class="p">:</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="n">n_samples</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">&gt;</span> <span class="n">n_samples</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Got `batch_size` less than 1 or larger than &quot;</span>
+                              <span class="s2">&quot;sample size. It is going to be clipped&quot;</span><span class="p">)</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">)</span>
+
+        <span class="c1"># Initialize lists</span>
+        <span class="n">activations</span> <span class="o">=</span> <span class="p">[</span><span class="n">X</span><span class="p">]</span>
+        <span class="n">activations</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">n_fan_out</span><span class="p">))</span>
+                           <span class="k">for</span> <span class="n">n_fan_out</span> <span class="ow">in</span> <span class="n">layer_units</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="n">deltas</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">a_layer</span><span class="p">)</span> <span class="k">for</span> <span class="n">a_layer</span> <span class="ow">in</span> <span class="n">activations</span><span class="p">]</span>
+
+        <span class="n">coef_grads</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n_fan_in_</span><span class="p">,</span> <span class="n">n_fan_out_</span><span class="p">))</span> <span class="k">for</span> <span class="n">n_fan_in_</span><span class="p">,</span>
+                      <span class="n">n_fan_out_</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">layer_units</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                                        <span class="n">layer_units</span><span class="p">[</span><span class="mi">1</span><span class="p">:])]</span>
+
+        <span class="n">intercept_grads</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">n_fan_out_</span><span class="p">)</span> <span class="k">for</span> <span class="n">n_fan_out_</span> <span class="ow">in</span>
+                           <span class="n">layer_units</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span>
+
+        <span class="c1"># Run the Stochastic optimization solver</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="ow">in</span> <span class="n">_STOCHASTIC_SOLVERS</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fit_stochastic</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">activations</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">coef_grads</span><span class="p">,</span>
+                                 <span class="n">intercept_grads</span><span class="p">,</span> <span class="n">layer_units</span><span class="p">,</span> <span class="n">incremental</span><span class="p">)</span>
+
+        <span class="c1"># Run the LBFGS solver</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;lbfgs&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fit_lbfgs</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">activations</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">coef_grads</span><span class="p">,</span>
+                            <span class="n">intercept_grads</span><span class="p">,</span> <span class="n">layer_units</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">_validate_hyperparameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shuffle</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;shuffle must be either True or False, got </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">shuffle</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;max_iter must be &gt; 0, got </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">&lt;</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;alpha must be &gt;= 0, got </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;constant&quot;</span><span class="p">,</span> <span class="s2">&quot;invscaling&quot;</span><span class="p">,</span> <span class="s2">&quot;adaptive&quot;</span><span class="p">]</span> <span class="ow">and</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate_init</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;learning_rate_init must be &gt; 0, got </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">momentum</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">momentum</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;momentum must be &gt;= 0 and &lt;= 1, got </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">momentum</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nesterovs_momentum</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;nesterovs_momentum must be either True or False,&quot;</span>
+                             <span class="s2">&quot; got </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">nesterovs_momentum</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">early_stopping</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;early_stopping must be either True or False,&quot;</span>
+                             <span class="s2">&quot; got </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">early_stopping</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_fraction</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_fraction</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;validation_fraction must be &gt;= 0 and &lt; 1, &quot;</span>
+                             <span class="s2">&quot;got </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_fraction</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_1</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_1</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;beta_1 must be &gt;= 0 and &lt; 1, got </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">beta_1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_2</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_2</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;beta_2 must be &gt;= 0 and &lt; 1, got </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">beta_2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;epsilon must be &gt; 0, got </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">)</span>
+
+        <span class="c1"># raise ValueError if not registered</span>
+        <span class="n">supported_activations</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;identity&#39;</span><span class="p">,</span> <span class="s1">&#39;logistic&#39;</span><span class="p">,</span> <span class="s1">&#39;tanh&#39;</span><span class="p">,</span> <span class="s1">&#39;relu&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">activation</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">supported_activations</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The activation &#39;</span><span class="si">%s</span><span class="s2">&#39; is not supported. Supported &quot;</span>
+                             <span class="s2">&quot;activations are </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">activation</span><span class="p">,</span>
+                                                      <span class="n">supported_activations</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;constant&quot;</span><span class="p">,</span> <span class="s2">&quot;invscaling&quot;</span><span class="p">,</span> <span class="s2">&quot;adaptive&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;learning rate </span><span class="si">%s</span><span class="s2"> is not supported. &quot;</span> <span class="o">%</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span><span class="p">)</span>
+        <span class="n">supported_solvers</span> <span class="o">=</span> <span class="n">_STOCHASTIC_SOLVERS</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;lbfgs&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">supported_solvers</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The solver </span><span class="si">%s</span><span class="s2"> is not supported. &quot;</span>
+                             <span class="s2">&quot; Expected one of: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>
+                             <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">solver</span><span class="p">,</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">supported_solvers</span><span class="p">)))</span>
+
+    <span class="k">def</span> <span class="nf">_fit_lbfgs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">activations</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">coef_grads</span><span class="p">,</span>
+                   <span class="n">intercept_grads</span><span class="p">,</span> <span class="n">layer_units</span><span class="p">):</span>
+        <span class="c1"># Store meta information for the parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coef_indptr</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_intercept_indptr</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># Save sizes and indices of coefficients for faster unpacking</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_layers_</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">n_fan_in</span><span class="p">,</span> <span class="n">n_fan_out</span> <span class="o">=</span> <span class="n">layer_units</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">layer_units</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+
+            <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="p">(</span><span class="n">n_fan_in</span> <span class="o">*</span> <span class="n">n_fan_out</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_coef_indptr</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="p">(</span><span class="n">n_fan_in</span><span class="p">,</span> <span class="n">n_fan_out</span><span class="p">)))</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">end</span>
+
+        <span class="c1"># Save sizes and indices of intercepts for faster unpacking</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_layers_</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">layer_units</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_intercept_indptr</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">))</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">end</span>
+
+        <span class="c1"># Run LBFGS</span>
+        <span class="n">packed_coef_inter</span> <span class="o">=</span> <span class="n">_pack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coefs_</span><span class="p">,</span>
+                                  <span class="bp">self</span><span class="o">.</span><span class="n">intercepts_</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="ow">is</span> <span class="kc">True</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">iprint</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">iprint</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="n">optimal_parameters</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_</span><span class="p">,</span> <span class="n">d</span> <span class="o">=</span> <span class="n">fmin_l_bfgs_b</span><span class="p">(</span>
+            <span class="n">x0</span><span class="o">=</span><span class="n">packed_coef_inter</span><span class="p">,</span>
+            <span class="n">func</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_loss_grad_lbfgs</span><span class="p">,</span>
+            <span class="n">maxfun</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span>
+            <span class="n">iprint</span><span class="o">=</span><span class="n">iprint</span><span class="p">,</span>
+            <span class="n">pgtol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">activations</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">coef_grads</span><span class="p">,</span> <span class="n">intercept_grads</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_unpack</span><span class="p">(</span><span class="n">optimal_parameters</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_fit_stochastic</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">activations</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">coef_grads</span><span class="p">,</span>
+                        <span class="n">intercept_grads</span><span class="p">,</span> <span class="n">layer_units</span><span class="p">,</span> <span class="n">incremental</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">incremental</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_optimizer&#39;</span><span class="p">):</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs_</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">intercepts_</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;sgd&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span> <span class="o">=</span> <span class="n">SGDOptimizer</span><span class="p">(</span>
+                    <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate_init</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">momentum</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nesterovs_momentum</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">power_t</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;adam&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span> <span class="o">=</span> <span class="n">AdamOptimizer</span><span class="p">(</span>
+                    <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate_init</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_2</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">)</span>
+
+        <span class="c1"># early_stopping in partial_fit doesn&#39;t make sense</span>
+        <span class="n">early_stopping</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">early_stopping</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">incremental</span>
+        <span class="k">if</span> <span class="n">early_stopping</span><span class="p">:</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">X_val</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">y_val</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span>
+                <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_random_state</span><span class="p">,</span>
+                <span class="n">test_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_fraction</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">is_classifier</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+                <span class="n">y_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">y_val</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">X_val</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">y_val</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="n">n_samples</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">it</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">):</span>
+                <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">shuffle</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_random_state</span><span class="p">)</span>
+                <span class="n">accumulated_loss</span> <span class="o">=</span> <span class="mf">0.0</span>
+                <span class="k">for</span> <span class="n">batch_slice</span> <span class="ow">in</span> <span class="n">gen_batches</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">):</span>
+                    <span class="n">activations</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">batch_slice</span><span class="p">]</span>
+                    <span class="n">batch_loss</span><span class="p">,</span> <span class="n">coef_grads</span><span class="p">,</span> <span class="n">intercept_grads</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_backprop</span><span class="p">(</span>
+                        <span class="n">X</span><span class="p">[</span><span class="n">batch_slice</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">batch_slice</span><span class="p">],</span> <span class="n">activations</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span>
+                        <span class="n">coef_grads</span><span class="p">,</span> <span class="n">intercept_grads</span><span class="p">)</span>
+                    <span class="n">accumulated_loss</span> <span class="o">+=</span> <span class="n">batch_loss</span> <span class="o">*</span> <span class="p">(</span><span class="n">batch_slice</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span>
+                                                      <span class="n">batch_slice</span><span class="o">.</span><span class="n">start</span><span class="p">)</span>
+
+                    <span class="c1"># update weights</span>
+                    <span class="n">grads</span> <span class="o">=</span> <span class="n">coef_grads</span> <span class="o">+</span> <span class="n">intercept_grads</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="o">.</span><span class="n">update_params</span><span class="p">(</span><span class="n">grads</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loss_</span> <span class="o">=</span> <span class="n">accumulated_loss</span> <span class="o">/</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">t_</span> <span class="o">+=</span> <span class="n">n_samples</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loss_curve_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss_</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Iteration </span><span class="si">%d</span><span class="s2">, loss = </span><span class="si">%.8f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span><span class="p">,</span>
+                                                         <span class="bp">self</span><span class="o">.</span><span class="n">loss_</span><span class="p">))</span>
+
+                <span class="c1"># update no_improvement_count based on training loss or</span>
+                <span class="c1"># validation score according to early_stopping</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_update_no_improvement_count</span><span class="p">(</span><span class="n">early_stopping</span><span class="p">,</span> <span class="n">X_val</span><span class="p">,</span> <span class="n">y_val</span><span class="p">)</span>
+
+                <span class="c1"># for learning rate that needs to be updated at iteration end</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="o">.</span><span class="n">iteration_ends</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t_</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_no_improvement_count</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="c1"># not better than last two iterations by tol.</span>
+                    <span class="c1"># stop or decrease learning rate</span>
+                    <span class="k">if</span> <span class="n">early_stopping</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;Validation score did not improve more than &quot;</span>
+                               <span class="s2">&quot;tol=</span><span class="si">%f</span><span class="s2"> for two consecutive epochs.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;Training loss did not improve more than tol=</span><span class="si">%f</span><span class="s2">&quot;</span>
+                               <span class="s2">&quot; for two consecutive epochs.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">)</span>
+
+                    <span class="n">is_stopping</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="o">.</span><span class="n">trigger_stopping</span><span class="p">(</span>
+                        <span class="n">msg</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">is_stopping</span><span class="p">:</span>
+                        <span class="k">break</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_no_improvement_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+                <span class="k">if</span> <span class="n">incremental</span><span class="p">:</span>
+                    <span class="k">break</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">:</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                        <span class="s2">&quot;Stochastic Optimizer: Maximum iterations (</span><span class="si">%d</span><span class="s2">) &quot;</span>
+                        <span class="s2">&quot;reached and the optimization hasn&#39;t converged yet.&quot;</span>
+                        <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">ConvergenceWarning</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Training interrupted by user.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">early_stopping</span><span class="p">:</span>
+            <span class="c1"># restore best weights</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coefs_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_best_coefs</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">intercepts_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_best_intercepts</span>
+
+    <span class="k">def</span> <span class="nf">_update_no_improvement_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">early_stopping</span><span class="p">,</span> <span class="n">X_val</span><span class="p">,</span> <span class="n">y_val</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">early_stopping</span><span class="p">:</span>
+            <span class="c1"># compute validation score, use that for stopping</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">validation_scores_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X_val</span><span class="p">,</span> <span class="n">y_val</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Validation score: </span><span class="si">%f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_scores_</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="c1"># update best parameters</span>
+            <span class="c1"># use validation_scores_, not loss_curve_</span>
+            <span class="c1"># let&#39;s hope no-one overloads .score with mse</span>
+            <span class="n">last_valid_score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_scores_</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">last_valid_score</span> <span class="o">&lt;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">best_validation_score_</span> <span class="o">+</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_no_improvement_count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_no_improvement_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="k">if</span> <span class="n">last_valid_score</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_validation_score_</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">best_validation_score_</span> <span class="o">=</span> <span class="n">last_valid_score</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_best_coefs</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs_</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_best_intercepts</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                                         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">intercepts_</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_curve_</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_loss_</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_no_improvement_count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_no_improvement_count</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_curve_</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_loss_</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">best_loss_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_curve_</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model to data matrix X and target(s) y.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like or sparse matrix, shape (n_samples, n_features)</span>
+<span class="sd">            The input data.</span>
+
+<span class="sd">        y : array-like, shape (n_samples,) or (n_samples, n_outputs)</span>
+<span class="sd">            The target values (class labels in classification, real numbers in</span>
+<span class="sd">            regression).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : returns a trained MLP model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">incremental</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">partial_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model to data matrix X and target y.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape (n_samples, n_features)</span>
+<span class="sd">            The input data.</span>
+
+<span class="sd">        y : array-like, shape (n_samples,)</span>
+<span class="sd">            The target values.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : returns a trained MLP model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_STOCHASTIC_SOLVERS</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;partial_fit is only available for stochastic&quot;</span>
+                                 <span class="s2">&quot; optimizers. </span><span class="si">%s</span><span class="s2"> is not stochastic.&quot;</span>
+                                 <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partial_fit</span>
+
+    <span class="k">def</span> <span class="nf">_partial_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">incremental</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Predict using the trained model</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape (n_samples, n_features)</span>
+<span class="sd">            The input data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y_pred : array-like, shape (n_samples,) or (n_samples, n_outputs)</span>
+<span class="sd">            The decision function of the samples for each class in the model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="s1">&#39;csc&#39;</span><span class="p">,</span> <span class="s1">&#39;coo&#39;</span><span class="p">])</span>
+
+        <span class="c1"># Make sure self.hidden_layer_sizes is a list</span>
+        <span class="n">hidden_layer_sizes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hidden_layer_sizes</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">hidden_layer_sizes</span><span class="p">,</span> <span class="s2">&quot;__iter__&quot;</span><span class="p">):</span>
+            <span class="n">hidden_layer_sizes</span> <span class="o">=</span> <span class="p">[</span><span class="n">hidden_layer_sizes</span><span class="p">]</span>
+        <span class="n">hidden_layer_sizes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">hidden_layer_sizes</span><span class="p">)</span>
+
+        <span class="n">layer_units</span> <span class="o">=</span> <span class="p">[</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">+</span> <span class="n">hidden_layer_sizes</span> <span class="o">+</span> \
+            <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n_outputs_</span><span class="p">]</span>
+
+        <span class="c1"># Initialize layers</span>
+        <span class="n">activations</span> <span class="o">=</span> <span class="p">[</span><span class="n">X</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_layers_</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">activations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                         <span class="n">layer_units</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])))</span>
+        <span class="c1"># forward propagate</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_forward_pass</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="n">activations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">y_pred</span>
+
+
+<span class="k">class</span> <span class="nc">MLPClassifier</span><span class="p">(</span><span class="n">BaseMultilayerPerceptron</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Multi-layer Perceptron classifier.</span>
+
+<span class="sd">    This model optimizes the log-loss function using LBFGS or stochastic</span>
+<span class="sd">    gradient descent.</span>
+
+<span class="sd">    .. versionadded:: 0.18</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    hidden_layer_sizes : tuple, length = n_layers - 2, default (100,)</span>
+<span class="sd">        The ith element represents the number of neurons in the ith</span>
+<span class="sd">        hidden layer.</span>
+
+<span class="sd">    activation : {&#39;identity&#39;, &#39;logistic&#39;, &#39;tanh&#39;, &#39;relu&#39;}, default &#39;relu&#39;</span>
+<span class="sd">        Activation function for the hidden layer.</span>
+
+<span class="sd">        - &#39;identity&#39;, no-op activation, useful to implement linear bottleneck,</span>
+<span class="sd">          returns f(x) = x</span>
+
+<span class="sd">        - &#39;logistic&#39;, the logistic sigmoid function,</span>
+<span class="sd">          returns f(x) = 1 / (1 + exp(-x)).</span>
+
+<span class="sd">        - &#39;tanh&#39;, the hyperbolic tan function,</span>
+<span class="sd">          returns f(x) = tanh(x).</span>
+
+<span class="sd">        - &#39;relu&#39;, the rectified linear unit function,</span>
+<span class="sd">          returns f(x) = max(0, x)</span>
+
+<span class="sd">    solver : {&#39;lbfgs&#39;, &#39;sgd&#39;, &#39;adam&#39;}, default &#39;adam&#39;</span>
+<span class="sd">        The solver for weight optimization.</span>
+
+<span class="sd">        - &#39;lbfgs&#39; is an optimizer in the family of quasi-Newton methods.</span>
+
+<span class="sd">        - &#39;sgd&#39; refers to stochastic gradient descent.</span>
+
+<span class="sd">        - &#39;adam&#39; refers to a stochastic gradient-based optimizer proposed</span>
+<span class="sd">          by Kingma, Diederik, and Jimmy Ba</span>
+
+<span class="sd">        Note: The default solver &#39;adam&#39; works pretty well on relatively</span>
+<span class="sd">        large datasets (with thousands of training samples or more) in terms of</span>
+<span class="sd">        both training time and validation score.</span>
+<span class="sd">        For small datasets, however, &#39;lbfgs&#39; can converge faster and perform</span>
+<span class="sd">        better.</span>
+
+<span class="sd">    alpha : float, optional, default 0.0001</span>
+<span class="sd">        L2 penalty (regularization term) parameter.</span>
+
+<span class="sd">    batch_size : int, optional, default &#39;auto&#39;</span>
+<span class="sd">        Size of minibatches for stochastic optimizers.</span>
+<span class="sd">        If the solver is &#39;lbfgs&#39;, the classifier will not use minibatch.</span>
+<span class="sd">        When set to &quot;auto&quot;, `batch_size=min(200, n_samples)`</span>
+
+<span class="sd">    learning_rate : {&#39;constant&#39;, &#39;invscaling&#39;, &#39;adaptive&#39;}, default &#39;constant&#39;</span>
+<span class="sd">        Learning rate schedule for weight updates.</span>
+
+<span class="sd">        - &#39;constant&#39; is a constant learning rate given by</span>
+<span class="sd">          &#39;learning_rate_init&#39;.</span>
+
+<span class="sd">        - &#39;invscaling&#39; gradually decreases the learning rate ``learning_rate_``</span>
+<span class="sd">          at each time step &#39;t&#39; using an inverse scaling exponent of &#39;power_t&#39;.</span>
+<span class="sd">          effective_learning_rate = learning_rate_init / pow(t, power_t)</span>
+
+<span class="sd">        - &#39;adaptive&#39; keeps the learning rate constant to</span>
+<span class="sd">          &#39;learning_rate_init&#39; as long as training loss keeps decreasing.</span>
+<span class="sd">          Each time two consecutive epochs fail to decrease training loss by at</span>
+<span class="sd">          least tol, or fail to increase validation score by at least tol if</span>
+<span class="sd">          &#39;early_stopping&#39; is on, the current learning rate is divided by 5.</span>
+
+<span class="sd">        Only used when ``solver=&#39;sgd&#39;``.</span>
+
+<span class="sd">    learning_rate_init : double, optional, default 0.001</span>
+<span class="sd">        The initial learning rate used. It controls the step-size</span>
+<span class="sd">        in updating the weights. Only used when solver=&#39;sgd&#39; or &#39;adam&#39;.</span>
+
+<span class="sd">    power_t : double, optional, default 0.5</span>
+<span class="sd">        The exponent for inverse scaling learning rate.</span>
+<span class="sd">        It is used in updating effective learning rate when the learning_rate</span>
+<span class="sd">        is set to &#39;invscaling&#39;. Only used when solver=&#39;sgd&#39;.</span>
+
+<span class="sd">    max_iter : int, optional, default 200</span>
+<span class="sd">        Maximum number of iterations. The solver iterates until convergence</span>
+<span class="sd">        (determined by &#39;tol&#39;) or this number of iterations. For stochastic</span>
+<span class="sd">        solvers (&#39;sgd&#39;, &#39;adam&#39;), note that this determines the number of epochs</span>
+<span class="sd">        (how many times each data point will be used), not the number of</span>
+<span class="sd">        gradient steps.</span>
+
+<span class="sd">    shuffle : bool, optional, default True</span>
+<span class="sd">        Whether to shuffle samples in each iteration. Only used when</span>
+<span class="sd">        solver=&#39;sgd&#39; or &#39;adam&#39;.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional, default None</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`.</span>
+
+<span class="sd">    tol : float, optional, default 1e-4</span>
+<span class="sd">        Tolerance for the optimization. When the loss or score is not improving</span>
+<span class="sd">        by at least tol for two consecutive iterations, unless `learning_rate`</span>
+<span class="sd">        is set to &#39;adaptive&#39;, convergence is considered to be reached and</span>
+<span class="sd">        training stops.</span>
+
+<span class="sd">    verbose : bool, optional, default False</span>
+<span class="sd">        Whether to print progress messages to stdout.</span>
+
+<span class="sd">    warm_start : bool, optional, default False</span>
+<span class="sd">        When set to True, reuse the solution of the previous</span>
+<span class="sd">        call to fit as initialization, otherwise, just erase the</span>
+<span class="sd">        previous solution.</span>
+
+<span class="sd">    momentum : float, default 0.9</span>
+<span class="sd">        Momentum for gradient descent update. Should be between 0 and 1. Only</span>
+<span class="sd">        used when solver=&#39;sgd&#39;.</span>
+
+<span class="sd">    nesterovs_momentum : boolean, default True</span>
+<span class="sd">        Whether to use Nesterov&#39;s momentum. Only used when solver=&#39;sgd&#39; and</span>
+<span class="sd">        momentum &gt; 0.</span>
+
+<span class="sd">    early_stopping : bool, default False</span>
+<span class="sd">        Whether to use early stopping to terminate training when validation</span>
+<span class="sd">        score is not improving. If set to true, it will automatically set</span>
+<span class="sd">        aside 10% of training data as validation and terminate training when</span>
+<span class="sd">        validation score is not improving by at least tol for two consecutive</span>
+<span class="sd">        epochs.</span>
+<span class="sd">        Only effective when solver=&#39;sgd&#39; or &#39;adam&#39;</span>
+
+<span class="sd">    validation_fraction : float, optional, default 0.1</span>
+<span class="sd">        The proportion of training data to set aside as validation set for</span>
+<span class="sd">        early stopping. Must be between 0 and 1.</span>
+<span class="sd">        Only used if early_stopping is True</span>
+
+<span class="sd">    beta_1 : float, optional, default 0.9</span>
+<span class="sd">        Exponential decay rate for estimates of first moment vector in adam,</span>
+<span class="sd">        should be in [0, 1). Only used when solver=&#39;adam&#39;</span>
+
+<span class="sd">    beta_2 : float, optional, default 0.999</span>
+<span class="sd">        Exponential decay rate for estimates of second moment vector in adam,</span>
+<span class="sd">        should be in [0, 1). Only used when solver=&#39;adam&#39;</span>
+
+<span class="sd">    epsilon : float, optional, default 1e-8</span>
+<span class="sd">        Value for numerical stability in adam. Only used when solver=&#39;adam&#39;</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    classes_ : array or list of array of shape (n_classes,)</span>
+<span class="sd">        Class labels for each output.</span>
+
+<span class="sd">    loss_ : float</span>
+<span class="sd">        The current loss computed with the loss function.</span>
+
+<span class="sd">    coefs_ : list, length n_layers - 1</span>
+<span class="sd">        The ith element in the list represents the weight matrix corresponding</span>
+<span class="sd">        to layer i.</span>
+
+<span class="sd">    intercepts_ : list, length n_layers - 1</span>
+<span class="sd">        The ith element in the list represents the bias vector corresponding to</span>
+<span class="sd">        layer i + 1.</span>
+
+<span class="sd">    n_iter_ : int,</span>
+<span class="sd">        The number of iterations the solver has ran.</span>
+
+<span class="sd">    n_layers_ : int</span>
+<span class="sd">        Number of layers.</span>
+
+<span class="sd">    n_outputs_ : int</span>
+<span class="sd">        Number of outputs.</span>
+
+<span class="sd">    out_activation_ : string</span>
+<span class="sd">        Name of the output activation function.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    MLPClassifier trains iteratively since at each time step</span>
+<span class="sd">    the partial derivatives of the loss function with respect to the model</span>
+<span class="sd">    parameters are computed to update the parameters.</span>
+
+<span class="sd">    It can also have a regularization term added to the loss function</span>
+<span class="sd">    that shrinks model parameters to prevent overfitting.</span>
+
+<span class="sd">    This implementation works with data represented as dense numpy arrays or</span>
+<span class="sd">    sparse scipy arrays of floating point values.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Hinton, Geoffrey E.</span>
+<span class="sd">        &quot;Connectionist learning procedures.&quot; Artificial intelligence 40.1</span>
+<span class="sd">        (1989): 185-234.</span>
+
+<span class="sd">    Glorot, Xavier, and Yoshua Bengio. &quot;Understanding the difficulty of</span>
+<span class="sd">        training deep feedforward neural networks.&quot; International Conference</span>
+<span class="sd">        on Artificial Intelligence and Statistics. 2010.</span>
+
+<span class="sd">    He, Kaiming, et al. &quot;Delving deep into rectifiers: Surpassing human-level</span>
+<span class="sd">        performance on imagenet classification.&quot; arXiv preprint</span>
+<span class="sd">        arXiv:1502.01852 (2015).</span>
+
+<span class="sd">    Kingma, Diederik, and Jimmy Ba. &quot;Adam: A method for stochastic</span>
+<span class="sd">        optimization.&quot; arXiv preprint arXiv:1412.6980 (2014).</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_layer_sizes</span><span class="o">=</span><span class="p">(</span><span class="mi">100</span><span class="p">,),</span> <span class="n">activation</span><span class="o">=</span><span class="s2">&quot;relu&quot;</span><span class="p">,</span>
+                 <span class="n">solver</span><span class="o">=</span><span class="s1">&#39;adam&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">,</span>
+                 <span class="n">batch_size</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="s2">&quot;constant&quot;</span><span class="p">,</span>
+                 <span class="n">learning_rate_init</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">power_t</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+                 <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span>
+                 <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">warm_start</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+                 <span class="n">nesterovs_momentum</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">early_stopping</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">validation_fraction</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">beta_1</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">beta_2</span><span class="o">=</span><span class="mf">0.999</span><span class="p">,</span>
+                 <span class="n">epsilon</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">):</span>
+
+        <span class="n">sup</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">MLPClassifier</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="n">sup</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">hidden_layer_sizes</span><span class="o">=</span><span class="n">hidden_layer_sizes</span><span class="p">,</span>
+                     <span class="n">activation</span><span class="o">=</span><span class="n">activation</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="n">solver</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span>
+                     <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">,</span>
+                     <span class="n">learning_rate_init</span><span class="o">=</span><span class="n">learning_rate_init</span><span class="p">,</span> <span class="n">power_t</span><span class="o">=</span><span class="n">power_t</span><span class="p">,</span>
+                     <span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="s1">&#39;log_loss&#39;</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="n">shuffle</span><span class="p">,</span>
+                     <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span>
+                     <span class="n">warm_start</span><span class="o">=</span><span class="n">warm_start</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="n">momentum</span><span class="p">,</span>
+                     <span class="n">nesterovs_momentum</span><span class="o">=</span><span class="n">nesterovs_momentum</span><span class="p">,</span>
+                     <span class="n">early_stopping</span><span class="o">=</span><span class="n">early_stopping</span><span class="p">,</span>
+                     <span class="n">validation_fraction</span><span class="o">=</span><span class="n">validation_fraction</span><span class="p">,</span>
+                     <span class="n">beta_1</span><span class="o">=</span><span class="n">beta_1</span><span class="p">,</span> <span class="n">beta_2</span><span class="o">=</span><span class="n">beta_2</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="n">epsilon</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_validate_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">incremental</span><span class="p">):</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="s1">&#39;csc&#39;</span><span class="p">,</span> <span class="s1">&#39;coo&#39;</span><span class="p">],</span>
+                         <span class="n">multi_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">y</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">column_or_1d</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">incremental</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span> <span class="o">=</span> <span class="n">LabelBinarizer</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">classes_</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">warm_start</span><span class="p">:</span>
+            <span class="n">classes</span> <span class="o">=</span> <span class="n">unique_labels</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">classes</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;warm_start can only be used where `y` has &quot;</span>
+                                 <span class="s2">&quot;the same classes as in the previous &quot;</span>
+                                 <span class="s2">&quot;call to fit. Previously got </span><span class="si">%s</span><span class="s2">, `y` has </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>
+                                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">,</span> <span class="n">classes</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">classes</span> <span class="o">=</span> <span class="n">unique_labels</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">classes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`y` has classes not in `self.classes_`.&quot;</span>
+                                 <span class="s2">&quot; `self.classes_` has </span><span class="si">%s</span><span class="s2">. &#39;y&#39; has </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span>
+                                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">,</span> <span class="n">classes</span><span class="p">))</span>
+
+        <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span>
+
+<div class="viewcode-block" id="MLPClassifier.predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_neural_network_mlpclassifier.html#ibex.sklearn.neural_network.MLPClassifier.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Predict using the multi-layer perceptron classifier</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape (n_samples, n_features)</span>
+<span class="sd">            The input data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y : array-like, shape (n_samples,) or (n_samples, n_classes)</span>
+<span class="sd">            The predicted classes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;coefs_&quot;</span><span class="p">)</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_outputs_</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">y_pred</span> <span class="o">=</span> <span class="n">y_pred</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">y_pred</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MLPClassifier.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_neural_network_mlpclassifier.html#ibex.sklearn.neural_network.MLPClassifier.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model to data matrix X and target(s) y.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like or sparse matrix, shape (n_samples, n_features)</span>
+<span class="sd">            The input data.</span>
+
+<span class="sd">        y : array-like, shape (n_samples,) or (n_samples, n_outputs)</span>
+<span class="sd">            The target values (class labels in classification, real numbers in</span>
+<span class="sd">            regression).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : returns a trained MLP model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">incremental</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">warm_start</span> <span class="ow">and</span>
+                                            <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;classes_&quot;</span><span class="p">)))</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">partial_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model to data matrix X and target y.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape (n_samples, n_features)</span>
+<span class="sd">            The input data.</span>
+
+<span class="sd">        y : array-like, shape (n_samples,)</span>
+<span class="sd">            The target values.</span>
+
+<span class="sd">        classes : array, shape (n_classes)</span>
+<span class="sd">            Classes across all calls to partial_fit.</span>
+<span class="sd">            Can be obtained via `np.unique(y_all)`, where y_all is the</span>
+<span class="sd">            target vector of the entire dataset.</span>
+<span class="sd">            This argument is required for the first call to partial_fit</span>
+<span class="sd">            and can be omitted in the subsequent calls.</span>
+<span class="sd">            Note that y doesn&#39;t need to contain all labels in `classes`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : returns a trained MLP model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_STOCHASTIC_SOLVERS</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;partial_fit is only available for stochastic&quot;</span>
+                                 <span class="s2">&quot; optimizer. </span><span class="si">%s</span><span class="s2"> is not stochastic&quot;</span>
+                                 <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partial_fit</span>
+
+    <span class="k">def</span> <span class="nf">_partial_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">classes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">_check_partial_fit_first_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">classes</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span> <span class="o">=</span> <span class="n">LabelBinarizer</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">type_of_target</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;multilabel&#39;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">classes</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">MLPClassifier</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_partial_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span>
+
+<div class="viewcode-block" id="MLPClassifier.predict_log_proba"><a class="viewcode-back" href="../../../api_ibex_sklearn_neural_network_mlpclassifier.html#ibex.sklearn.neural_network.MLPClassifier.predict_log_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the log of probability estimates.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            The input data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        log_y_prob : array-like, shape (n_samples, n_classes)</span>
+<span class="sd">            The predicted log-probability of the sample for each class</span>
+<span class="sd">            in the model, where classes are ordered as they are in</span>
+<span class="sd">            `self.classes_`. Equivalent to log(predict_proba(X))</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">y_prob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">y_prob</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">y_prob</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MLPClassifier.predict_proba"><a class="viewcode-back" href="../../../api_ibex_sklearn_neural_network_mlpclassifier.html#ibex.sklearn.neural_network.MLPClassifier.predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Probability estimates.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape (n_samples, n_features)</span>
+<span class="sd">            The input data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y_prob : array-like, shape (n_samples, n_classes)</span>
+<span class="sd">            The predicted probability of the sample for each class in the</span>
+<span class="sd">            model, where classes are ordered as they are in `self.classes_`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;coefs_&quot;</span><span class="p">)</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_outputs_</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">y_pred</span> <span class="o">=</span> <span class="n">y_pred</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">y_pred</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="mi">1</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">y_pred</span></div>
+
+
+<span class="k">class</span> <span class="nc">MLPRegressor</span><span class="p">(</span><span class="n">BaseMultilayerPerceptron</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Multi-layer Perceptron regressor.</span>
+
+<span class="sd">    This model optimizes the squared-loss using LBFGS or stochastic gradient</span>
+<span class="sd">    descent.</span>
+
+<span class="sd">    .. versionadded:: 0.18</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    hidden_layer_sizes : tuple, length = n_layers - 2, default (100,)</span>
+<span class="sd">        The ith element represents the number of neurons in the ith</span>
+<span class="sd">        hidden layer.</span>
+
+<span class="sd">    activation : {&#39;identity&#39;, &#39;logistic&#39;, &#39;tanh&#39;, &#39;relu&#39;}, default &#39;relu&#39;</span>
+<span class="sd">        Activation function for the hidden layer.</span>
+
+<span class="sd">        - &#39;identity&#39;, no-op activation, useful to implement linear bottleneck,</span>
+<span class="sd">          returns f(x) = x</span>
+
+<span class="sd">        - &#39;logistic&#39;, the logistic sigmoid function,</span>
+<span class="sd">          returns f(x) = 1 / (1 + exp(-x)).</span>
+
+<span class="sd">        - &#39;tanh&#39;, the hyperbolic tan function,</span>
+<span class="sd">          returns f(x) = tanh(x).</span>
+
+<span class="sd">        - &#39;relu&#39;, the rectified linear unit function,</span>
+<span class="sd">          returns f(x) = max(0, x)</span>
+
+<span class="sd">    solver : {&#39;lbfgs&#39;, &#39;sgd&#39;, &#39;adam&#39;}, default &#39;adam&#39;</span>
+<span class="sd">        The solver for weight optimization.</span>
+
+<span class="sd">        - &#39;lbfgs&#39; is an optimizer in the family of quasi-Newton methods.</span>
+
+<span class="sd">        - &#39;sgd&#39; refers to stochastic gradient descent.</span>
+
+<span class="sd">        - &#39;adam&#39; refers to a stochastic gradient-based optimizer proposed by</span>
+<span class="sd">          Kingma, Diederik, and Jimmy Ba</span>
+
+<span class="sd">        Note: The default solver &#39;adam&#39; works pretty well on relatively</span>
+<span class="sd">        large datasets (with thousands of training samples or more) in terms of</span>
+<span class="sd">        both training time and validation score.</span>
+<span class="sd">        For small datasets, however, &#39;lbfgs&#39; can converge faster and perform</span>
+<span class="sd">        better.</span>
+
+<span class="sd">    alpha : float, optional, default 0.0001</span>
+<span class="sd">        L2 penalty (regularization term) parameter.</span>
+
+<span class="sd">    batch_size : int, optional, default &#39;auto&#39;</span>
+<span class="sd">        Size of minibatches for stochastic optimizers.</span>
+<span class="sd">        If the solver is &#39;lbfgs&#39;, the classifier will not use minibatch.</span>
+<span class="sd">        When set to &quot;auto&quot;, `batch_size=min(200, n_samples)`</span>
+
+<span class="sd">    learning_rate : {&#39;constant&#39;, &#39;invscaling&#39;, &#39;adaptive&#39;}, default &#39;constant&#39;</span>
+<span class="sd">        Learning rate schedule for weight updates.</span>
+
+<span class="sd">        - &#39;constant&#39; is a constant learning rate given by</span>
+<span class="sd">          &#39;learning_rate_init&#39;.</span>
+
+<span class="sd">        - &#39;invscaling&#39; gradually decreases the learning rate ``learning_rate_``</span>
+<span class="sd">          at each time step &#39;t&#39; using an inverse scaling exponent of &#39;power_t&#39;.</span>
+<span class="sd">          effective_learning_rate = learning_rate_init / pow(t, power_t)</span>
+
+<span class="sd">        - &#39;adaptive&#39; keeps the learning rate constant to</span>
+<span class="sd">          &#39;learning_rate_init&#39; as long as training loss keeps decreasing.</span>
+<span class="sd">          Each time two consecutive epochs fail to decrease training loss by at</span>
+<span class="sd">          least tol, or fail to increase validation score by at least tol if</span>
+<span class="sd">          &#39;early_stopping&#39; is on, the current learning rate is divided by 5.</span>
+
+<span class="sd">        Only used when solver=&#39;sgd&#39;.</span>
+
+<span class="sd">    learning_rate_init : double, optional, default 0.001</span>
+<span class="sd">        The initial learning rate used. It controls the step-size</span>
+<span class="sd">        in updating the weights. Only used when solver=&#39;sgd&#39; or &#39;adam&#39;.</span>
+
+<span class="sd">    power_t : double, optional, default 0.5</span>
+<span class="sd">        The exponent for inverse scaling learning rate.</span>
+<span class="sd">        It is used in updating effective learning rate when the learning_rate</span>
+<span class="sd">        is set to &#39;invscaling&#39;. Only used when solver=&#39;sgd&#39;.</span>
+
+<span class="sd">    max_iter : int, optional, default 200</span>
+<span class="sd">        Maximum number of iterations. The solver iterates until convergence</span>
+<span class="sd">        (determined by &#39;tol&#39;) or this number of iterations. For stochastic</span>
+<span class="sd">        solvers (&#39;sgd&#39;, &#39;adam&#39;), note that this determines the number of epochs</span>
+<span class="sd">        (how many times each data point will be used), not the number of</span>
+<span class="sd">        gradient steps.</span>
+
+<span class="sd">    shuffle : bool, optional, default True</span>
+<span class="sd">        Whether to shuffle samples in each iteration. Only used when</span>
+<span class="sd">        solver=&#39;sgd&#39; or &#39;adam&#39;.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional, default None</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`.</span>
+
+<span class="sd">    tol : float, optional, default 1e-4</span>
+<span class="sd">        Tolerance for the optimization. When the loss or score is not improving</span>
+<span class="sd">        by at least tol for two consecutive iterations, unless `learning_rate`</span>
+<span class="sd">        is set to &#39;adaptive&#39;, convergence is considered to be reached and</span>
+<span class="sd">        training stops.</span>
+
+<span class="sd">    verbose : bool, optional, default False</span>
+<span class="sd">        Whether to print progress messages to stdout.</span>
+
+<span class="sd">    warm_start : bool, optional, default False</span>
+<span class="sd">        When set to True, reuse the solution of the previous</span>
+<span class="sd">        call to fit as initialization, otherwise, just erase the</span>
+<span class="sd">        previous solution.</span>
+
+<span class="sd">    momentum : float, default 0.9</span>
+<span class="sd">        Momentum for gradient descent update.  Should be between 0 and 1. Only</span>
+<span class="sd">        used when solver=&#39;sgd&#39;.</span>
+
+<span class="sd">    nesterovs_momentum : boolean, default True</span>
+<span class="sd">        Whether to use Nesterov&#39;s momentum. Only used when solver=&#39;sgd&#39; and</span>
+<span class="sd">        momentum &gt; 0.</span>
+
+<span class="sd">    early_stopping : bool, default False</span>
+<span class="sd">        Whether to use early stopping to terminate training when validation</span>
+<span class="sd">        score is not improving. If set to true, it will automatically set</span>
+<span class="sd">        aside 10% of training data as validation and terminate training when</span>
+<span class="sd">        validation score is not improving by at least tol for two consecutive</span>
+<span class="sd">        epochs.</span>
+<span class="sd">        Only effective when solver=&#39;sgd&#39; or &#39;adam&#39;</span>
+
+<span class="sd">    validation_fraction : float, optional, default 0.1</span>
+<span class="sd">        The proportion of training data to set aside as validation set for</span>
+<span class="sd">        early stopping. Must be between 0 and 1.</span>
+<span class="sd">        Only used if early_stopping is True</span>
+
+<span class="sd">    beta_1 : float, optional, default 0.9</span>
+<span class="sd">        Exponential decay rate for estimates of first moment vector in adam,</span>
+<span class="sd">        should be in [0, 1). Only used when solver=&#39;adam&#39;</span>
+
+<span class="sd">    beta_2 : float, optional, default 0.999</span>
+<span class="sd">        Exponential decay rate for estimates of second moment vector in adam,</span>
+<span class="sd">        should be in [0, 1). Only used when solver=&#39;adam&#39;</span>
+
+<span class="sd">    epsilon : float, optional, default 1e-8</span>
+<span class="sd">        Value for numerical stability in adam. Only used when solver=&#39;adam&#39;</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    loss_ : float</span>
+<span class="sd">        The current loss computed with the loss function.</span>
+
+<span class="sd">    coefs_ : list, length n_layers - 1</span>
+<span class="sd">        The ith element in the list represents the weight matrix corresponding</span>
+<span class="sd">        to layer i.</span>
+
+<span class="sd">    intercepts_ : list, length n_layers - 1</span>
+<span class="sd">        The ith element in the list represents the bias vector corresponding to</span>
+<span class="sd">        layer i + 1.</span>
+
+<span class="sd">    n_iter_ : int,</span>
+<span class="sd">        The number of iterations the solver has ran.</span>
+
+<span class="sd">    n_layers_ : int</span>
+<span class="sd">        Number of layers.</span>
+
+<span class="sd">    n_outputs_ : int</span>
+<span class="sd">        Number of outputs.</span>
+
+<span class="sd">    out_activation_ : string</span>
+<span class="sd">        Name of the output activation function.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    MLPRegressor trains iteratively since at each time step</span>
+<span class="sd">    the partial derivatives of the loss function with respect to the model</span>
+<span class="sd">    parameters are computed to update the parameters.</span>
+
+<span class="sd">    It can also have a regularization term added to the loss function</span>
+<span class="sd">    that shrinks model parameters to prevent overfitting.</span>
+
+<span class="sd">    This implementation works with data represented as dense and sparse numpy</span>
+<span class="sd">    arrays of floating point values.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Hinton, Geoffrey E.</span>
+<span class="sd">        &quot;Connectionist learning procedures.&quot; Artificial intelligence 40.1</span>
+<span class="sd">        (1989): 185-234.</span>
+
+<span class="sd">    Glorot, Xavier, and Yoshua Bengio. &quot;Understanding the difficulty of</span>
+<span class="sd">        training deep feedforward neural networks.&quot; International Conference</span>
+<span class="sd">        on Artificial Intelligence and Statistics. 2010.</span>
+
+<span class="sd">    He, Kaiming, et al. &quot;Delving deep into rectifiers: Surpassing human-level</span>
+<span class="sd">        performance on imagenet classification.&quot; arXiv preprint</span>
+<span class="sd">        arXiv:1502.01852 (2015).</span>
+
+<span class="sd">    Kingma, Diederik, and Jimmy Ba. &quot;Adam: A method for stochastic</span>
+<span class="sd">        optimization.&quot; arXiv preprint arXiv:1412.6980 (2014).</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_layer_sizes</span><span class="o">=</span><span class="p">(</span><span class="mi">100</span><span class="p">,),</span> <span class="n">activation</span><span class="o">=</span><span class="s2">&quot;relu&quot;</span><span class="p">,</span>
+                 <span class="n">solver</span><span class="o">=</span><span class="s1">&#39;adam&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">,</span>
+                 <span class="n">batch_size</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="s2">&quot;constant&quot;</span><span class="p">,</span>
+                 <span class="n">learning_rate_init</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
+                 <span class="n">power_t</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span>
+                 <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">warm_start</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+                 <span class="n">nesterovs_momentum</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">early_stopping</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">validation_fraction</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">beta_1</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">beta_2</span><span class="o">=</span><span class="mf">0.999</span><span class="p">,</span>
+                 <span class="n">epsilon</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">):</span>
+
+        <span class="n">sup</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">MLPRegressor</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="n">sup</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">hidden_layer_sizes</span><span class="o">=</span><span class="n">hidden_layer_sizes</span><span class="p">,</span>
+                     <span class="n">activation</span><span class="o">=</span><span class="n">activation</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="n">solver</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span>
+                     <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">,</span>
+                     <span class="n">learning_rate_init</span><span class="o">=</span><span class="n">learning_rate_init</span><span class="p">,</span> <span class="n">power_t</span><span class="o">=</span><span class="n">power_t</span><span class="p">,</span>
+                     <span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="s1">&#39;squared_loss&#39;</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="n">shuffle</span><span class="p">,</span>
+                     <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span>
+                     <span class="n">warm_start</span><span class="o">=</span><span class="n">warm_start</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="n">momentum</span><span class="p">,</span>
+                     <span class="n">nesterovs_momentum</span><span class="o">=</span><span class="n">nesterovs_momentum</span><span class="p">,</span>
+                     <span class="n">early_stopping</span><span class="o">=</span><span class="n">early_stopping</span><span class="p">,</span>
+                     <span class="n">validation_fraction</span><span class="o">=</span><span class="n">validation_fraction</span><span class="p">,</span>
+                     <span class="n">beta_1</span><span class="o">=</span><span class="n">beta_1</span><span class="p">,</span> <span class="n">beta_2</span><span class="o">=</span><span class="n">beta_2</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="n">epsilon</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MLPRegressor.predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_neural_network_mlpregressor.html#ibex.sklearn.neural_network.MLPRegressor.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Predict using the multi-layer perceptron model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape (n_samples, n_features)</span>
+<span class="sd">            The input data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y : array-like, shape (n_samples, n_outputs)</span>
+<span class="sd">            The predicted values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;coefs_&quot;</span><span class="p">)</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">y_pred</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">y_pred</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">y_pred</span></div>
+
+    <span class="k">def</span> <span class="nf">_validate_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">incremental</span><span class="p">):</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="s1">&#39;csc&#39;</span><span class="p">,</span> <span class="s1">&#39;coo&#39;</span><span class="p">],</span>
+                         <span class="n">multi_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">y_numeric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">y</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">column_or_1d</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

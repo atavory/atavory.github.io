@@ -1,0 +1,312 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.covariance.outlier_detection &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.covariance.outlier_detection</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Class for outlier detection.</span>
+
+<span class="sd">This class provides a framework for outlier detection. It consists in</span>
+<span class="sd">several methods that can be added to a covariance estimator in order to</span>
+<span class="sd">assess the outlying-ness of the observations of a data set.</span>
+<span class="sd">Such a &quot;outlier detector&quot; object is proposed constructed from a robust</span>
+<span class="sd">covariance estimator (the Minimum Covariance Determinant).</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="c1"># Author: Virgile Fritsch &lt;virgile.fritsch@inria.fr&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy</span> <span class="k">as</span> <span class="nn">sp</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">MinCovDet</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_is_fitted</span><span class="p">,</span> <span class="n">check_array</span>
+<span class="kn">from</span> <span class="nn">..metrics</span> <span class="k">import</span> <span class="n">accuracy_score</span>
+
+
+<span class="k">class</span> <span class="nc">EllipticEnvelope</span><span class="p">(</span><span class="n">MinCovDet</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An object for detecting outliers in a Gaussian distributed dataset.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;outlier_detection&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    store_precision : boolean, optional (default=True)</span>
+<span class="sd">        Specify if the estimated precision is stored.</span>
+
+<span class="sd">    assume_centered : boolean, optional (default=False)</span>
+<span class="sd">        If True, the support of robust location and covariance estimates</span>
+<span class="sd">        is computed, and a covariance estimate is recomputed from it,</span>
+<span class="sd">        without centering the data.</span>
+<span class="sd">        Useful to work with data whose mean is significantly equal to</span>
+<span class="sd">        zero but is not exactly zero.</span>
+<span class="sd">        If False, the robust location and covariance are directly computed</span>
+<span class="sd">        with the FastMCD algorithm without additional treatment.</span>
+
+<span class="sd">    support_fraction : float in (0., 1.), optional (default=None)</span>
+<span class="sd">        The proportion of points to be included in the support of the raw</span>
+<span class="sd">        MCD estimate. If None, the minimum value of support_fraction will</span>
+<span class="sd">        be used within the algorithm: `[n_sample + n_features + 1] / 2`.</span>
+
+<span class="sd">    contamination : float in (0., 0.5), optional (default=0.1)</span>
+<span class="sd">        The amount of contamination of the data set, i.e. the proportion</span>
+<span class="sd">        of outliers in the data set.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional (default=None)</span>
+<span class="sd">        The seed of the pseudo random number generator to use when shuffling</span>
+<span class="sd">        the data.  If int, random_state is the seed used by the random number</span>
+<span class="sd">        generator; If RandomState instance, random_state is the random number</span>
+<span class="sd">        generator; If None, the random number generator is the RandomState</span>
+<span class="sd">        instance used by `np.random`.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    location_ : array-like, shape (n_features,)</span>
+<span class="sd">        Estimated robust location</span>
+
+<span class="sd">    covariance_ : array-like, shape (n_features, n_features)</span>
+<span class="sd">        Estimated robust covariance matrix</span>
+
+<span class="sd">    precision_ : array-like, shape (n_features, n_features)</span>
+<span class="sd">        Estimated pseudo inverse matrix.</span>
+<span class="sd">        (stored only if store_precision is True)</span>
+
+<span class="sd">    support_ : array-like, shape (n_samples,)</span>
+<span class="sd">        A mask of the observations that have been used to compute the</span>
+<span class="sd">        robust estimates of location and shape.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    EmpiricalCovariance, MinCovDet</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Outlier detection from covariance estimation may break or not</span>
+<span class="sd">    perform well in high-dimensional settings. In particular, one will</span>
+<span class="sd">    always take care to work with ``n_samples &gt; n_features ** 2``.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ..  [1] Rousseeuw, P.J., Van Driessen, K. &quot;A fast algorithm for the minimum</span>
+<span class="sd">        covariance determinant estimator&quot; Technometrics 41(3), 212 (1999)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">store_precision</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">assume_centered</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">support_fraction</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">contamination</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+                 <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EllipticEnvelope</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">store_precision</span><span class="o">=</span><span class="n">store_precision</span><span class="p">,</span>
+            <span class="n">assume_centered</span><span class="o">=</span><span class="n">assume_centered</span><span class="p">,</span>
+            <span class="n">support_fraction</span><span class="o">=</span><span class="n">support_fraction</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contamination</span> <span class="o">=</span> <span class="n">contamination</span>
+
+<div class="viewcode-block" id="EllipticEnvelope.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_covariance_ellipticenvelope.html#ibex.sklearn.covariance.EllipticEnvelope.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the EllipticEnvelope model with X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : numpy array or sparse matrix of shape [n_samples, n_features]</span>
+<span class="sd">            Training data</span>
+<span class="sd">        y : (ignored)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EllipticEnvelope</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">threshold_</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">scoreatpercentile</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dist_</span><span class="p">,</span> <span class="mf">100.</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">contamination</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="EllipticEnvelope.decision_function"><a class="viewcode-back" href="../../../api_ibex_sklearn_covariance_ellipticenvelope.html#ibex.sklearn.covariance.EllipticEnvelope.decision_function">[docs]</a>    <span class="k">def</span> <span class="nf">decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">raw_values</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the decision function of the given observations.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+
+<span class="sd">        raw_values : bool</span>
+<span class="sd">            Whether or not to consider raw Mahalanobis distances as the</span>
+<span class="sd">            decision function. Must be False (default) for compatibility</span>
+<span class="sd">            with the others outlier detection tools.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        decision : array-like, shape (n_samples, )</span>
+<span class="sd">            Decision function of the samples.</span>
+<span class="sd">            It is equal to the Mahalanobis distances if `raw_values`</span>
+<span class="sd">            is True. By default (``raw_values=False``), it is equal</span>
+<span class="sd">            to the cubic root of the shifted Mahalanobis distances.</span>
+<span class="sd">            In that case, the threshold for being an outlier is 0, which</span>
+<span class="sd">            ensures a compatibility with other outlier detection tools</span>
+<span class="sd">            such as the One-Class SVM.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;threshold_&#39;</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">mahal_dist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mahalanobis</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">raw_values</span><span class="p">:</span>
+            <span class="n">decision</span> <span class="o">=</span> <span class="n">mahal_dist</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">transformed_mahal_dist</span> <span class="o">=</span> <span class="n">mahal_dist</span> <span class="o">**</span> <span class="mf">0.33</span>
+            <span class="n">decision</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold_</span> <span class="o">**</span> <span class="mf">0.33</span> <span class="o">-</span> <span class="n">transformed_mahal_dist</span>
+
+        <span class="k">return</span> <span class="n">decision</span></div>
+
+<div class="viewcode-block" id="EllipticEnvelope.predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_covariance_ellipticenvelope.html#ibex.sklearn.covariance.EllipticEnvelope.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Outlyingness of observations in X according to the fitted model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = (n_samples, n_features)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        is_outliers : array, shape = (n_samples, ), dtype = bool</span>
+<span class="sd">            For each observation, tells whether or not it should be considered</span>
+<span class="sd">            as an outlier according to the fitted model.</span>
+
+<span class="sd">        threshold : float,</span>
+<span class="sd">            The values of the less outlying point&#39;s decision function.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;threshold_&#39;</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">is_inlier</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">contamination</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">raw_values</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">is_inlier</span><span class="p">[</span><span class="n">values</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold_</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;You must provide a contamination rate.&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">is_inlier</span></div>
+
+<div class="viewcode-block" id="EllipticEnvelope.score"><a class="viewcode-back" href="../../../api_ibex_sklearn_covariance_ellipticenvelope.html#ibex.sklearn.covariance.EllipticEnvelope.score">[docs]</a>    <span class="k">def</span> <span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the mean accuracy on the given test data and labels.</span>
+
+<span class="sd">        In multi-label classification, this is the subset accuracy</span>
+<span class="sd">        which is a harsh metric since you require for each sample that</span>
+<span class="sd">        each label set be correctly predicted.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = (n_samples, n_features)</span>
+<span class="sd">            Test samples.</span>
+
+<span class="sd">        y : array-like, shape = (n_samples,) or (n_samples, n_outputs)</span>
+<span class="sd">            True labels for X.</span>
+
+<span class="sd">        sample_weight : array-like, shape = (n_samples,), optional</span>
+<span class="sd">            Sample weights.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        score : float</span>
+<span class="sd">            Mean accuracy of self.predict(X) wrt. y.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">accuracy_score</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

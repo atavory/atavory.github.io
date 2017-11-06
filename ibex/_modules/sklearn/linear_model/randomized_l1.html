@@ -1,0 +1,775 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.linear_model.randomized_l1 &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.linear_model.randomized_l1</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Randomized Lasso/Logistic: feature selection based on Lasso and</span>
+<span class="sd">sparse Logistic Regression</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Author: Gael Varoquaux, Alexandre Gramfort</span>
+<span class="c1">#</span>
+<span class="c1"># License: BSD 3 clause</span>
+
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">issparse</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">sparse</span>
+<span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="k">import</span> <span class="n">interp1d</span>
+
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">_preprocess_data</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span>
+<span class="kn">from</span> <span class="nn">..externals</span> <span class="k">import</span> <span class="n">six</span>
+<span class="kn">from</span> <span class="nn">..externals.joblib</span> <span class="k">import</span> <span class="n">Memory</span><span class="p">,</span> <span class="n">Parallel</span><span class="p">,</span> <span class="n">delayed</span>
+<span class="kn">from</span> <span class="nn">..feature_selection.base</span> <span class="k">import</span> <span class="n">SelectorMixin</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="p">(</span><span class="n">as_float_array</span><span class="p">,</span> <span class="n">check_random_state</span><span class="p">,</span> <span class="n">check_X_y</span><span class="p">,</span> <span class="n">safe_mask</span><span class="p">,</span>
+                     <span class="n">deprecated</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_is_fitted</span>
+<span class="kn">from</span> <span class="nn">.least_angle</span> <span class="k">import</span> <span class="n">lars_path</span><span class="p">,</span> <span class="n">LassoLarsIC</span>
+<span class="kn">from</span> <span class="nn">.logistic</span> <span class="k">import</span> <span class="n">LogisticRegression</span>
+<span class="kn">from</span> <span class="nn">..exceptions</span> <span class="k">import</span> <span class="n">ConvergenceWarning</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Randomized linear model: feature selection</span>
+
+<span class="k">def</span> <span class="nf">_resample_model</span><span class="p">(</span><span class="n">estimator_func</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">scaling</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span> <span class="n">n_resampling</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+                    <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">pre_dispatch</span><span class="o">=</span><span class="s1">&#39;3*n_jobs&#39;</span><span class="p">,</span>
+                    <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sample_fraction</span><span class="o">=.</span><span class="mi">75</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+    <span class="n">random_state</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+    <span class="c1"># We are generating 1 - weights, and not weights</span>
+    <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;</span> <span class="n">scaling</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;&#39;scaling&#39; should be between 0 and 1. Got </span><span class="si">%r</span><span class="s2"> instead.&quot;</span> <span class="o">%</span> <span class="n">scaling</span><span class="p">)</span>
+
+    <span class="n">scaling</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">-</span> <span class="n">scaling</span>
+    <span class="n">scores_</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">active_set</span> <span class="ow">in</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span>
+                               <span class="n">pre_dispatch</span><span class="o">=</span><span class="n">pre_dispatch</span><span class="p">)(</span>
+            <span class="n">delayed</span><span class="p">(</span><span class="n">estimator_func</span><span class="p">)(</span>
+                <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">scaling</span> <span class="o">*</span> <span class="n">random_state</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span>
+                    <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n_features</span><span class="p">,)),</span>
+                <span class="n">mask</span><span class="o">=</span><span class="p">(</span><span class="n">random_state</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">sample_fraction</span><span class="p">),</span>
+                <span class="n">verbose</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">verbose</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span>
+                <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_resampling</span><span class="p">)):</span>
+        <span class="n">scores_</span> <span class="o">+=</span> <span class="n">active_set</span>
+
+    <span class="n">scores_</span> <span class="o">/=</span> <span class="n">n_resampling</span>
+    <span class="k">return</span> <span class="n">scores_</span>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The class BaseRandomizedLinearModel is deprecated in 0.19&quot;</span>
+            <span class="s2">&quot; and will be removed in 0.21.&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">BaseRandomizedLinearModel</span><span class="p">(</span><span class="n">six</span><span class="o">.</span><span class="n">with_metaclass</span><span class="p">(</span><span class="n">ABCMeta</span><span class="p">,</span> <span class="n">BaseEstimator</span><span class="p">,</span>
+                                                   <span class="n">SelectorMixin</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Base class to implement randomized linear models for feature selection</span>
+
+<span class="sd">    This implements the strategy by Meinshausen and Buhlman:</span>
+<span class="sd">    stability selection with randomized sampling, and random re-weighting of</span>
+<span class="sd">    the penalty.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="n">_preprocess_data</span> <span class="o">=</span> <span class="nb">staticmethod</span><span class="p">(</span><span class="n">_preprocess_data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model using X, y as training data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+<span class="sd">            Training data.</span>
+
+<span class="sd">        y : array-like, shape = [n_samples]</span>
+<span class="sd">            Target values. Will be cast to X&#39;s dtype if necessary</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : object</span>
+<span class="sd">               Returns an instance of self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="s1">&#39;csc&#39;</span><span class="p">],</span> <span class="n">y_numeric</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">ensure_min_samples</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">estimator</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">as_float_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X_offset</span><span class="p">,</span> <span class="n">y_offset</span><span class="p">,</span> <span class="n">X_scale</span> <span class="o">=</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">_preprocess_data</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">)</span>
+
+        <span class="n">estimator_func</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_estimator_and_params</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="n">memory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">memory</span>
+        <span class="k">if</span> <span class="n">memory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">memory</span> <span class="o">=</span> <span class="n">Memory</span><span class="p">(</span><span class="n">cachedir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span> <span class="n">six</span><span class="o">.</span><span class="n">string_types</span><span class="p">):</span>
+            <span class="n">memory</span> <span class="o">=</span> <span class="n">Memory</span><span class="p">(</span><span class="n">cachedir</span><span class="o">=</span><span class="n">memory</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span> <span class="n">Memory</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;memory&#39; should either be a string or&quot;</span>
+                             <span class="s2">&quot; a sklearn.externals.joblib.Memory&quot;</span>
+                             <span class="s2">&quot; instance, got &#39;memory=</span><span class="si">{!r}</span><span class="s2">&#39; instead.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                 <span class="nb">type</span><span class="p">(</span><span class="n">memory</span><span class="p">)))</span>
+
+        <span class="n">scores_</span> <span class="o">=</span> <span class="n">memory</span><span class="o">.</span><span class="n">cache</span><span class="p">(</span>
+            <span class="n">_resample_model</span><span class="p">,</span> <span class="n">ignore</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">,</span> <span class="s1">&#39;n_jobs&#39;</span><span class="p">,</span> <span class="s1">&#39;pre_dispatch&#39;</span><span class="p">]</span>
+        <span class="p">)(</span>
+            <span class="n">estimator_func</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span>
+            <span class="n">scaling</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scaling</span><span class="p">,</span> <span class="n">n_resampling</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_resampling</span><span class="p">,</span>
+            <span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span>
+            <span class="n">pre_dispatch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pre_dispatch</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">,</span>
+            <span class="n">sample_fraction</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_fraction</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">scores_</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">scores_</span> <span class="o">=</span> <span class="n">scores_</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">all_scores_</span> <span class="o">=</span> <span class="n">scores_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scores_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">all_scores_</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">_make_estimator_and_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the parameters passed to the estimator&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+    <span class="k">def</span> <span class="nf">_get_support_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the boolean mask indicating which features are selected.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        support : boolean array of shape [# input features]</span>
+<span class="sd">                  An element is True iff its corresponding feature is selected</span>
+<span class="sd">                  for retention.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;scores_&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">scores_</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">selection_threshold</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Randomized lasso: regression settings</span>
+
+<span class="k">def</span> <span class="nf">_randomized_lasso</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                      <span class="n">precompute</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span>
+                      <span class="n">max_iter</span><span class="o">=</span><span class="mi">500</span><span class="p">):</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">safe_mask</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">mask</span><span class="p">)]</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+
+    <span class="c1"># Center X and y to avoid fit the intercept</span>
+    <span class="n">X</span> <span class="o">-=</span> <span class="n">X</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">-=</span> <span class="n">y</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+
+    <span class="n">X</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">weights</span><span class="p">)</span> <span class="o">*</span> <span class="n">X</span>
+
+    <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">ConvergenceWarning</span><span class="p">)</span>
+        <span class="n">alphas_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">coef_</span> <span class="o">=</span> <span class="n">lars_path</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span>
+                                      <span class="n">Gram</span><span class="o">=</span><span class="n">precompute</span><span class="p">,</span> <span class="n">copy_X</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                      <span class="n">copy_Gram</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">alpha_min</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">alpha</span><span class="p">),</span>
+                                      <span class="n">method</span><span class="o">=</span><span class="s1">&#39;lasso&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span>
+                                      <span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="n">eps</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">alphas_</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># np.min(alpha) &lt; alpha_min</span>
+            <span class="n">interpolator</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">alphas_</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">coef_</span><span class="p">[:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                                    <span class="n">bounds_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="mf">0.</span><span class="p">)</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="p">(</span><span class="n">interpolator</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">alpha</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">coef_</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mf">0.0</span>
+    <span class="k">return</span> <span class="n">scores</span>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The class RandomizedLasso is deprecated in 0.19&quot;</span>
+            <span class="s2">&quot; and will be removed in 0.21.&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">RandomizedLasso</span><span class="p">(</span><span class="n">BaseRandomizedLinearModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Randomized Lasso.</span>
+
+<span class="sd">    Randomized Lasso works by subsampling the training data and</span>
+<span class="sd">    computing a Lasso estimate where the penalty of a random subset of</span>
+<span class="sd">    coefficients has been scaled. By performing this double</span>
+<span class="sd">    randomization several times, the method assigns high scores to</span>
+<span class="sd">    features that are repeatedly selected across randomizations. This</span>
+<span class="sd">    is known as stability selection. In short, features selected more</span>
+<span class="sd">    often are considered good features.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    alpha : float, &#39;aic&#39;, or &#39;bic&#39;, optional</span>
+<span class="sd">        The regularization parameter alpha parameter in the Lasso.</span>
+<span class="sd">        Warning: this is not the alpha parameter in the stability selection</span>
+<span class="sd">        article which is scaling.</span>
+
+<span class="sd">    scaling : float, optional</span>
+<span class="sd">        The s parameter used to randomly scale the penalty of different</span>
+<span class="sd">        features.</span>
+<span class="sd">        Should be between 0 and 1.</span>
+
+<span class="sd">    sample_fraction : float, optional</span>
+<span class="sd">        The fraction of samples to be used in each randomized design.</span>
+<span class="sd">        Should be between 0 and 1. If 1, all samples are used.</span>
+
+<span class="sd">    n_resampling : int, optional</span>
+<span class="sd">        Number of randomized models.</span>
+
+<span class="sd">    selection_threshold : float, optional</span>
+<span class="sd">        The score above which features should be selected.</span>
+
+<span class="sd">    fit_intercept : boolean, optional</span>
+<span class="sd">        whether to calculate the intercept for this model. If set</span>
+<span class="sd">        to false, no intercept will be used in calculations</span>
+<span class="sd">        (e.g. data is expected to be already centered).</span>
+
+<span class="sd">    verbose : boolean or integer, optional</span>
+<span class="sd">        Sets the verbosity amount</span>
+
+<span class="sd">    normalize : boolean, optional, default True</span>
+<span class="sd">        If True, the regressors X will be normalized before regression.</span>
+<span class="sd">        This parameter is ignored when `fit_intercept` is set to False.</span>
+<span class="sd">        When the regressors are normalized, note that this makes the</span>
+<span class="sd">        hyperparameters learned more robust and almost independent of</span>
+<span class="sd">        the number of samples. The same property is not valid for</span>
+<span class="sd">        standardized data. However, if you wish to standardize, please</span>
+<span class="sd">        use `preprocessing.StandardScaler` before calling `fit` on an</span>
+<span class="sd">        estimator with `normalize=False`.</span>
+
+<span class="sd">    precompute : True | False | &#39;auto&#39; | array-like</span>
+<span class="sd">        Whether to use a precomputed Gram matrix to speed up calculations.</span>
+<span class="sd">        If set to &#39;auto&#39; let us decide.</span>
+<span class="sd">        The Gram matrix can also be passed as argument, but it will be used</span>
+<span class="sd">        only for the selection of parameter alpha, if alpha is &#39;aic&#39; or &#39;bic&#39;.</span>
+
+<span class="sd">    max_iter : integer, optional</span>
+<span class="sd">        Maximum number of iterations to perform in the Lars algorithm.</span>
+
+<span class="sd">    eps : float, optional</span>
+<span class="sd">        The machine-precision regularization in the computation of the</span>
+<span class="sd">        Cholesky diagonal factors. Increase this for very ill-conditioned</span>
+<span class="sd">        systems. Unlike the &#39;tol&#39; parameter in some iterative</span>
+<span class="sd">        optimization-based algorithms, this parameter does not control</span>
+<span class="sd">        the tolerance of the optimization.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional (default=None)</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`.</span>
+
+<span class="sd">    n_jobs : integer, optional</span>
+<span class="sd">        Number of CPUs to use during the resampling. If &#39;-1&#39;, use</span>
+<span class="sd">        all the CPUs</span>
+
+<span class="sd">    pre_dispatch : int, or string, optional</span>
+<span class="sd">        Controls the number of jobs that get dispatched during parallel</span>
+<span class="sd">        execution. Reducing this number can be useful to avoid an</span>
+<span class="sd">        explosion of memory consumption when more jobs get dispatched</span>
+<span class="sd">        than CPUs can process. This parameter can be:</span>
+
+<span class="sd">            - None, in which case all the jobs are immediately</span>
+<span class="sd">              created and spawned. Use this for lightweight and</span>
+<span class="sd">              fast-running jobs, to avoid delays due to on-demand</span>
+<span class="sd">              spawning of the jobs</span>
+
+<span class="sd">            - An int, giving the exact number of total jobs that are</span>
+<span class="sd">              spawned</span>
+
+<span class="sd">            - A string, giving an expression as a function of n_jobs,</span>
+<span class="sd">              as in &#39;2*n_jobs&#39;</span>
+
+<span class="sd">    memory : Instance of sklearn.externals.joblib.Memory or string, optional \</span>
+<span class="sd">            (default=None)</span>
+<span class="sd">        Used for internal caching. By default, no caching is done.</span>
+<span class="sd">        If a string is given, it is the path to the caching directory.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    scores_ : array, shape = [n_features]</span>
+<span class="sd">        Feature scores between 0 and 1.</span>
+
+<span class="sd">    all_scores_ : array, shape = [n_features, n_reg_parameter]</span>
+<span class="sd">        Feature scores between 0 and 1 for all values of the regularization \</span>
+<span class="sd">        parameter. The reference article suggests ``scores_`` is the max of \</span>
+<span class="sd">        ``all_scores_``.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.linear_model import RandomizedLasso</span>
+<span class="sd">    &gt;&gt;&gt; randomized_lasso = RandomizedLasso()</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Stability selection</span>
+<span class="sd">    Nicolai Meinshausen, Peter Buhlmann</span>
+<span class="sd">    Journal of the Royal Statistical Society: Series B</span>
+<span class="sd">    Volume 72, Issue 4, pages 417-473, September 2010</span>
+<span class="sd">    DOI: 10.1111/j.1467-9868.2010.00740.x</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    RandomizedLogisticRegression, Lasso, ElasticNet</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="s1">&#39;aic&#39;</span><span class="p">,</span> <span class="n">scaling</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span> <span class="n">sample_fraction</span><span class="o">=.</span><span class="mi">75</span><span class="p">,</span>
+                 <span class="n">n_resampling</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">selection_threshold</span><span class="o">=.</span><span class="mi">25</span><span class="p">,</span>
+                 <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">precompute</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span>
+                 <span class="n">max_iter</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+                 <span class="n">eps</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">pre_dispatch</span><span class="o">=</span><span class="s1">&#39;3*n_jobs&#39;</span><span class="p">,</span>
+                 <span class="n">memory</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scaling</span> <span class="o">=</span> <span class="n">scaling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_fraction</span> <span class="o">=</span> <span class="n">sample_fraction</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_resampling</span> <span class="o">=</span> <span class="n">n_resampling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span> <span class="o">=</span> <span class="n">fit_intercept</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span> <span class="o">=</span> <span class="n">normalize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">precompute</span> <span class="o">=</span> <span class="n">precompute</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="n">eps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">selection_threshold</span> <span class="o">=</span> <span class="n">selection_threshold</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_dispatch</span> <span class="o">=</span> <span class="n">pre_dispatch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="n">memory</span>
+
+    <span class="k">def</span> <span class="nf">_make_estimator_and_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">six</span><span class="o">.</span><span class="n">string_types</span><span class="p">)</span> <span class="ow">and</span> <span class="n">alpha</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;aic&#39;</span><span class="p">,</span> <span class="s1">&#39;bic&#39;</span><span class="p">):</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">LassoLarsIC</span><span class="p">(</span><span class="n">precompute</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">precompute</span><span class="p">,</span>
+                                <span class="n">criterion</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span>
+                                <span class="n">max_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span>
+                                <span class="n">eps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">alpha_</span>
+
+        <span class="n">precompute</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precompute</span>
+        <span class="c1"># A precomputed Gram array is useless, since _randomized_lasso</span>
+        <span class="c1"># change X a each iteration</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">precompute</span><span class="p">,</span> <span class="s1">&#39;__array__&#39;</span><span class="p">):</span>
+            <span class="n">precompute</span> <span class="o">=</span> <span class="s1">&#39;auto&#39;</span>
+        <span class="k">assert</span> <span class="n">precompute</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;auto&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_randomized_lasso</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span>
+                                       <span class="n">eps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span>
+                                       <span class="n">precompute</span><span class="o">=</span><span class="n">precompute</span><span class="p">)</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Randomized logistic: classification settings</span>
+
+<span class="k">def</span> <span class="nf">_randomized_logistic</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                         <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">):</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">safe_mask</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">mask</span><span class="p">)]</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+        <span class="n">weight_dia</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">dia_matrix</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">weights</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">size</span><span class="p">))</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">X</span> <span class="o">*</span> <span class="n">weight_dia</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">X</span> <span class="o">*=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">weights</span><span class="p">)</span>
+
+    <span class="n">C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">C</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;C should be 1-dimensional array-like, &quot;</span>
+                         <span class="s2">&quot;but got a </span><span class="si">{}</span><span class="s2">-dimensional array-like instead: </span><span class="si">{}</span><span class="s2">.&quot;</span>
+                         <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span> <span class="n">C</span><span class="p">))</span>
+
+    <span class="n">scores</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">C</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">this_C</span><span class="p">,</span> <span class="n">this_scores</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">scores</span><span class="o">.</span><span class="n">T</span><span class="p">):</span>
+        <span class="c1"># XXX : would be great to do it with a warm_start ...</span>
+        <span class="n">clf</span> <span class="o">=</span> <span class="n">LogisticRegression</span><span class="p">(</span><span class="n">C</span><span class="o">=</span><span class="n">this_C</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">penalty</span><span class="o">=</span><span class="s1">&#39;l1&#39;</span><span class="p">,</span> <span class="n">dual</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                 <span class="n">fit_intercept</span><span class="o">=</span><span class="n">fit_intercept</span><span class="p">)</span>
+        <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="n">this_scores</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">clf</span><span class="o">.</span><span class="n">coef_</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">scores</span>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The class RandomizedLogisticRegression is deprecated in 0.19&quot;</span>
+            <span class="s2">&quot; and will be removed in 0.21.&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">RandomizedLogisticRegression</span><span class="p">(</span><span class="n">BaseRandomizedLinearModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Randomized Logistic Regression</span>
+
+<span class="sd">    Randomized Logistic Regression works by subsampling the training</span>
+<span class="sd">    data and fitting a L1-penalized LogisticRegression model where the</span>
+<span class="sd">    penalty of a random subset of coefficients has been scaled. By</span>
+<span class="sd">    performing this double randomization several times, the method</span>
+<span class="sd">    assigns high scores to features that are repeatedly selected across</span>
+<span class="sd">    randomizations. This is known as stability selection. In short,</span>
+<span class="sd">    features selected more often are considered good features.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    C : float or array-like of shape [n_reg_parameter], optional, default=1</span>
+<span class="sd">        The regularization parameter C in the LogisticRegression.</span>
+<span class="sd">        When C is an array, fit will take each regularization parameter in C</span>
+<span class="sd">        one by one for LogisticRegression and store results for each one</span>
+<span class="sd">        in ``all_scores_``, where columns and rows represent corresponding</span>
+<span class="sd">        reg_parameters and features.</span>
+
+<span class="sd">    scaling : float, optional, default=0.5</span>
+<span class="sd">        The s parameter used to randomly scale the penalty of different</span>
+<span class="sd">        features.</span>
+<span class="sd">        Should be between 0 and 1.</span>
+
+<span class="sd">    sample_fraction : float, optional, default=0.75</span>
+<span class="sd">        The fraction of samples to be used in each randomized design.</span>
+<span class="sd">        Should be between 0 and 1. If 1, all samples are used.</span>
+
+<span class="sd">    n_resampling : int, optional, default=200</span>
+<span class="sd">        Number of randomized models.</span>
+
+<span class="sd">    selection_threshold : float, optional, default=0.25</span>
+<span class="sd">        The score above which features should be selected.</span>
+
+<span class="sd">    tol : float, optional, default=1e-3</span>
+<span class="sd">         tolerance for stopping criteria of LogisticRegression</span>
+
+<span class="sd">    fit_intercept : boolean, optional, default=True</span>
+<span class="sd">        whether to calculate the intercept for this model. If set</span>
+<span class="sd">        to false, no intercept will be used in calculations</span>
+<span class="sd">        (e.g. data is expected to be already centered).</span>
+
+<span class="sd">    verbose : boolean or integer, optional</span>
+<span class="sd">        Sets the verbosity amount</span>
+
+<span class="sd">    normalize : boolean, optional, default True</span>
+<span class="sd">        If True, the regressors X will be normalized before regression.</span>
+<span class="sd">        This parameter is ignored when `fit_intercept` is set to False.</span>
+<span class="sd">        When the regressors are normalized, note that this makes the</span>
+<span class="sd">        hyperparameters learnt more robust and almost independent of the number</span>
+<span class="sd">        of samples. The same property is not valid for standardized data.</span>
+<span class="sd">        However, if you wish to standardize, please use</span>
+<span class="sd">        `preprocessing.StandardScaler` before calling `fit` on an estimator</span>
+<span class="sd">        with `normalize=False`.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional (default=None)</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`.</span>
+
+<span class="sd">    n_jobs : integer, optional</span>
+<span class="sd">        Number of CPUs to use during the resampling. If &#39;-1&#39;, use</span>
+<span class="sd">        all the CPUs</span>
+
+<span class="sd">    pre_dispatch : int, or string, optional</span>
+<span class="sd">        Controls the number of jobs that get dispatched during parallel</span>
+<span class="sd">        execution. Reducing this number can be useful to avoid an</span>
+<span class="sd">        explosion of memory consumption when more jobs get dispatched</span>
+<span class="sd">        than CPUs can process. This parameter can be:</span>
+
+<span class="sd">            - None, in which case all the jobs are immediately</span>
+<span class="sd">              created and spawned. Use this for lightweight and</span>
+<span class="sd">              fast-running jobs, to avoid delays due to on-demand</span>
+<span class="sd">              spawning of the jobs</span>
+
+<span class="sd">            - An int, giving the exact number of total jobs that are</span>
+<span class="sd">              spawned</span>
+
+<span class="sd">            - A string, giving an expression as a function of n_jobs,</span>
+<span class="sd">              as in &#39;2*n_jobs&#39;</span>
+
+<span class="sd">    memory : Instance of sklearn.externals.joblib.Memory or string, optional \</span>
+<span class="sd">            (default=None)</span>
+<span class="sd">        Used for internal caching. By default, no caching is done.</span>
+<span class="sd">        If a string is given, it is the path to the caching directory.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    scores_ : array, shape = [n_features]</span>
+<span class="sd">        Feature scores between 0 and 1.</span>
+
+<span class="sd">    all_scores_ : array, shape = [n_features, n_reg_parameter]</span>
+<span class="sd">        Feature scores between 0 and 1 for all values of the regularization \</span>
+<span class="sd">        parameter. The reference article suggests ``scores_`` is the max \</span>
+<span class="sd">        of ``all_scores_``.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.linear_model import RandomizedLogisticRegression</span>
+<span class="sd">    &gt;&gt;&gt; randomized_logistic = RandomizedLogisticRegression()</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Stability selection</span>
+<span class="sd">    Nicolai Meinshausen, Peter Buhlmann</span>
+<span class="sd">    Journal of the Royal Statistical Society: Series B</span>
+<span class="sd">    Volume 72, Issue 4, pages 417-473, September 2010</span>
+<span class="sd">    DOI: 10.1111/j.1467-9868.2010.00740.x</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    RandomizedLasso, LogisticRegression</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">scaling</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span> <span class="n">sample_fraction</span><span class="o">=.</span><span class="mi">75</span><span class="p">,</span>
+                 <span class="n">n_resampling</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+                 <span class="n">selection_threshold</span><span class="o">=.</span><span class="mi">25</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+                 <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">pre_dispatch</span><span class="o">=</span><span class="s1">&#39;3*n_jobs&#39;</span><span class="p">,</span>
+                 <span class="n">memory</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">C</span> <span class="o">=</span> <span class="n">C</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scaling</span> <span class="o">=</span> <span class="n">scaling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_fraction</span> <span class="o">=</span> <span class="n">sample_fraction</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_resampling</span> <span class="o">=</span> <span class="n">n_resampling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span> <span class="o">=</span> <span class="n">fit_intercept</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span> <span class="o">=</span> <span class="n">normalize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">selection_threshold</span> <span class="o">=</span> <span class="n">selection_threshold</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_dispatch</span> <span class="o">=</span> <span class="n">pre_dispatch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="n">memory</span>
+
+    <span class="k">def</span> <span class="nf">_make_estimator_and_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">C</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
+                      <span class="n">fit_intercept</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_randomized_logistic</span><span class="p">,</span> <span class="n">params</span>
+
+    <span class="k">def</span> <span class="nf">_preprocess_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Center the data in X but not in y&quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">X_offset</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">X_scale</span> <span class="o">=</span> <span class="n">_preprocess_data</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="p">,</span>
+                                                      <span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X_offset</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X_scale</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Stability paths</span>
+<span class="k">def</span> <span class="nf">_lasso_stability_path</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">eps</span><span class="p">):</span>
+    <span class="s2">&quot;Inner loop of lasso_stability_path&quot;</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">X</span> <span class="o">*</span> <span class="n">weights</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">safe_mask</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">mask</span><span class="p">),</span> <span class="p">:]</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+
+    <span class="n">alpha_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">y</span><span class="p">)))</span> <span class="o">/</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">alpha_min</span> <span class="o">=</span> <span class="n">eps</span> <span class="o">*</span> <span class="n">alpha_max</span>  <span class="c1"># set for early stopping in path</span>
+    <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">ConvergenceWarning</span><span class="p">)</span>
+        <span class="n">alphas</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">coefs</span> <span class="o">=</span> <span class="n">lars_path</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;lasso&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                     <span class="n">alpha_min</span><span class="o">=</span><span class="n">alpha_min</span><span class="p">)</span>
+    <span class="c1"># Scale alpha by alpha_max</span>
+    <span class="n">alphas</span> <span class="o">/=</span> <span class="n">alphas</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c1"># Sort alphas in ascending order</span>
+    <span class="n">alphas</span> <span class="o">=</span> <span class="n">alphas</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">coefs</span> <span class="o">=</span> <span class="n">coefs</span><span class="p">[:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="c1"># Get rid of the alphas that are too small</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">alphas</span> <span class="o">&gt;=</span> <span class="n">eps</span>
+    <span class="c1"># We also want to keep the first one: it should be close to the OLS</span>
+    <span class="c1"># solution</span>
+    <span class="n">mask</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">alphas</span> <span class="o">=</span> <span class="n">alphas</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+    <span class="n">coefs</span> <span class="o">=</span> <span class="n">coefs</span><span class="p">[:,</span> <span class="n">mask</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">alphas</span><span class="p">,</span> <span class="n">coefs</span>
+
+
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;The function lasso_stability_path is deprecated in 0.19&quot;</span>
+            <span class="s2">&quot; and will be removed in 0.21.&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">lasso_stability_path</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">scaling</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                         <span class="n">n_resampling</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">n_grid</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                         <span class="n">sample_fraction</span><span class="o">=</span><span class="mf">0.75</span><span class="p">,</span>
+                         <span class="n">eps</span><span class="o">=</span><span class="mi">4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                         <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Stability path based on randomized Lasso estimates</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array-like, shape = [n_samples, n_features]</span>
+<span class="sd">        training data.</span>
+
+<span class="sd">    y : array-like, shape = [n_samples]</span>
+<span class="sd">        target values.</span>
+
+<span class="sd">    scaling : float, optional, default=0.5</span>
+<span class="sd">        The alpha parameter in the stability selection article used to</span>
+<span class="sd">        randomly scale the features. Should be between 0 and 1.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional, default=None</span>
+<span class="sd">        The generator used to randomize the design.  If int, random_state is</span>
+<span class="sd">        the seed used by the random number generator; If RandomState instance,</span>
+<span class="sd">        random_state is the random number generator; If None, the random number</span>
+<span class="sd">        generator is the RandomState instance used by `np.random`.</span>
+
+<span class="sd">    n_resampling : int, optional, default=200</span>
+<span class="sd">        Number of randomized models.</span>
+
+<span class="sd">    n_grid : int, optional, default=100</span>
+<span class="sd">        Number of grid points. The path is linearly reinterpolated</span>
+<span class="sd">        on a grid between 0 and 1 before computing the scores.</span>
+
+<span class="sd">    sample_fraction : float, optional, default=0.75</span>
+<span class="sd">        The fraction of samples to be used in each randomized design.</span>
+<span class="sd">        Should be between 0 and 1. If 1, all samples are used.</span>
+
+<span class="sd">    eps : float, optional</span>
+<span class="sd">        Smallest value of alpha / alpha_max considered</span>
+
+<span class="sd">    n_jobs : integer, optional</span>
+<span class="sd">        Number of CPUs to use during the resampling. If &#39;-1&#39;, use</span>
+<span class="sd">        all the CPUs</span>
+
+<span class="sd">    verbose : boolean or integer, optional</span>
+<span class="sd">        Sets the verbosity amount</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    alphas_grid : array, shape ~ [n_grid]</span>
+<span class="sd">        The grid points between 0 and 1: alpha/alpha_max</span>
+
+<span class="sd">    scores_path : array, shape = [n_features, n_grid]</span>
+<span class="sd">        The scores for each feature along the path.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="s1">&#39;csc&#39;</span><span class="p">,</span> <span class="s1">&#39;coo&#39;</span><span class="p">])</span>
+    <span class="n">rng</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;</span> <span class="n">scaling</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Parameter &#39;scaling&#39; should be between 0 and 1.&quot;</span>
+                         <span class="s2">&quot; Got </span><span class="si">%r</span><span class="s2"> instead.&quot;</span> <span class="o">%</span> <span class="n">scaling</span><span class="p">)</span>
+
+    <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="n">paths</span> <span class="o">=</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)(</span>
+        <span class="n">delayed</span><span class="p">(</span><span class="n">_lasso_stability_path</span><span class="p">)(</span>
+            <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">rng</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">sample_fraction</span><span class="p">,</span>
+            <span class="n">weights</span><span class="o">=</span><span class="mf">1.</span> <span class="o">-</span> <span class="n">scaling</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n_features</span><span class="p">,)),</span>
+            <span class="n">eps</span><span class="o">=</span><span class="n">eps</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_resampling</span><span class="p">))</span>
+
+    <span class="n">all_alphas</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">]))))</span>
+    <span class="c1"># Take approximately n_grid values</span>
+    <span class="n">stride</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_alphas</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n_grid</span><span class="p">))))</span>
+    <span class="n">all_alphas</span> <span class="o">=</span> <span class="n">all_alphas</span><span class="p">[::</span><span class="n">stride</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">all_alphas</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">all_alphas</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">1.</span><span class="p">)</span>
+    <span class="n">all_alphas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_alphas</span><span class="p">)</span>
+    <span class="n">scores_path</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_features</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_alphas</span><span class="p">)))</span>
+
+    <span class="k">for</span> <span class="n">alphas</span><span class="p">,</span> <span class="n">coefs</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">alphas</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">alphas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">alphas</span><span class="p">]</span>
+            <span class="n">coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n_features</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">coefs</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">alphas</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">all_alphas</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">alphas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">alphas</span><span class="p">,</span> <span class="n">all_alphas</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+            <span class="n">coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">coefs</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_features</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+        <span class="n">scores_path</span> <span class="o">+=</span> <span class="p">(</span><span class="n">interp1d</span><span class="p">(</span><span class="n">alphas</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span>
+                        <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">,</span> <span class="n">bounds_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)(</span><span class="n">all_alphas</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">scores_path</span> <span class="o">/=</span> <span class="n">n_resampling</span>
+    <span class="k">return</span> <span class="n">all_alphas</span><span class="p">,</span> <span class="n">scores_path</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Uniting Features &#8212; ibex 0.1.1 documentation</title>
+    <title>Uniting Features &#8212; ibex latest documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1.1',
+        VERSION:     'latest',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -44,7 +44,7 @@
             
   <div class="section" id="uniting-features">
 <span id="feature-union"></span><h1>Uniting Features<a class="headerlink" href="#uniting-features" title="Permalink to this headline">¶</a></h1>
-<p>A feature-union <a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/generated/pandas.concat.html">horizontally concatenates</a> the <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.20.3)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> results of multiple transformer objects.</p>
+<p>A feature-union <a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/generated/pandas.concat.html">horizontally concatenates</a> the <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> results of multiple transformer objects.</p>
 <p>This estimator applies a list of transformer objects in parallel to the input data, then concatenates the results. This is useful to combine several feature extraction mechanisms into a single transformer.</p>
 <p>In this chapter we’ll use the following Iris dataset:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -69,7 +69,7 @@
 </div>
 <div class="section" id="sklearn-alternative">
 <h2><code class="docutils literal"><span class="pre">sklearn</span></code> Alternative<a class="headerlink" href="#sklearn-alternative" title="Permalink to this headline">¶</a></h2>
-<p>Using <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.FeatureUnion.html#sklearn.pipeline.FeatureUnion" title="(in scikit-learn v0.19.0)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.pipeline.FeatureUnion</span></code></a>, we can create a feature-union of steps:</p>
+<p>Using <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.FeatureUnion.html#sklearn.pipeline.FeatureUnion" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.pipeline.FeatureUnion</span></code></a>, we can create a feature-union of steps:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.pipeline</span> <span class="k">import</span> <span class="n">FeatureUnion</span>
 <span class="go">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span> <span class="o">=</span> <span class="n">FeatureUnion</span><span class="p">([(</span><span class="s1">&#39;pca&#39;</span><span class="p">,</span> <span class="n">PdPCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">2</span><span class="p">)),</span> <span class="p">(</span><span class="s1">&#39;best&#39;</span><span class="p">,</span> <span class="n">PdSelectKBest</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">))])</span>
@@ -101,11 +101,11 @@
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
 <span class="go">          pca                 selectkbest</span>
 <span class="go">       comp_0    comp_1 petal length (cm)</span>
-<span class="go">0   -2.684207  0.326607               1.4</span>
-<span class="go">1   -2.715391 -0.169557               1.4</span>
-<span class="go">2   -2.889820 -0.137346               1.3</span>
-<span class="go">3   -2.746437 -0.311124               1.5</span>
-<span class="go">4   -2.728593  0.333925               1.4</span>
+<span class="go">0   -2.684207 ...0.326607               1.4</span>
+<span class="go">1   -2.715391 ...0.169557               1.4</span>
+<span class="go">2   -2.889820 ...0.137346               1.3</span>
+<span class="go">3   -2.746437 ...0.311124               1.5</span>
+<span class="go">4   -2.728593 ...0.333925               1.4</span>
 <span class="go">    ...</span>
 </pre></div>
 </div>
@@ -120,11 +120,11 @@
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
 <span class="go">    functiontransformer_0           functiontransformer_1</span>
 <span class="go">                      pc1       pc2                  best</span>
-<span class="go">0               -2.684207  0.326607                   1.4</span>
-<span class="go">1               -2.715391 -0.169557                   1.4</span>
-<span class="go">2               -2.889820 -0.137346                   1.3</span>
-<span class="go">3               -2.746437 -0.311124                   1.5</span>
-<span class="go">4               -2.728593  0.333925                   1.4</span>
+<span class="go">0               -2.684207 ...0.326607                   1.4</span>
+<span class="go">1               -2.715391 ...0.169557                   1.4</span>
+<span class="go">2               -2.889820 ...0.137346                   1.3</span>
+<span class="go">3               -2.746437 ...0.311124                   1.5</span>
+<span class="go">4               -2.728593 ...0.333925                   1.4</span>
 <span class="go">    ...</span>
 </pre></div>
 </div>
@@ -141,7 +141,7 @@
 <p>This is similar to the discussion of <span class="xref std std-ref">pipeline_pipeline_syntax_alternative</span> in <a class="reference internal" href="pipelines.html#pipeline"><span class="std std-ref">Pipelining</span></a>.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">Just as with <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="(in scikit-learn v0.19.0)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.pipeline.Pipeline</span></code></a> vs. <code class="docutils literal"><span class="pre">|</span></code>, also <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.FeatureUnion.html#sklearn.pipeline.FeatureUnion" title="(in scikit-learn v0.19.0)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.pipeline.FeatureUnion</span></code></a> gives greater control over steps name
+<p class="last">Just as with <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.pipeline.Pipeline</span></code></a> vs. <code class="docutils literal"><span class="pre">|</span></code>, also <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.FeatureUnion.html#sklearn.pipeline.FeatureUnion" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.pipeline.FeatureUnion</span></code></a> gives greater control over steps name
 relative to <code class="docutils literal"><span class="pre">+</span></code>. Note, however that <code class="docutils literal"><span class="pre">FeatureUnion</span></code> provides control over further aspects, e.g., the ability to run steps in parallel.</p>
 </div>
 </div>

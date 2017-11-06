@@ -1,0 +1,1019 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.svm.base &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.svm.base</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span> <span class="k">as</span> <span class="nn">sp</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">libsvm</span><span class="p">,</span> <span class="n">liblinear</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">libsvm_sparse</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClassifierMixin</span>
+<span class="kn">from</span> <span class="nn">..preprocessing</span> <span class="k">import</span> <span class="n">LabelEncoder</span>
+<span class="kn">from</span> <span class="nn">..utils.multiclass</span> <span class="k">import</span> <span class="n">_ovr_decision_function</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_array</span><span class="p">,</span> <span class="n">check_consistent_length</span><span class="p">,</span> <span class="n">check_random_state</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">column_or_1d</span><span class="p">,</span> <span class="n">check_X_y</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">compute_class_weight</span>
+<span class="kn">from</span> <span class="nn">..utils.extmath</span> <span class="k">import</span> <span class="n">safe_sparse_dot</span>
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">check_is_fitted</span>
+<span class="kn">from</span> <span class="nn">..utils.multiclass</span> <span class="k">import</span> <span class="n">check_classification_targets</span>
+<span class="kn">from</span> <span class="nn">..externals</span> <span class="k">import</span> <span class="n">six</span>
+<span class="kn">from</span> <span class="nn">..exceptions</span> <span class="k">import</span> <span class="n">ConvergenceWarning</span>
+<span class="kn">from</span> <span class="nn">..exceptions</span> <span class="k">import</span> <span class="n">NotFittedError</span>
+
+
+<span class="n">LIBSVM_IMPL</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;c_svc&#39;</span><span class="p">,</span> <span class="s1">&#39;nu_svc&#39;</span><span class="p">,</span> <span class="s1">&#39;one_class&#39;</span><span class="p">,</span> <span class="s1">&#39;epsilon_svr&#39;</span><span class="p">,</span> <span class="s1">&#39;nu_svr&#39;</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_one_vs_one_coef</span><span class="p">(</span><span class="n">dual_coef</span><span class="p">,</span> <span class="n">n_support</span><span class="p">,</span> <span class="n">support_vectors</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate primal coefficients from dual coefficients</span>
+<span class="sd">    for the one-vs-one multi class LibSVM in the case</span>
+<span class="sd">    of a linear kernel.&quot;&quot;&quot;</span>
+
+    <span class="c1"># get 1vs1 weights for all n*(n-1) classifiers.</span>
+    <span class="c1"># this is somewhat messy.</span>
+    <span class="c1"># shape of dual_coef_ is nSV * (n_classes -1)</span>
+    <span class="c1"># see docs for details</span>
+    <span class="n">n_class</span> <span class="o">=</span> <span class="n">dual_coef</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="c1"># XXX we could do preallocation of coef but</span>
+    <span class="c1"># would have to take care in the sparse case</span>
+    <span class="n">coef</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">sv_locs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([[</span><span class="mi">0</span><span class="p">],</span> <span class="n">n_support</span><span class="p">]))</span>
+    <span class="k">for</span> <span class="n">class1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_class</span><span class="p">):</span>
+        <span class="c1"># SVs for class1:</span>
+        <span class="n">sv1</span> <span class="o">=</span> <span class="n">support_vectors</span><span class="p">[</span><span class="n">sv_locs</span><span class="p">[</span><span class="n">class1</span><span class="p">]:</span><span class="n">sv_locs</span><span class="p">[</span><span class="n">class1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="p">:]</span>
+        <span class="k">for</span> <span class="n">class2</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">class1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_class</span><span class="p">):</span>
+            <span class="c1"># SVs for class1:</span>
+            <span class="n">sv2</span> <span class="o">=</span> <span class="n">support_vectors</span><span class="p">[</span><span class="n">sv_locs</span><span class="p">[</span><span class="n">class2</span><span class="p">]:</span><span class="n">sv_locs</span><span class="p">[</span><span class="n">class2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="p">:]</span>
+
+            <span class="c1"># dual coef for class1 SVs:</span>
+            <span class="n">alpha1</span> <span class="o">=</span> <span class="n">dual_coef</span><span class="p">[</span><span class="n">class2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">sv_locs</span><span class="p">[</span><span class="n">class1</span><span class="p">]:</span><span class="n">sv_locs</span><span class="p">[</span><span class="n">class1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]]</span>
+            <span class="c1"># dual coef for class2 SVs:</span>
+            <span class="n">alpha2</span> <span class="o">=</span> <span class="n">dual_coef</span><span class="p">[</span><span class="n">class1</span><span class="p">,</span> <span class="n">sv_locs</span><span class="p">[</span><span class="n">class2</span><span class="p">]:</span><span class="n">sv_locs</span><span class="p">[</span><span class="n">class2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]]</span>
+            <span class="c1"># build weight for class1 vs class2</span>
+
+            <span class="n">coef</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">alpha1</span><span class="p">,</span> <span class="n">sv1</span><span class="p">)</span>
+                        <span class="o">+</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">alpha2</span><span class="p">,</span> <span class="n">sv2</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">coef</span>
+
+
+<span class="k">class</span> <span class="nc">BaseLibSVM</span><span class="p">(</span><span class="n">six</span><span class="o">.</span><span class="n">with_metaclass</span><span class="p">(</span><span class="n">ABCMeta</span><span class="p">,</span> <span class="n">BaseEstimator</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Base class for estimators that use libsvm as backing library</span>
+
+<span class="sd">    This implements support vector machine classification and regression.</span>
+
+<span class="sd">    Parameter documentation is in the derived `SVC` class.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># The order of these must match the integer values in LibSVM.</span>
+    <span class="c1"># XXX These are actually the same in the dense case. Need to factor</span>
+    <span class="c1"># this out.</span>
+    <span class="n">_sparse_kernels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;linear&quot;</span><span class="p">,</span> <span class="s2">&quot;poly&quot;</span><span class="p">,</span> <span class="s2">&quot;rbf&quot;</span><span class="p">,</span> <span class="s2">&quot;sigmoid&quot;</span><span class="p">,</span> <span class="s2">&quot;precomputed&quot;</span><span class="p">]</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">impl</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">degree</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">coef0</span><span class="p">,</span>
+                 <span class="n">tol</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">shrinking</span><span class="p">,</span> <span class="n">probability</span><span class="p">,</span> <span class="n">cache_size</span><span class="p">,</span>
+                 <span class="n">class_weight</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">max_iter</span><span class="p">,</span> <span class="n">random_state</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">impl</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">LIBSVM_IMPL</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;impl should be one of </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2"> was given&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                <span class="n">LIBSVM_IMPL</span><span class="p">,</span> <span class="n">impl</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">gamma</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;The gamma value of 0.0 is invalid. Use &#39;auto&#39; to set&quot;</span>
+                   <span class="s2">&quot; gamma to a value of 1 / n_features.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_impl</span> <span class="o">=</span> <span class="n">impl</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">=</span> <span class="n">kernel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">degree</span> <span class="o">=</span> <span class="n">degree</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">gamma</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef0</span> <span class="o">=</span> <span class="n">coef0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">C</span> <span class="o">=</span> <span class="n">C</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nu</span> <span class="o">=</span> <span class="n">nu</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="n">epsilon</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shrinking</span> <span class="o">=</span> <span class="n">shrinking</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">probability</span> <span class="o">=</span> <span class="n">probability</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache_size</span> <span class="o">=</span> <span class="n">cache_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">class_weight</span> <span class="o">=</span> <span class="n">class_weight</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_pairwise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Used by cross_val_score.</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">==</span> <span class="s2">&quot;precomputed&quot;</span>
+
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the SVM model according to the given training data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape (n_samples, n_features)</span>
+<span class="sd">            Training vectors, where n_samples is the number of samples</span>
+<span class="sd">            and n_features is the number of features.</span>
+<span class="sd">            For kernel=&quot;precomputed&quot;, the expected shape of X is</span>
+<span class="sd">            (n_samples, n_samples).</span>
+
+<span class="sd">        y : array-like, shape (n_samples,)</span>
+<span class="sd">            Target values (class labels in classification, real numbers in</span>
+<span class="sd">            regression)</span>
+
+<span class="sd">        sample_weight : array-like, shape (n_samples,)</span>
+<span class="sd">            Per-sample weights. Rescale C per sample. Higher weights</span>
+<span class="sd">            force the classifier to put more emphasis on these points.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : object</span>
+<span class="sd">            Returns self.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        ------</span>
+<span class="sd">        If X and y are not C-ordered and contiguous arrays of np.float64 and</span>
+<span class="sd">        X is not a scipy.sparse.csr_matrix, X and/or y may be copied.</span>
+
+<span class="sd">        If X is a dense array, then the other methods will not support sparse</span>
+<span class="sd">        matrices as input.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">rnd</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+
+        <span class="n">sparse</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">isspmatrix</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sparse</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">==</span> <span class="s2">&quot;precomputed&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Sparse precomputed kernels are not supported.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sparse</span> <span class="o">=</span> <span class="n">sparse</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">)</span>
+
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_targets</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+        <span class="n">sample_weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([]</span>
+                                   <span class="k">if</span> <span class="n">sample_weight</span> <span class="ow">is</span> <span class="kc">None</span>
+                                   <span class="k">else</span> <span class="n">sample_weight</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">solver_type</span> <span class="o">=</span> <span class="n">LIBSVM_IMPL</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_impl</span><span class="p">)</span>
+
+        <span class="c1"># input validation</span>
+        <span class="k">if</span> <span class="n">solver_type</span> <span class="o">!=</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;X and y have incompatible shapes.</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span>
+                             <span class="s2">&quot;X has </span><span class="si">%s</span><span class="s2"> samples, but y has </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span>
+                             <span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">==</span> <span class="s2">&quot;precomputed&quot;</span> <span class="ow">and</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;X.shape[0] should be equal to X.shape[1]&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">sample_weight</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">sample_weight</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;sample_weight and X have incompatible shapes: &quot;</span>
+                             <span class="s2">&quot;</span><span class="si">%r</span><span class="s2"> vs </span><span class="si">%r</span><span class="se">\n</span><span class="s2">&quot;</span>
+                             <span class="s2">&quot;Note: Sparse matrices cannot be indexed w/&quot;</span>
+                             <span class="s2">&quot;boolean masks (use `indices=True` in CV).&quot;</span>
+                             <span class="o">%</span> <span class="p">(</span><span class="n">sample_weight</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span>
+
+        <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span>
+        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">kernel</span><span class="p">):</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="s1">&#39;precomputed&#39;</span>
+
+        <span class="n">fit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse_fit</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dense_fit</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;[LibSVM]&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+        <span class="n">seed</span> <span class="o">=</span> <span class="n">rnd</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="s1">&#39;i&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">)</span>
+        <span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">,</span> <span class="n">solver_type</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
+        <span class="c1"># see comment on the other call to np.iinfo in this file</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape_fit_</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># In binary case, we need to flip the sign of coef, intercept and</span>
+        <span class="c1"># decision function. Use self._intercept_ and self._dual_coef_ internally.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_intercept_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dual_coef_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_coef_</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_impl</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;c_svc&#39;</span><span class="p">,</span> <span class="s1">&#39;nu_svc&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dual_coef_</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_coef_</span>
+
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">_validate_targets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Validation of y and class_weight.</span>
+
+<span class="sd">        Default implementation for SVR and one-class; overridden in BaseSVC.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># XXX this is ugly.</span>
+        <span class="c1"># Regression models should not have a class_weight_ attribute.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">class_weight_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">column_or_1d</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_warn_from_fit_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_status_</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_status_</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Solver terminated early (max_iter=</span><span class="si">%i</span><span class="s1">).&#39;</span>
+                          <span class="s1">&#39;  Consider pre-processing your data with&#39;</span>
+                          <span class="s1">&#39; StandardScaler or MinMaxScaler.&#39;</span>
+                          <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">ConvergenceWarning</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_dense_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">,</span> <span class="n">solver_type</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span>
+                   <span class="n">random_seed</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">):</span>
+            <span class="c1"># you must store a reference to X to compute the kernel in predict</span>
+            <span class="c1"># TODO: add keyword copy to copy on demand</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__Xfit</span> <span class="o">=</span> <span class="n">X</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_kernel</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;X.shape[0] should be equal to X.shape[1]&quot;</span><span class="p">)</span>
+
+        <span class="n">libsvm</span><span class="o">.</span><span class="n">set_verbosity_wrap</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">six</span><span class="o">.</span><span class="n">PY2</span><span class="p">:</span>
+            <span class="c1"># In python2 ensure kernel is ascii bytes to prevent a TypeError</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="n">six</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">UnicodeType</span><span class="p">):</span>
+                <span class="n">kernel</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">six</span><span class="o">.</span><span class="n">PY3</span><span class="p">:</span>
+            <span class="c1"># In python3 ensure kernel is utf8 unicode to prevent a TypeError</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+                <span class="n">kernel</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="s1">&#39;utf8&#39;</span><span class="p">)</span>
+
+        <span class="c1"># we don&#39;t pass **self.get_params() to allow subclasses to</span>
+        <span class="c1"># add other parameters to __init__</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">support_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_support_</span><span class="p">,</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">dual_coef_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">probA_</span><span class="p">,</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">probB_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_status_</span> <span class="o">=</span> <span class="n">libsvm</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+                <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span>
+                <span class="n">svm_type</span><span class="o">=</span><span class="n">solver_type</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">,</span>
+                <span class="n">class_weight</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">class_weight_</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="n">kernel</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span>
+                <span class="n">nu</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span> <span class="n">probability</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">probability</span><span class="p">,</span> <span class="n">degree</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">degree</span><span class="p">,</span>
+                <span class="n">shrinking</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shrinking</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
+                <span class="n">cache_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_size</span><span class="p">,</span> <span class="n">coef0</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">coef0</span><span class="p">,</span>
+                <span class="n">gamma</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span>
+                <span class="n">max_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="n">random_seed</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_warn_from_fit_status</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_sparse_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">,</span> <span class="n">solver_type</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span>
+                    <span class="n">random_seed</span><span class="p">):</span>
+        <span class="n">X</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+        <span class="n">X</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">()</span>
+
+        <span class="n">kernel_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse_kernels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span>
+
+        <span class="n">libsvm_sparse</span><span class="o">.</span><span class="n">set_verbosity_wrap</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">support_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="p">,</span> <span class="n">dual_coef_data</span><span class="p">,</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_support_</span><span class="p">,</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">probA_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">probB_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_status_</span> <span class="o">=</span> \
+            <span class="n">libsvm_sparse</span><span class="o">.</span><span class="n">libsvm_sparse_train</span><span class="p">(</span>
+                <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">X</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">indptr</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">solver_type</span><span class="p">,</span>
+                <span class="n">kernel_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">degree</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">coef0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_weight_</span><span class="p">,</span>
+                <span class="n">sample_weight</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span>
+                <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shrinking</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">probability</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span>
+                <span class="n">random_seed</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_warn_from_fit_status</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;classes_&quot;</span><span class="p">):</span>
+            <span class="n">n_class</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>   <span class="c1"># regression</span>
+            <span class="n">n_class</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">n_SV</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">dual_coef_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_SV</span><span class="p">),</span> <span class="n">n_class</span><span class="p">)</span>
+        <span class="n">dual_coef_indptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dual_coef_indices</span><span class="o">.</span><span class="n">size</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                                     <span class="n">dual_coef_indices</span><span class="o">.</span><span class="n">size</span> <span class="o">/</span> <span class="n">n_class</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dual_coef_</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">dual_coef_data</span><span class="p">,</span> <span class="n">dual_coef_indices</span><span class="p">,</span> <span class="n">dual_coef_indptr</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">n_class</span><span class="p">,</span> <span class="n">n_SV</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Perform regression on samples in X.</span>
+
+<span class="sd">        For an one-class model, +1 (inlier) or -1 (outlier) is returned.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape (n_samples, n_features)</span>
+<span class="sd">            For kernel=&quot;precomputed&quot;, the expected shape of X is</span>
+<span class="sd">            (n_samples_test, n_samples_train).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y_pred : array, shape (n_samples,)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_for_predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">predict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse_predict</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dense_predict</span>
+        <span class="k">return</span> <span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_dense_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_kernel</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+
+        <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span>
+        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">):</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="s1">&#39;precomputed&#39;</span>
+            <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_fit_</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;X.shape[1] = </span><span class="si">%d</span><span class="s2"> should be equal to </span><span class="si">%d</span><span class="s2">, &quot;</span>
+                                 <span class="s2">&quot;the number of samples at training time&quot;</span> <span class="o">%</span>
+                                 <span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_fit_</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+        <span class="n">svm_type</span> <span class="o">=</span> <span class="n">LIBSVM_IMPL</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_impl</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">libsvm</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">support_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_support_</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dual_coef_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intercept_</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">probA_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">probB_</span><span class="p">,</span> <span class="n">svm_type</span><span class="o">=</span><span class="n">svm_type</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="n">kernel</span><span class="p">,</span>
+            <span class="n">degree</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">degree</span><span class="p">,</span> <span class="n">coef0</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">coef0</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span><span class="p">,</span>
+            <span class="n">cache_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_size</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_sparse_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="c1"># Precondition: X is a csr_matrix of dtype np.float64.</span>
+        <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span>
+        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">kernel</span><span class="p">):</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="s1">&#39;precomputed&#39;</span>
+
+        <span class="n">kernel_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse_kernels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span>
+
+        <span class="n">C</span> <span class="o">=</span> <span class="mf">0.0</span>  <span class="c1"># C is not useful here</span>
+
+        <span class="k">return</span> <span class="n">libsvm_sparse</span><span class="o">.</span><span class="n">libsvm_sparse_predict</span><span class="p">(</span>
+            <span class="n">X</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">indptr</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="o">.</span><span class="n">indptr</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dual_coef_</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intercept_</span><span class="p">,</span>
+            <span class="n">LIBSVM_IMPL</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_impl</span><span class="p">),</span> <span class="n">kernel_type</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">degree</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">coef0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
+            <span class="n">C</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_weight_</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shrinking</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">probability</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_support_</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">probA_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">probB_</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_compute_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the data transformed by a callable kernel&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">):</span>
+            <span class="c1"># in the case of precomputed kernel given as a function, we</span>
+            <span class="c1"># have to compute explicitly the kernel matrix</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Xfit</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">kernel</span><span class="p">):</span>
+                <span class="n">kernel</span> <span class="o">=</span> <span class="n">kernel</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">X</span>
+
+    <span class="k">def</span> <span class="nf">_decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Distance of the samples X to the separating hyperplane.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_class * (n_class-1) / 2)</span>
+<span class="sd">            Returns the decision function of the sample for each class</span>
+<span class="sd">            in the model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># NOTE: _validate_for_predict contains check for is_fitted</span>
+        <span class="c1"># hence must be placed before any other attributes are used.</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_for_predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_kernel</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse</span><span class="p">:</span>
+            <span class="n">dec_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse_decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dec_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dense_decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+        <span class="c1"># In binary case, we need to flip the sign of coef, intercept and</span>
+        <span class="c1"># decision function.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_impl</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;c_svc&#39;</span><span class="p">,</span> <span class="s1">&#39;nu_svc&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="o">-</span><span class="n">dec_func</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">dec_func</span>
+
+    <span class="k">def</span> <span class="nf">_dense_decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s2">&quot;C&quot;</span><span class="p">)</span>
+
+        <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span>
+        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">kernel</span><span class="p">):</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="s1">&#39;precomputed&#39;</span>
+
+        <span class="k">return</span> <span class="n">libsvm</span><span class="o">.</span><span class="n">decision_function</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">support_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_support_</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dual_coef_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intercept_</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">probA_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">probB_</span><span class="p">,</span>
+            <span class="n">svm_type</span><span class="o">=</span><span class="n">LIBSVM_IMPL</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_impl</span><span class="p">),</span>
+            <span class="n">kernel</span><span class="o">=</span><span class="n">kernel</span><span class="p">,</span> <span class="n">degree</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">degree</span><span class="p">,</span> <span class="n">cache_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_size</span><span class="p">,</span>
+            <span class="n">coef0</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">coef0</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_sparse_decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">X</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+
+        <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="s1">&#39;__call__&#39;</span><span class="p">):</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="s1">&#39;precomputed&#39;</span>
+
+        <span class="n">kernel_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse_kernels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">libsvm_sparse</span><span class="o">.</span><span class="n">libsvm_sparse_decision_function</span><span class="p">(</span>
+            <span class="n">X</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">indptr</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="o">.</span><span class="n">indptr</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dual_coef_</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intercept_</span><span class="p">,</span>
+            <span class="n">LIBSVM_IMPL</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_impl</span><span class="p">),</span> <span class="n">kernel_type</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">degree</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">coef0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_weight_</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shrinking</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">probability</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_support_</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">probA_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">probB_</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_validate_for_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;support_&#39;</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s2">&quot;C&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">sp</span><span class="o">.</span><span class="n">isspmatrix</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse</span><span class="p">:</span>
+            <span class="n">X</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;cannot use sparse input in </span><span class="si">%r</span><span class="s2"> trained on dense data&quot;</span>
+                <span class="o">%</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">==</span> <span class="s2">&quot;precomputed&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_fit_</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;X.shape[1] = </span><span class="si">%d</span><span class="s2"> should be equal to </span><span class="si">%d</span><span class="s2">, &quot;</span>
+                                 <span class="s2">&quot;the number of samples at training time&quot;</span> <span class="o">%</span>
+                                 <span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_fit_</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">elif</span> <span class="n">n_features</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_fit_</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;X.shape[1] = </span><span class="si">%d</span><span class="s2"> should be equal to </span><span class="si">%d</span><span class="s2">, &quot;</span>
+                             <span class="s2">&quot;the number of features at training time&quot;</span> <span class="o">%</span>
+                             <span class="p">(</span><span class="n">n_features</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_fit_</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">X</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">coef_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">!=</span> <span class="s1">&#39;linear&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s1">&#39;coef_ is only available when using a &#39;</span>
+                                 <span class="s1">&#39;linear kernel&#39;</span><span class="p">)</span>
+
+        <span class="n">coef</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_coef</span><span class="p">()</span>
+
+        <span class="c1"># coef_ being a read-only property, it&#39;s better to mark the value as</span>
+        <span class="c1"># immutable to avoid hiding potential bugs for the unsuspecting user.</span>
+        <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">coef</span><span class="p">):</span>
+            <span class="c1"># sparse matrix do not have global flags</span>
+            <span class="n">coef</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># regular dense array</span>
+            <span class="n">coef</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="n">coef</span>
+
+    <span class="k">def</span> <span class="nf">_get_coef</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dual_coef_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">BaseSVC</span><span class="p">(</span><span class="n">six</span><span class="o">.</span><span class="n">with_metaclass</span><span class="p">(</span><span class="n">ABCMeta</span><span class="p">,</span> <span class="n">BaseLibSVM</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;ABC for LibSVM-based classifiers.&quot;&quot;&quot;</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">impl</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">degree</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">coef0</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span>
+                 <span class="n">shrinking</span><span class="p">,</span> <span class="n">probability</span><span class="p">,</span> <span class="n">cache_size</span><span class="p">,</span> <span class="n">class_weight</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span>
+                 <span class="n">max_iter</span><span class="p">,</span> <span class="n">decision_function_shape</span><span class="p">,</span> <span class="n">random_state</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decision_function_shape</span> <span class="o">=</span> <span class="n">decision_function_shape</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">BaseSVC</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">impl</span><span class="o">=</span><span class="n">impl</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="n">kernel</span><span class="p">,</span> <span class="n">degree</span><span class="o">=</span><span class="n">degree</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="n">gamma</span><span class="p">,</span> <span class="n">coef0</span><span class="o">=</span><span class="n">coef0</span><span class="p">,</span>
+            <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="n">C</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="n">nu</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">shrinking</span><span class="o">=</span><span class="n">shrinking</span><span class="p">,</span>
+            <span class="n">probability</span><span class="o">=</span><span class="n">probability</span><span class="p">,</span> <span class="n">cache_size</span><span class="o">=</span><span class="n">cache_size</span><span class="p">,</span>
+            <span class="n">class_weight</span><span class="o">=</span><span class="n">class_weight</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_validate_targets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="n">y_</span> <span class="o">=</span> <span class="n">column_or_1d</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">check_classification_targets</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y_</span><span class="p">,</span> <span class="n">return_inverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">class_weight_</span> <span class="o">=</span> <span class="n">compute_class_weight</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">class_weight</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">y_</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;The number of classes has to be greater than one; got </span><span class="si">%d</span><span class="s2">&quot;</span>
+                <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="bp">cls</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span> <span class="o">=</span> <span class="bp">cls</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Distance of the samples X to the separating hyperplane.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_classes * (n_classes-1) / 2)</span>
+<span class="sd">            Returns the decision function of the sample for each class</span>
+<span class="sd">            in the model.</span>
+<span class="sd">            If decision_function_shape=&#39;ovr&#39;, the shape is (n_samples,</span>
+<span class="sd">            n_classes)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">decision_function_shape</span> <span class="o">==</span> <span class="s1">&#39;ovr&#39;</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_ovr_decision_function</span><span class="p">(</span><span class="n">dec</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">dec</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">dec</span>
+
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Perform classification on samples in X.</span>
+
+<span class="sd">        For an one-class model, +1 or -1 is returned.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix}, shape (n_samples, n_features)</span>
+<span class="sd">            For kernel=&quot;precomputed&quot;, the expected shape of X is</span>
+<span class="sd">            [n_samples_test, n_samples_train]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y_pred : array, shape (n_samples,)</span>
+<span class="sd">            Class labels for samples in X.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">BaseSVC</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">))</span>
+
+    <span class="c1"># Hacky way of getting predict_proba to raise an AttributeError when</span>
+    <span class="c1"># probability=False using properties. Do not use this in new code; when</span>
+    <span class="c1"># probabilities are not available depending on a setting, introduce two</span>
+    <span class="c1"># estimators.</span>
+    <span class="k">def</span> <span class="nf">_check_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">probability</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;predict_proba is not available when &quot;</span>
+                                 <span class="s2">&quot; probability=False&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_impl</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;c_svc&#39;</span><span class="p">,</span> <span class="s1">&#39;nu_svc&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;predict_proba only implemented for SVC&quot;</span>
+                                 <span class="s2">&quot; and NuSVC&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute probabilities of possible outcomes for samples in X.</span>
+
+<span class="sd">        The model need to have probability information computed at training</span>
+<span class="sd">        time: fit with attribute `probability` set to True.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            For kernel=&quot;precomputed&quot;, the expected shape of X is</span>
+<span class="sd">            [n_samples_test, n_samples_train]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        T : array-like, shape (n_samples, n_classes)</span>
+<span class="sd">            Returns the probability of the sample for each class in</span>
+<span class="sd">            the model. The columns correspond to the classes in sorted</span>
+<span class="sd">            order, as they appear in the attribute `classes_`.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The probability model is created using cross validation, so</span>
+<span class="sd">        the results can be slightly different than those obtained by</span>
+<span class="sd">        predict. Also, it will produce meaningless results on very small</span>
+<span class="sd">        datasets.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_proba</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_predict_proba</span>
+
+    <span class="k">def</span> <span class="nf">_predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_for_predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">probA_</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">probB_</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NotFittedError</span><span class="p">(</span><span class="s2">&quot;predict_proba is not available when fitted &quot;</span>
+                                 <span class="s2">&quot;with probability=False&quot;</span><span class="p">)</span>
+        <span class="n">pred_proba</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sparse_predict_proba</span>
+                      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dense_predict_proba</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pred_proba</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute log probabilities of possible outcomes for samples in X.</span>
+
+<span class="sd">        The model need to have probability information computed at training</span>
+<span class="sd">        time: fit with attribute `probability` set to True.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            For kernel=&quot;precomputed&quot;, the expected shape of X is</span>
+<span class="sd">            [n_samples_test, n_samples_train]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        T : array-like, shape (n_samples, n_classes)</span>
+<span class="sd">            Returns the log-probabilities of the sample for each class in</span>
+<span class="sd">            the model. The columns correspond to the classes in sorted</span>
+<span class="sd">            order, as they appear in the attribute `classes_`.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The probability model is created using cross validation, so</span>
+<span class="sd">        the results can be slightly different than those obtained by</span>
+<span class="sd">        predict. Also, it will produce meaningless results on very small</span>
+<span class="sd">        datasets.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_proba</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_predict_log_proba</span>
+
+    <span class="k">def</span> <span class="nf">_predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_dense_predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_kernel</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+        <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span>
+        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">kernel</span><span class="p">):</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="s1">&#39;precomputed&#39;</span>
+
+        <span class="n">svm_type</span> <span class="o">=</span> <span class="n">LIBSVM_IMPL</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_impl</span><span class="p">)</span>
+        <span class="n">pprob</span> <span class="o">=</span> <span class="n">libsvm</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">support_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_support_</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dual_coef_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intercept_</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">probA_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">probB_</span><span class="p">,</span>
+            <span class="n">svm_type</span><span class="o">=</span><span class="n">svm_type</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="n">kernel</span><span class="p">,</span> <span class="n">degree</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">degree</span><span class="p">,</span>
+            <span class="n">cache_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_size</span><span class="p">,</span> <span class="n">coef0</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">coef0</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">pprob</span>
+
+    <span class="k">def</span> <span class="nf">_sparse_predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">X</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+
+        <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span>
+        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">kernel</span><span class="p">):</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="s1">&#39;precomputed&#39;</span>
+
+        <span class="n">kernel_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse_kernels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">libsvm_sparse</span><span class="o">.</span><span class="n">libsvm_sparse_predict_proba</span><span class="p">(</span>
+            <span class="n">X</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">indptr</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="o">.</span><span class="n">indptr</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dual_coef_</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intercept_</span><span class="p">,</span>
+            <span class="n">LIBSVM_IMPL</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_impl</span><span class="p">),</span> <span class="n">kernel_type</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">degree</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">coef0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_weight_</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shrinking</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">probability</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_support_</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">probA_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">probB_</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_coef</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_coef_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># binary classifier</span>
+            <span class="n">coef</span> <span class="o">=</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_coef_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># 1vs1 classifier</span>
+            <span class="n">coef</span> <span class="o">=</span> <span class="n">_one_vs_one_coef</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_coef_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_support_</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">support_vectors_</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">coef</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="n">coef</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">coef</span><span class="p">)</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">coef</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">coef</span>
+
+
+<span class="k">def</span> <span class="nf">_get_liblinear_solver_type</span><span class="p">(</span><span class="n">multi_class</span><span class="p">,</span> <span class="n">penalty</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">dual</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Find the liblinear magic number for the solver.</span>
+
+<span class="sd">    This number depends on the values of the following attributes:</span>
+<span class="sd">      - multi_class</span>
+<span class="sd">      - penalty</span>
+<span class="sd">      - loss</span>
+<span class="sd">      - dual</span>
+
+<span class="sd">    The same number is also internally used by LibLinear to determine</span>
+<span class="sd">    which solver to use.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># nested dicts containing level 1: available loss functions,</span>
+    <span class="c1"># level2: available penalties for the given loss function,</span>
+    <span class="c1"># level3: wether the dual solver is available for the specified</span>
+    <span class="c1"># combination of loss function and penalty</span>
+    <span class="n">_solver_type_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;logistic_regression&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;l1&#39;</span><span class="p">:</span> <span class="p">{</span><span class="kc">False</span><span class="p">:</span> <span class="mi">6</span><span class="p">},</span>
+            <span class="s1">&#39;l2&#39;</span><span class="p">:</span> <span class="p">{</span><span class="kc">False</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">True</span><span class="p">:</span> <span class="mi">7</span><span class="p">}},</span>
+        <span class="s1">&#39;hinge&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;l2&#39;</span><span class="p">:</span> <span class="p">{</span><span class="kc">True</span><span class="p">:</span> <span class="mi">3</span><span class="p">}},</span>
+        <span class="s1">&#39;squared_hinge&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;l1&#39;</span><span class="p">:</span> <span class="p">{</span><span class="kc">False</span><span class="p">:</span> <span class="mi">5</span><span class="p">},</span>
+            <span class="s1">&#39;l2&#39;</span><span class="p">:</span> <span class="p">{</span><span class="kc">False</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="kc">True</span><span class="p">:</span> <span class="mi">1</span><span class="p">}},</span>
+        <span class="s1">&#39;epsilon_insensitive&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;l2&#39;</span><span class="p">:</span> <span class="p">{</span><span class="kc">True</span><span class="p">:</span> <span class="mi">13</span><span class="p">}},</span>
+        <span class="s1">&#39;squared_epsilon_insensitive&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;l2&#39;</span><span class="p">:</span> <span class="p">{</span><span class="kc">False</span><span class="p">:</span> <span class="mi">11</span><span class="p">,</span> <span class="kc">True</span><span class="p">:</span> <span class="mi">12</span><span class="p">}},</span>
+        <span class="s1">&#39;crammer_singer&#39;</span><span class="p">:</span> <span class="mi">4</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">multi_class</span> <span class="o">==</span> <span class="s1">&#39;crammer_singer&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_solver_type_dict</span><span class="p">[</span><span class="n">multi_class</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">multi_class</span> <span class="o">!=</span> <span class="s1">&#39;ovr&#39;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`multi_class` must be one of `ovr`, &quot;</span>
+                         <span class="s2">&quot;`crammer_singer`, got </span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">multi_class</span><span class="p">)</span>
+
+    <span class="n">_solver_pen</span> <span class="o">=</span> <span class="n">_solver_type_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">_solver_pen</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">error_string</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;loss=&#39;</span><span class="si">%s</span><span class="s2">&#39; is not supported&quot;</span> <span class="o">%</span> <span class="n">loss</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">_solver_dual</span> <span class="o">=</span> <span class="n">_solver_pen</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">penalty</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">_solver_dual</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">error_string</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;The combination of penalty=&#39;</span><span class="si">%s</span><span class="s2">&#39; &quot;</span>
+                            <span class="s2">&quot;and loss=&#39;</span><span class="si">%s</span><span class="s2">&#39; is not supported&quot;</span>
+                            <span class="o">%</span> <span class="p">(</span><span class="n">penalty</span><span class="p">,</span> <span class="n">loss</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">solver_num</span> <span class="o">=</span> <span class="n">_solver_dual</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dual</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">solver_num</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">error_string</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;The combination of penalty=&#39;</span><span class="si">%s</span><span class="s2">&#39; and &quot;</span>
+                                <span class="s2">&quot;loss=&#39;</span><span class="si">%s</span><span class="s2">&#39; are not supported when dual=</span><span class="si">%s</span><span class="s2">&quot;</span>
+                                <span class="o">%</span> <span class="p">(</span><span class="n">penalty</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">dual</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">solver_num</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unsupported set of arguments: </span><span class="si">%s</span><span class="s1">, &#39;</span>
+                     <span class="s1">&#39;Parameters: penalty=</span><span class="si">%r</span><span class="s1">, loss=</span><span class="si">%r</span><span class="s1">, dual=</span><span class="si">%r</span><span class="s1">&#39;</span>
+                     <span class="o">%</span> <span class="p">(</span><span class="n">error_string</span><span class="p">,</span> <span class="n">penalty</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">dual</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_fit_liblinear</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="p">,</span> <span class="n">intercept_scaling</span><span class="p">,</span> <span class="n">class_weight</span><span class="p">,</span>
+                   <span class="n">penalty</span><span class="p">,</span> <span class="n">dual</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">max_iter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span>
+                   <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">multi_class</span><span class="o">=</span><span class="s1">&#39;ovr&#39;</span><span class="p">,</span>
+                   <span class="n">loss</span><span class="o">=</span><span class="s1">&#39;logistic_regression&#39;</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+                   <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Used by Logistic Regression (and CV) and LinearSVC.</span>
+
+<span class="sd">    Preprocessing is done in this function before supplying it to liblinear.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : {array-like, sparse matrix}, shape (n_samples, n_features)</span>
+<span class="sd">        Training vector, where n_samples in the number of samples and</span>
+<span class="sd">        n_features is the number of features.</span>
+
+<span class="sd">    y : array-like, shape (n_samples,)</span>
+<span class="sd">        Target vector relative to X</span>
+
+<span class="sd">    C : float</span>
+<span class="sd">        Inverse of cross-validation parameter. Lower the C, the more</span>
+<span class="sd">        the penalization.</span>
+
+<span class="sd">    fit_intercept : bool</span>
+<span class="sd">        Whether or not to fit the intercept, that is to add a intercept</span>
+<span class="sd">        term to the decision function.</span>
+
+<span class="sd">    intercept_scaling : float</span>
+<span class="sd">        LibLinear internally penalizes the intercept and this term is subject</span>
+<span class="sd">        to regularization just like the other terms of the feature vector.</span>
+<span class="sd">        In order to avoid this, one should increase the intercept_scaling.</span>
+<span class="sd">        such that the feature vector becomes [x, intercept_scaling].</span>
+
+<span class="sd">    class_weight : {dict, &#39;balanced&#39;}, optional</span>
+<span class="sd">        Weights associated with classes in the form ``{class_label: weight}``.</span>
+<span class="sd">        If not given, all classes are supposed to have weight one. For</span>
+<span class="sd">        multi-output problems, a list of dicts can be provided in the same</span>
+<span class="sd">        order as the columns of y.</span>
+
+<span class="sd">        The &quot;balanced&quot; mode uses the values of y to automatically adjust</span>
+<span class="sd">        weights inversely proportional to class frequencies in the input data</span>
+<span class="sd">        as ``n_samples / (n_classes * np.bincount(y))``</span>
+
+<span class="sd">    penalty : str, {&#39;l1&#39;, &#39;l2&#39;}</span>
+<span class="sd">        The norm of the penalty used in regularization.</span>
+
+<span class="sd">    dual : bool</span>
+<span class="sd">        Dual or primal formulation,</span>
+
+<span class="sd">    verbose : int</span>
+<span class="sd">        Set verbose to any positive number for verbosity.</span>
+
+<span class="sd">    max_iter : int</span>
+<span class="sd">        Number of iterations.</span>
+
+<span class="sd">    tol : float</span>
+<span class="sd">        Stopping condition.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional (default=None)</span>
+<span class="sd">        The seed of the pseudo random number generator to use when shuffling</span>
+<span class="sd">        the data.  If int, random_state is the seed used by the random number</span>
+<span class="sd">        generator; If RandomState instance, random_state is the random number</span>
+<span class="sd">        generator; If None, the random number generator is the RandomState</span>
+<span class="sd">        instance used by `np.random`.</span>
+
+<span class="sd">    multi_class : str, {&#39;ovr&#39;, &#39;crammer_singer&#39;}</span>
+<span class="sd">        `ovr` trains n_classes one-vs-rest classifiers, while `crammer_singer`</span>
+<span class="sd">        optimizes a joint objective over all classes.</span>
+<span class="sd">        While `crammer_singer` is interesting from an theoretical perspective</span>
+<span class="sd">        as it is consistent it is seldom used in practice and rarely leads to</span>
+<span class="sd">        better accuracy and is more expensive to compute.</span>
+<span class="sd">        If `crammer_singer` is chosen, the options loss, penalty and dual will</span>
+<span class="sd">        be ignored.</span>
+
+<span class="sd">    loss : str, {&#39;logistic_regression&#39;, &#39;hinge&#39;, &#39;squared_hinge&#39;,</span>
+<span class="sd">                 &#39;epsilon_insensitive&#39;, &#39;squared_epsilon_insensitive}</span>
+<span class="sd">        The loss function used to fit the model.</span>
+
+<span class="sd">    epsilon : float, optional (default=0.1)</span>
+<span class="sd">        Epsilon parameter in the epsilon-insensitive loss function. Note</span>
+<span class="sd">        that the value of this parameter depends on the scale of the target</span>
+<span class="sd">        variable y. If unsure, set epsilon=0.</span>
+
+<span class="sd">    sample_weight : array-like, optional</span>
+<span class="sd">        Weights assigned to each sample.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    coef_ : ndarray, shape (n_features, n_features + 1)</span>
+<span class="sd">        The coefficient vector got by minimizing the objective function.</span>
+
+<span class="sd">    intercept_ : float</span>
+<span class="sd">        The intercept term added to the vector.</span>
+
+<span class="sd">    n_iter_ : int</span>
+<span class="sd">        Maximum number of iterations run across all classes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">loss</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;epsilon_insensitive&#39;</span><span class="p">,</span> <span class="s1">&#39;squared_epsilon_insensitive&#39;</span><span class="p">]:</span>
+        <span class="n">enc</span> <span class="o">=</span> <span class="n">LabelEncoder</span><span class="p">()</span>
+        <span class="n">y_ind</span> <span class="o">=</span> <span class="n">enc</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">classes_</span> <span class="o">=</span> <span class="n">enc</span><span class="o">.</span><span class="n">classes_</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">classes_</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;This solver needs samples of at least 2 classes&quot;</span>
+                             <span class="s2">&quot; in the data, but the data contains only one&quot;</span>
+                             <span class="s2">&quot; class: </span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">classes_</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="n">class_weight_</span> <span class="o">=</span> <span class="n">compute_class_weight</span><span class="p">(</span><span class="n">class_weight</span><span class="p">,</span> <span class="n">classes_</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">class_weight_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">y_ind</span> <span class="o">=</span> <span class="n">y</span>
+    <span class="n">liblinear</span><span class="o">.</span><span class="n">set_verbosity_wrap</span><span class="p">(</span><span class="n">verbose</span><span class="p">)</span>
+    <span class="n">rnd</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;[LibLinear]&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+    <span class="c1"># LinearSVC breaks when intercept_scaling is &lt;= 0</span>
+    <span class="n">bias</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+    <span class="k">if</span> <span class="n">fit_intercept</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">intercept_scaling</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Intercept scaling is </span><span class="si">%r</span><span class="s2"> but needs to be greater than 0.&quot;</span>
+                             <span class="s2">&quot; To disable fitting an intercept,&quot;</span>
+                             <span class="s2">&quot; set fit_intercept=False.&quot;</span> <span class="o">%</span> <span class="n">intercept_scaling</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">bias</span> <span class="o">=</span> <span class="n">intercept_scaling</span>
+
+    <span class="n">libsvm</span><span class="o">.</span><span class="n">set_verbosity_wrap</span><span class="p">(</span><span class="n">verbose</span><span class="p">)</span>
+    <span class="n">libsvm_sparse</span><span class="o">.</span><span class="n">set_verbosity_wrap</span><span class="p">(</span><span class="n">verbose</span><span class="p">)</span>
+    <span class="n">liblinear</span><span class="o">.</span><span class="n">set_verbosity_wrap</span><span class="p">(</span><span class="n">verbose</span><span class="p">)</span>
+
+    <span class="c1"># LibLinear wants targets as doubles, even for classification</span>
+    <span class="n">y_ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y_ind</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">sample_weight</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">sample_weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sample_weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+        <span class="n">check_consistent_length</span><span class="p">(</span><span class="n">sample_weight</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+
+    <span class="n">solver_type</span> <span class="o">=</span> <span class="n">_get_liblinear_solver_type</span><span class="p">(</span><span class="n">multi_class</span><span class="p">,</span> <span class="n">penalty</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">dual</span><span class="p">)</span>
+    <span class="n">raw_coef_</span><span class="p">,</span> <span class="n">n_iter_</span> <span class="o">=</span> <span class="n">liblinear</span><span class="o">.</span><span class="n">train_wrap</span><span class="p">(</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y_ind</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">isspmatrix</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">solver_type</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">bias</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span>
+        <span class="n">class_weight_</span><span class="p">,</span> <span class="n">max_iter</span><span class="p">,</span> <span class="n">rnd</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="s1">&#39;i&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">),</span>
+        <span class="n">epsilon</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">)</span>
+    <span class="c1"># Regarding rnd.randint(..) in the above signature:</span>
+    <span class="c1"># seed for srand in range [0..INT_MAX); due to limitations in Numpy</span>
+    <span class="c1"># on 32-bit platforms, we can&#39;t get to the UINT_MAX limit that</span>
+    <span class="c1"># srand supports</span>
+    <span class="n">n_iter_</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">n_iter_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_iter_</span> <span class="o">&gt;=</span> <span class="n">max_iter</span> <span class="ow">and</span> <span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Liblinear failed to converge, increase &quot;</span>
+                      <span class="s2">&quot;the number of iterations.&quot;</span><span class="p">,</span> <span class="n">ConvergenceWarning</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">fit_intercept</span><span class="p">:</span>
+        <span class="n">coef_</span> <span class="o">=</span> <span class="n">raw_coef_</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">intercept_</span> <span class="o">=</span> <span class="n">intercept_scaling</span> <span class="o">*</span> <span class="n">raw_coef_</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">coef_</span> <span class="o">=</span> <span class="n">raw_coef_</span>
+        <span class="n">intercept_</span> <span class="o">=</span> <span class="mf">0.</span>
+
+    <span class="k">return</span> <span class="n">coef_</span><span class="p">,</span> <span class="n">intercept_</span><span class="p">,</span> <span class="n">n_iter_</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

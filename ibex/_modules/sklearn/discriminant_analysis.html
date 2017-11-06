@@ -1,0 +1,897 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.discriminant_analysis &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.discriminant_analysis</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Linear Discriminant Analysis and Quadratic Discriminant Analysis</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Authors: Clemens Brunner</span>
+<span class="c1">#          Martin Billinger</span>
+<span class="c1">#          Matthieu Perrot</span>
+<span class="c1">#          Mathieu Blondel</span>
+
+<span class="c1"># License: BSD 3-Clause</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">deprecated</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">linalg</span>
+<span class="kn">from</span> <span class="nn">.externals.six</span> <span class="k">import</span> <span class="n">string_types</span>
+<span class="kn">from</span> <span class="nn">.externals.six.moves</span> <span class="k">import</span> <span class="n">xrange</span>
+
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">,</span> <span class="n">ClassifierMixin</span>
+<span class="kn">from</span> <span class="nn">.linear_model.base</span> <span class="k">import</span> <span class="n">LinearClassifierMixin</span>
+<span class="kn">from</span> <span class="nn">.covariance</span> <span class="k">import</span> <span class="n">ledoit_wolf</span><span class="p">,</span> <span class="n">empirical_covariance</span><span class="p">,</span> <span class="n">shrunk_covariance</span>
+<span class="kn">from</span> <span class="nn">.utils.multiclass</span> <span class="k">import</span> <span class="n">unique_labels</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">check_array</span><span class="p">,</span> <span class="n">check_X_y</span>
+<span class="kn">from</span> <span class="nn">.utils.validation</span> <span class="k">import</span> <span class="n">check_is_fitted</span>
+<span class="kn">from</span> <span class="nn">.utils.multiclass</span> <span class="k">import</span> <span class="n">check_classification_targets</span>
+<span class="kn">from</span> <span class="nn">.preprocessing</span> <span class="k">import</span> <span class="n">StandardScaler</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;LinearDiscriminantAnalysis&#39;</span><span class="p">,</span> <span class="s1">&#39;QuadraticDiscriminantAnalysis&#39;</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">shrinkage</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Estimate covariance matrix (using optional shrinkage).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">        Input data.</span>
+
+<span class="sd">    shrinkage : string or float, optional</span>
+<span class="sd">        Shrinkage parameter, possible values:</span>
+<span class="sd">          - None or &#39;empirical&#39;: no shrinkage (default).</span>
+<span class="sd">          - &#39;auto&#39;: automatic shrinkage using the Ledoit-Wolf lemma.</span>
+<span class="sd">          - float between 0 and 1: fixed shrinkage parameter.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    s : array, shape (n_features, n_features)</span>
+<span class="sd">        Estimated covariance matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">shrinkage</span> <span class="o">=</span> <span class="s2">&quot;empirical&quot;</span> <span class="k">if</span> <span class="n">shrinkage</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">shrinkage</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shrinkage</span><span class="p">,</span> <span class="n">string_types</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">shrinkage</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+            <span class="n">sc</span> <span class="o">=</span> <span class="n">StandardScaler</span><span class="p">()</span>  <span class="c1"># standardize features</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">ledoit_wolf</span><span class="p">(</span><span class="n">X</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c1"># rescale</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">scale_</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">s</span> <span class="o">*</span> <span class="n">sc</span><span class="o">.</span><span class="n">scale_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="k">elif</span> <span class="n">shrinkage</span> <span class="o">==</span> <span class="s1">&#39;empirical&#39;</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">empirical_covariance</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;unknown shrinkage parameter&#39;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shrinkage</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shrinkage</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">shrinkage</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">shrinkage</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;shrinkage parameter must be between 0 and 1&#39;</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">shrunk_covariance</span><span class="p">(</span><span class="n">empirical_covariance</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">shrinkage</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;shrinkage must be of string or int type&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">s</span>
+
+
+<span class="k">def</span> <span class="nf">_class_means</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute class means.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">        Input data.</span>
+
+<span class="sd">    y : array-like, shape (n_samples,) or (n_samples, n_targets)</span>
+<span class="sd">        Target values.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    means : array-like, shape (n_features,)</span>
+<span class="sd">        Class means.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">means</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">classes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">classes</span><span class="p">:</span>
+        <span class="n">Xg</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">y</span> <span class="o">==</span> <span class="n">group</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">means</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Xg</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">means</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_class_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">priors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">shrinkage</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute class covariance matrix.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">        Input data.</span>
+
+<span class="sd">    y : array-like, shape (n_samples,) or (n_samples, n_targets)</span>
+<span class="sd">        Target values.</span>
+
+<span class="sd">    priors : array-like, shape (n_classes,)</span>
+<span class="sd">        Class priors.</span>
+
+<span class="sd">    shrinkage : string or float, optional</span>
+<span class="sd">        Shrinkage parameter, possible values:</span>
+<span class="sd">          - None: no shrinkage (default).</span>
+<span class="sd">          - &#39;auto&#39;: automatic shrinkage using the Ledoit-Wolf lemma.</span>
+<span class="sd">          - float between 0 and 1: fixed shrinkage parameter.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cov : array-like, shape (n_features, n_features)</span>
+<span class="sd">        Class covariance matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">classes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">covs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">classes</span><span class="p">:</span>
+        <span class="n">Xg</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">y</span> <span class="o">==</span> <span class="n">group</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">covs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">_cov</span><span class="p">(</span><span class="n">Xg</span><span class="p">,</span> <span class="n">shrinkage</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">covs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">priors</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">LinearDiscriminantAnalysis</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">LinearClassifierMixin</span><span class="p">,</span>
+                                 <span class="n">TransformerMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Linear Discriminant Analysis</span>
+
+<span class="sd">    A classifier with a linear decision boundary, generated by fitting class</span>
+<span class="sd">    conditional densities to the data and using Bayes&#39; rule.</span>
+
+<span class="sd">    The model fits a Gaussian density to each class, assuming that all classes</span>
+<span class="sd">    share the same covariance matrix.</span>
+
+<span class="sd">    The fitted model can also be used to reduce the dimensionality of the input</span>
+<span class="sd">    by projecting it to the most discriminative directions.</span>
+
+<span class="sd">    .. versionadded:: 0.17</span>
+<span class="sd">       *LinearDiscriminantAnalysis*.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;lda_qda&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    solver : string, optional</span>
+<span class="sd">        Solver to use, possible values:</span>
+<span class="sd">          - &#39;svd&#39;: Singular value decomposition (default).</span>
+<span class="sd">            Does not compute the covariance matrix, therefore this solver is</span>
+<span class="sd">            recommended for data with a large number of features.</span>
+<span class="sd">          - &#39;lsqr&#39;: Least squares solution, can be combined with shrinkage.</span>
+<span class="sd">          - &#39;eigen&#39;: Eigenvalue decomposition, can be combined with shrinkage.</span>
+
+<span class="sd">    shrinkage : string or float, optional</span>
+<span class="sd">        Shrinkage parameter, possible values:</span>
+<span class="sd">          - None: no shrinkage (default).</span>
+<span class="sd">          - &#39;auto&#39;: automatic shrinkage using the Ledoit-Wolf lemma.</span>
+<span class="sd">          - float between 0 and 1: fixed shrinkage parameter.</span>
+
+<span class="sd">        Note that shrinkage works only with &#39;lsqr&#39; and &#39;eigen&#39; solvers.</span>
+
+<span class="sd">    priors : array, optional, shape (n_classes,)</span>
+<span class="sd">        Class priors.</span>
+
+<span class="sd">    n_components : int, optional</span>
+<span class="sd">        Number of components (&lt; n_classes - 1) for dimensionality reduction.</span>
+
+<span class="sd">    store_covariance : bool, optional</span>
+<span class="sd">        Additionally compute class covariance matrix (default False), used</span>
+<span class="sd">        only in &#39;svd&#39; solver.</span>
+
+<span class="sd">        .. versionadded:: 0.17</span>
+
+<span class="sd">    tol : float, optional, (default 1.0e-4)</span>
+<span class="sd">        Threshold used for rank estimation in SVD solver.</span>
+
+<span class="sd">        .. versionadded:: 0.17</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coef_ : array, shape (n_features,) or (n_classes, n_features)</span>
+<span class="sd">        Weight vector(s).</span>
+
+<span class="sd">    intercept_ : array, shape (n_features,)</span>
+<span class="sd">        Intercept term.</span>
+
+<span class="sd">    covariance_ : array-like, shape (n_features, n_features)</span>
+<span class="sd">        Covariance matrix (shared by all classes).</span>
+
+<span class="sd">    explained_variance_ratio_ : array, shape (n_components,)</span>
+<span class="sd">        Percentage of variance explained by each of the selected components.</span>
+<span class="sd">        If ``n_components`` is not set then all components are stored and the</span>
+<span class="sd">        sum of explained variances is equal to 1.0. Only available when eigen</span>
+<span class="sd">        or svd solver is used.</span>
+
+<span class="sd">    means_ : array-like, shape (n_classes, n_features)</span>
+<span class="sd">        Class means.</span>
+
+<span class="sd">    priors_ : array-like, shape (n_classes,)</span>
+<span class="sd">        Class priors (sum to 1).</span>
+
+<span class="sd">    scalings_ : array-like, shape (rank, n_classes - 1)</span>
+<span class="sd">        Scaling of the features in the space spanned by the class centroids.</span>
+
+<span class="sd">    xbar_ : array-like, shape (n_features,)</span>
+<span class="sd">        Overall mean.</span>
+
+<span class="sd">    classes_ : array-like, shape (n_classes,)</span>
+<span class="sd">        Unique class labels.</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis: Quadratic</span>
+<span class="sd">        Discriminant Analysis</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The default solver is &#39;svd&#39;. It can perform both classification and</span>
+<span class="sd">    transform, and it does not rely on the calculation of the covariance</span>
+<span class="sd">    matrix. This can be an advantage in situations where the number of features</span>
+<span class="sd">    is large. However, the &#39;svd&#39; solver cannot be used with shrinkage.</span>
+
+<span class="sd">    The &#39;lsqr&#39; solver is an efficient algorithm that only works for</span>
+<span class="sd">    classification. It supports shrinkage.</span>
+
+<span class="sd">    The &#39;eigen&#39; solver is based on the optimization of the between class</span>
+<span class="sd">    scatter to within class scatter ratio. It can be used for both</span>
+<span class="sd">    classification and transform, and it supports shrinkage. However, the</span>
+<span class="sd">    &#39;eigen&#39; solver needs to compute the covariance matrix, so it might not be</span>
+<span class="sd">    suitable for situations with a high number of features.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.discriminant_analysis import LinearDiscriminantAnalysis</span>
+<span class="sd">    &gt;&gt;&gt; X = np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])</span>
+<span class="sd">    &gt;&gt;&gt; y = np.array([1, 1, 1, 2, 2, 2])</span>
+<span class="sd">    &gt;&gt;&gt; clf = LinearDiscriminantAnalysis()</span>
+<span class="sd">    &gt;&gt;&gt; clf.fit(X, y)</span>
+<span class="sd">    LinearDiscriminantAnalysis(n_components=None, priors=None, shrinkage=None,</span>
+<span class="sd">                  solver=&#39;svd&#39;, store_covariance=False, tol=0.0001)</span>
+<span class="sd">    &gt;&gt;&gt; print(clf.predict([[-0.8, -1]]))</span>
+<span class="sd">    [1]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="s1">&#39;svd&#39;</span><span class="p">,</span> <span class="n">shrinkage</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">priors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">n_components</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">store_covariance</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">=</span> <span class="n">solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shrinkage</span> <span class="o">=</span> <span class="n">shrinkage</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">priors</span> <span class="o">=</span> <span class="n">priors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">=</span> <span class="n">n_components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">store_covariance</span> <span class="o">=</span> <span class="n">store_covariance</span>  <span class="c1"># used only in svd solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>  <span class="c1"># used only in svd solver</span>
+
+    <span class="k">def</span> <span class="nf">_solve_lsqr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">shrinkage</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Least squares solver.</span>
+
+<span class="sd">        The least squares solver computes a straightforward solution of the</span>
+<span class="sd">        optimal decision rule based directly on the discriminant functions. It</span>
+<span class="sd">        can only be used for classification (with optional shrinkage), because</span>
+<span class="sd">        estimation of eigenvectors is not performed. Therefore, dimensionality</span>
+<span class="sd">        reduction with the transform is not supported.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training data.</span>
+
+<span class="sd">        y : array-like, shape (n_samples,) or (n_samples, n_classes)</span>
+<span class="sd">            Target values.</span>
+
+<span class="sd">        shrinkage : string or float, optional</span>
+<span class="sd">            Shrinkage parameter, possible values:</span>
+<span class="sd">              - None: no shrinkage (default).</span>
+<span class="sd">              - &#39;auto&#39;: automatic shrinkage using the Ledoit-Wolf lemma.</span>
+<span class="sd">              - float between 0 and 1: fixed shrinkage parameter.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        This solver is based on [1]_, section 2.6.2, pp. 39-41.</span>
+
+<span class="sd">        References</span>
+<span class="sd">        ----------</span>
+<span class="sd">        .. [1] R. O. Duda, P. E. Hart, D. G. Stork. Pattern Classification</span>
+<span class="sd">           (Second Edition). John Wiley &amp; Sons, Inc., New York, 2001. ISBN</span>
+<span class="sd">           0-471-05669-3.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">means_</span> <span class="o">=</span> <span class="n">_class_means</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covariance_</span> <span class="o">=</span> <span class="n">_class_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">priors_</span><span class="p">,</span> <span class="n">shrinkage</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="o">.</span><span class="n">T</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">T</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span><span class="o">.</span><span class="n">T</span><span class="p">))</span> <span class="o">+</span>
+                           <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">priors_</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_solve_eigen</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">shrinkage</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Eigenvalue solver.</span>
+
+<span class="sd">        The eigenvalue solver computes the optimal solution of the Rayleigh</span>
+<span class="sd">        coefficient (basically the ratio of between class scatter to within</span>
+<span class="sd">        class scatter). This solver supports both classification and</span>
+<span class="sd">        dimensionality reduction (with optional shrinkage).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training data.</span>
+
+<span class="sd">        y : array-like, shape (n_samples,) or (n_samples, n_targets)</span>
+<span class="sd">            Target values.</span>
+
+<span class="sd">        shrinkage : string or float, optional</span>
+<span class="sd">            Shrinkage parameter, possible values:</span>
+<span class="sd">              - None: no shrinkage (default).</span>
+<span class="sd">              - &#39;auto&#39;: automatic shrinkage using the Ledoit-Wolf lemma.</span>
+<span class="sd">              - float between 0 and 1: fixed shrinkage constant.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        This solver is based on [1]_, section 3.8.3, pp. 121-124.</span>
+
+<span class="sd">        References</span>
+<span class="sd">        ----------</span>
+<span class="sd">        .. [1] R. O. Duda, P. E. Hart, D. G. Stork. Pattern Classification</span>
+<span class="sd">           (Second Edition). John Wiley &amp; Sons, Inc., New York, 2001. ISBN</span>
+<span class="sd">           0-471-05669-3.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">means_</span> <span class="o">=</span> <span class="n">_class_means</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covariance_</span> <span class="o">=</span> <span class="n">_class_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">priors_</span><span class="p">,</span> <span class="n">shrinkage</span><span class="p">)</span>
+
+        <span class="n">Sw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_</span>  <span class="c1"># within scatter</span>
+        <span class="n">St</span> <span class="o">=</span> <span class="n">_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">shrinkage</span><span class="p">)</span>  <span class="c1"># total scatter</span>
+        <span class="n">Sb</span> <span class="o">=</span> <span class="n">St</span> <span class="o">-</span> <span class="n">Sw</span>  <span class="c1"># between scatter</span>
+
+        <span class="n">evals</span><span class="p">,</span> <span class="n">evecs</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">Sb</span><span class="p">,</span> <span class="n">Sw</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">explained_variance_ratio_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">evals</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">evals</span><span class="p">)</span>
+                                                 <span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">][:</span><span class="bp">self</span><span class="o">.</span><span class="n">_max_components</span><span class="p">]</span>
+        <span class="n">evecs</span> <span class="o">=</span> <span class="n">evecs</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">evals</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>  <span class="c1"># sort eigenvectors</span>
+        <span class="n">evecs</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">evecs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">scalings_</span> <span class="o">=</span> <span class="n">evecs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">,</span> <span class="n">evecs</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">evecs</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span><span class="o">.</span><span class="n">T</span><span class="p">))</span> <span class="o">+</span>
+                           <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">priors_</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_solve_svd</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;SVD solver.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training data.</span>
+
+<span class="sd">        y : array-like, shape (n_samples,) or (n_samples, n_targets)</span>
+<span class="sd">            Target values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">n_classes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">means_</span> <span class="o">=</span> <span class="n">_class_means</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_covariance</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">covariance_</span> <span class="o">=</span> <span class="n">_class_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">priors_</span><span class="p">)</span>
+
+        <span class="n">Xc</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">):</span>
+            <span class="n">Xg</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">y</span> <span class="o">==</span> <span class="n">group</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">Xc</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Xg</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">xbar_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">priors_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">)</span>
+
+        <span class="n">Xc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">Xc</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># 1) within (univariate) scaling by with classes std-dev</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">Xc</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># avoid division by zero in normalization</span>
+        <span class="n">std</span><span class="p">[</span><span class="n">std</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+        <span class="n">fac</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">n_samples</span> <span class="o">-</span> <span class="n">n_classes</span><span class="p">)</span>
+
+        <span class="c1"># 2) Within variance scaling</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">fac</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">Xc</span> <span class="o">/</span> <span class="n">std</span><span class="p">)</span>
+        <span class="c1"># SVD of centered (within)scaled data</span>
+        <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="n">rank</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">S</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">rank</span> <span class="o">&lt;</span> <span class="n">n_features</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Variables are collinear.&quot;</span><span class="p">)</span>
+        <span class="c1"># Scaling of within covariance is: V&#39; 1/S</span>
+        <span class="n">scalings</span> <span class="o">=</span> <span class="p">(</span><span class="n">V</span><span class="p">[:</span><span class="n">rank</span><span class="p">]</span> <span class="o">/</span> <span class="n">std</span><span class="p">)</span><span class="o">.</span><span class="n">T</span> <span class="o">/</span> <span class="n">S</span><span class="p">[:</span><span class="n">rank</span><span class="p">]</span>
+
+        <span class="c1"># 3) Between variance scaling</span>
+        <span class="c1"># Scale weighted centers</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(((</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">n_samples</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">priors_</span><span class="p">)</span> <span class="o">*</span> <span class="n">fac</span><span class="p">))</span> <span class="o">*</span>
+                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">means_</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">xbar_</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">scalings</span><span class="p">)</span>
+        <span class="c1"># Centers are living in a space with n_classes-1 dim (maximum)</span>
+        <span class="c1"># Use SVD to find projection in the space spanned by the</span>
+        <span class="c1"># (n_classes) centers</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">explained_variance_ratio_</span> <span class="o">=</span> <span class="p">(</span><span class="n">S</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+            <span class="n">S</span><span class="o">**</span><span class="mi">2</span><span class="p">))[:</span><span class="bp">self</span><span class="o">.</span><span class="n">_max_components</span><span class="p">]</span>
+        <span class="n">rank</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">S</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">*</span> <span class="n">S</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scalings_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">scalings</span><span class="p">,</span> <span class="n">V</span><span class="o">.</span><span class="n">T</span><span class="p">[:,</span> <span class="p">:</span><span class="n">rank</span><span class="p">])</span>
+        <span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">means_</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">xbar_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalings_</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">coef</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span>
+                           <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">priors_</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">coef</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalings_</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xbar_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LinearDiscriminantAnalysis.fit"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_lineardiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.LinearDiscriminantAnalysis.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit LinearDiscriminantAnalysis model according to the given</span>
+<span class="sd">           training data and parameters.</span>
+
+<span class="sd">           .. versionchanged:: 0.19</span>
+<span class="sd">              *store_covariance* has been moved to main constructor.</span>
+
+<span class="sd">           .. versionchanged:: 0.19</span>
+<span class="sd">              *tol* has been moved to main constructor.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training data.</span>
+
+<span class="sd">        y : array, shape (n_samples,)</span>
+<span class="sd">            Target values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">ensure_min_samples</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">estimator</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span> <span class="o">=</span> <span class="n">unique_labels</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">priors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># estimate priors from sample</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">y_t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">return_inverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># non-negative ints</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">priors_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">y_t</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">priors_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">priors</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">priors_</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;priors must be non-negative&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">priors_</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;The priors do not sum to 1. Renormalizing&quot;</span><span class="p">,</span>
+                          <span class="ne">UserWarning</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">priors_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">priors_</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">priors_</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+        <span class="c1"># Get the maximum number of components</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_max_components</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_max_components</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+                                       <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;svd&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shrinkage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;shrinkage not supported&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_solve_svd</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;lsqr&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_solve_lsqr</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">shrinkage</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shrinkage</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;eigen&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_solve_eigen</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">shrinkage</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shrinkage</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;unknown solver </span><span class="si">{}</span><span class="s2"> (valid solvers are &#39;svd&#39;, &quot;</span>
+                             <span class="s2">&quot;&#39;lsqr&#39;, and &#39;eigen&#39;).&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">solver</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># treat binary case as a special case</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coef_</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="n">ndmin</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                       <span class="n">ndmin</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="LinearDiscriminantAnalysis.transform"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_lineardiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.LinearDiscriminantAnalysis.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Project data to maximize class separation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Input data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X_new : array, shape (n_samples, n_components)</span>
+<span class="sd">            Transformed data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;lsqr&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;transform not implemented for &#39;lsqr&#39; &quot;</span>
+                                      <span class="s2">&quot;solver (use &#39;svd&#39; or &#39;eigen&#39;).&quot;</span><span class="p">)</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;xbar_&#39;</span><span class="p">,</span> <span class="s1">&#39;scalings_&#39;</span><span class="p">],</span> <span class="n">all_or_any</span><span class="o">=</span><span class="nb">any</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;svd&#39;</span><span class="p">:</span>
+            <span class="n">X_new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">xbar_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalings_</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;eigen&#39;</span><span class="p">:</span>
+            <span class="n">X_new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalings_</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">X_new</span><span class="p">[:,</span> <span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">_max_components</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="LinearDiscriminantAnalysis.predict_proba"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_lineardiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.LinearDiscriminantAnalysis.predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Estimate probability.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Input data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        C : array, shape (n_samples, n_classes)</span>
+<span class="sd">            Estimated probabilities.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">prob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">prob</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">prob</span><span class="p">,</span> <span class="n">prob</span><span class="p">)</span>
+        <span class="n">prob</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">reciprocal</span><span class="p">(</span><span class="n">prob</span><span class="p">,</span> <span class="n">prob</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># binary case</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="mi">1</span> <span class="o">-</span> <span class="n">prob</span><span class="p">,</span> <span class="n">prob</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># OvR normalization, like LibLinear&#39;s predict_probability</span>
+            <span class="n">prob</span> <span class="o">/=</span> <span class="n">prob</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">prob</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">prob</span></div>
+
+<div class="viewcode-block" id="LinearDiscriminantAnalysis.predict_log_proba"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_lineardiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.LinearDiscriminantAnalysis.predict_log_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Estimate log probability.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Input data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        C : array, shape (n_samples, n_classes)</span>
+<span class="sd">            Estimated log probabilities.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
+
+
+<span class="k">class</span> <span class="nc">QuadraticDiscriminantAnalysis</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Quadratic Discriminant Analysis</span>
+
+<span class="sd">    A classifier with a quadratic decision boundary, generated</span>
+<span class="sd">    by fitting class conditional densities to the data</span>
+<span class="sd">    and using Bayes&#39; rule.</span>
+
+<span class="sd">    The model fits a Gaussian density to each class.</span>
+
+<span class="sd">    .. versionadded:: 0.17</span>
+<span class="sd">       *QuadraticDiscriminantAnalysis*</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;lda_qda&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    priors : array, optional, shape = [n_classes]</span>
+<span class="sd">        Priors on classes</span>
+
+<span class="sd">    reg_param : float, optional</span>
+<span class="sd">        Regularizes the covariance estimate as</span>
+<span class="sd">        ``(1-reg_param)*Sigma + reg_param*np.eye(n_features)``</span>
+
+<span class="sd">    store_covariance : boolean</span>
+<span class="sd">        If True the covariance matrices are computed and stored in the</span>
+<span class="sd">        `self.covariance_` attribute.</span>
+
+<span class="sd">        .. versionadded:: 0.17</span>
+
+<span class="sd">    tol : float, optional, default 1.0e-4</span>
+<span class="sd">        Threshold used for rank estimation.</span>
+
+<span class="sd">        .. versionadded:: 0.17</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    covariance_ : list of array-like, shape = [n_features, n_features]</span>
+<span class="sd">        Covariance matrices of each class.</span>
+
+<span class="sd">    means_ : array-like, shape = [n_classes, n_features]</span>
+<span class="sd">        Class means.</span>
+
+<span class="sd">    priors_ : array-like, shape = [n_classes]</span>
+<span class="sd">        Class priors (sum to 1).</span>
+
+<span class="sd">    rotations_ : list of arrays</span>
+<span class="sd">        For each class k an array of shape [n_features, n_k], with</span>
+<span class="sd">        ``n_k = min(n_features, number of elements in class k)``</span>
+<span class="sd">        It is the rotation of the Gaussian distribution, i.e. its</span>
+<span class="sd">        principal axis.</span>
+
+<span class="sd">    scalings_ : list of arrays</span>
+<span class="sd">        For each class k an array of shape [n_k]. It contains the scaling</span>
+<span class="sd">        of the Gaussian distributions along its principal axes, i.e. the</span>
+<span class="sd">        variance in the rotated coordinate system.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis</span>
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; X = np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])</span>
+<span class="sd">    &gt;&gt;&gt; y = np.array([1, 1, 1, 2, 2, 2])</span>
+<span class="sd">    &gt;&gt;&gt; clf = QuadraticDiscriminantAnalysis()</span>
+<span class="sd">    &gt;&gt;&gt; clf.fit(X, y)</span>
+<span class="sd">    ... # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE</span>
+<span class="sd">    QuadraticDiscriminantAnalysis(priors=None, reg_param=0.0,</span>
+<span class="sd">                                  store_covariance=False,</span>
+<span class="sd">                                  store_covariances=None, tol=0.0001)</span>
+<span class="sd">    &gt;&gt;&gt; print(clf.predict([[-0.8, -1]]))</span>
+<span class="sd">    [1]</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    sklearn.discriminant_analysis.LinearDiscriminantAnalysis: Linear</span>
+<span class="sd">        Discriminant Analysis</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">priors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">reg_param</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">store_covariance</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">tol</span><span class="o">=</span><span class="mf">1.0e-4</span><span class="p">,</span> <span class="n">store_covariances</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">priors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">priors</span><span class="p">)</span> <span class="k">if</span> <span class="n">priors</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reg_param</span> <span class="o">=</span> <span class="n">reg_param</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">store_covariances</span> <span class="o">=</span> <span class="n">store_covariances</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">store_covariance</span> <span class="o">=</span> <span class="n">store_covariance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;Attribute covariances_ was deprecated in version&quot;</span>
+                <span class="s2">&quot; 0.19 and will be removed in 0.21. Use &quot;</span>
+                <span class="s2">&quot;covariance_ instead&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">covariances_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_</span>
+
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.fit"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the model according to the given training data and parameters.</span>
+
+<span class="sd">            .. versionchanged:: 0.19</span>
+<span class="sd">               ``store_covariances`` has been moved to main constructor as</span>
+<span class="sd">               ``store_covariance``</span>
+
+<span class="sd">            .. versionchanged:: 0.19</span>
+<span class="sd">               ``tol`` has been moved to main constructor.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+<span class="sd">            Training vector, where n_samples is the number of samples and</span>
+<span class="sd">            n_features is the number of features.</span>
+
+<span class="sd">        y : array, shape = [n_samples]</span>
+<span class="sd">            Target values (integers)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="n">check_classification_targets</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">return_inverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">n_classes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n_classes</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;y has less than 2 classes&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">priors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">priors_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">priors_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">priors</span>
+
+        <span class="n">cov</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">store_covariance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_covariance</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_covariances</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_covariances</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;&#39;store_covariances&#39; was renamed to store_covariance&quot;</span>
+                          <span class="s2">&quot; in version 0.19 and will be removed in 0.21.&quot;</span><span class="p">,</span>
+                          <span class="ne">DeprecationWarning</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">store_covariance</span><span class="p">:</span>
+            <span class="n">cov</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">means</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">scalings</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">rotations</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">xrange</span><span class="p">(</span><span class="n">n_classes</span><span class="p">):</span>
+            <span class="n">Xg</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">y</span> <span class="o">==</span> <span class="n">ind</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">meang</span> <span class="o">=</span> <span class="n">Xg</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">means</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">meang</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">Xg</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;y has only 1 sample in class </span><span class="si">%s</span><span class="s1">, covariance &#39;</span>
+                                 <span class="s1">&#39;is ill defined.&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">[</span><span class="n">ind</span><span class="p">]))</span>
+            <span class="n">Xgc</span> <span class="o">=</span> <span class="n">Xg</span> <span class="o">-</span> <span class="n">meang</span>
+            <span class="c1"># Xgc = U * S * V.T</span>
+            <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">Vt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">Xgc</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">rank</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">S</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">rank</span> <span class="o">&lt;</span> <span class="n">n_features</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Variables are collinear&quot;</span><span class="p">)</span>
+            <span class="n">S2</span> <span class="o">=</span> <span class="p">(</span><span class="n">S</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Xg</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">S2</span> <span class="o">=</span> <span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">reg_param</span><span class="p">)</span> <span class="o">*</span> <span class="n">S2</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">reg_param</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_covariance</span> <span class="ow">or</span> <span class="n">store_covariance</span><span class="p">:</span>
+                <span class="c1"># cov = V * (S^2 / (n-1)) * V.T</span>
+                <span class="n">cov</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S2</span> <span class="o">*</span> <span class="n">Vt</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">Vt</span><span class="p">))</span>
+            <span class="n">scalings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">S2</span><span class="p">)</span>
+            <span class="n">rotations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Vt</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_covariance</span> <span class="ow">or</span> <span class="n">store_covariance</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">covariance_</span> <span class="o">=</span> <span class="n">cov</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">means_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">means</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scalings_</span> <span class="o">=</span> <span class="n">scalings</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rotations_</span> <span class="o">=</span> <span class="n">rotations</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+    <span class="k">def</span> <span class="nf">_decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;classes_&#39;</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">norm2</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)):</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rotations_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalings_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">Xm</span> <span class="o">=</span> <span class="n">X</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">X2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Xm</span><span class="p">,</span> <span class="n">R</span> <span class="o">*</span> <span class="p">(</span><span class="n">S</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)))</span>
+            <span class="n">norm2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">X2</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">norm2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">norm2</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>   <span class="c1"># shape = [len(X), n_classes]</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalings_</span><span class="p">])</span>
+        <span class="k">return</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">norm2</span> <span class="o">+</span> <span class="n">u</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">priors_</span><span class="p">))</span>
+
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.decision_function"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.decision_function">[docs]</a>    <span class="k">def</span> <span class="nf">decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Apply decision function to an array of samples.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+<span class="sd">            Array of samples (test vectors).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        C : array, shape = [n_samples, n_classes] or [n_samples,]</span>
+<span class="sd">            Decision function values related to each class, per sample.</span>
+<span class="sd">            In the two-class case, the shape is [n_samples,], giving the</span>
+<span class="sd">            log likelihood ratio of the positive class.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dec_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="c1"># handle special case of two classes</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">dec_func</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">dec_func</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">dec_func</span></div>
+
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.predict"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Perform classification on an array of test vectors X.</span>
+
+<span class="sd">        The predicted class C for each sample in X is returned.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        C : array, shape = [n_samples]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">y_pred</span></div>
+
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.predict_proba"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return posterior probabilities of classification.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+<span class="sd">            Array of samples/test vectors.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        C : array, shape = [n_samples, n_classes]</span>
+<span class="sd">            Posterior probabilities of classification per class.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="c1"># compute the likelihood of the underlying gaussian models</span>
+        <span class="c1"># up to a multiplicative constant.</span>
+        <span class="n">likelihood</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">values</span> <span class="o">-</span> <span class="n">values</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])</span>
+        <span class="c1"># compute posterior probabilities</span>
+        <span class="k">return</span> <span class="n">likelihood</span> <span class="o">/</span> <span class="n">likelihood</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.predict_log_proba"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.predict_log_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return posterior probabilities of classification.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape = [n_samples, n_features]</span>
+<span class="sd">            Array of samples/test vectors.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        C : array, shape = [n_samples, n_classes]</span>
+<span class="sd">            Posterior log-probabilities of classification per class.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># XXX : can do better to avoid precision overflows</span>
+        <span class="n">probas_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">probas_</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

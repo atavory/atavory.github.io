@@ -1,0 +1,618 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sklearn.cluster.bicluster &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/logo.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sklearn.cluster.bicluster</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Spectral biclustering algorithms.</span>
+
+<span class="sd">Authors : Kemal Eren</span>
+<span class="sd">License: BSD 3 clause</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="k">import</span> <span class="n">norm</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">dia_matrix</span><span class="p">,</span> <span class="n">issparse</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse.linalg</span> <span class="k">import</span> <span class="n">eigsh</span><span class="p">,</span> <span class="n">svds</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">KMeans</span><span class="p">,</span> <span class="n">MiniBatchKMeans</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">BiclusterMixin</span>
+<span class="kn">from</span> <span class="nn">..externals</span> <span class="k">import</span> <span class="n">six</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="k">import</span> <span class="n">check_random_state</span>
+
+<span class="kn">from</span> <span class="nn">..utils.extmath</span> <span class="k">import</span> <span class="p">(</span><span class="n">make_nonnegative</span><span class="p">,</span> <span class="n">randomized_svd</span><span class="p">,</span>
+                             <span class="n">safe_sparse_dot</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">..utils.validation</span> <span class="k">import</span> <span class="n">assert_all_finite</span><span class="p">,</span> <span class="n">check_array</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;SpectralCoclustering&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;SpectralBiclustering&#39;</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_scale_normalize</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Normalize ``X`` by scaling rows and columns independently.</span>
+
+<span class="sd">    Returns the normalized matrix and the row and column scaling</span>
+<span class="sd">    factors.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">make_nonnegative</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="n">row_diag</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+    <span class="n">col_diag</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+    <span class="n">row_diag</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">row_diag</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">row_diag</span><span class="p">)</span>
+    <span class="n">col_diag</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">col_diag</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">col_diag</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+        <span class="n">n_rows</span><span class="p">,</span> <span class="n">n_cols</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">dia_matrix</span><span class="p">((</span><span class="n">row_diag</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_rows</span><span class="p">,</span> <span class="n">n_rows</span><span class="p">))</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">dia_matrix</span><span class="p">((</span><span class="n">col_diag</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_cols</span><span class="p">,</span> <span class="n">n_cols</span><span class="p">))</span>
+        <span class="n">an</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">X</span> <span class="o">*</span> <span class="n">c</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">an</span> <span class="o">=</span> <span class="n">row_diag</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">X</span> <span class="o">*</span> <span class="n">col_diag</span>
+    <span class="k">return</span> <span class="n">an</span><span class="p">,</span> <span class="n">row_diag</span><span class="p">,</span> <span class="n">col_diag</span>
+
+
+<span class="k">def</span> <span class="nf">_bistochastic_normalize</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Normalize rows and columns of ``X`` simultaneously so that all</span>
+<span class="sd">    rows sum to one constant and all columns sum to a different</span>
+<span class="sd">    constant.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># According to paper, this can also be done more efficiently with</span>
+    <span class="c1"># deviation reduction and balancing algorithms.</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">make_nonnegative</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="n">X_scaled</span> <span class="o">=</span> <span class="n">X</span>
+    <span class="n">dist</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_iter</span><span class="p">):</span>
+        <span class="n">X_new</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_scale_normalize</span><span class="p">(</span><span class="n">X_scaled</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+            <span class="n">dist</span> <span class="o">=</span> <span class="n">norm</span><span class="p">(</span><span class="n">X_scaled</span><span class="o">.</span><span class="n">data</span> <span class="o">-</span> <span class="n">X</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dist</span> <span class="o">=</span> <span class="n">norm</span><span class="p">(</span><span class="n">X_scaled</span> <span class="o">-</span> <span class="n">X_new</span><span class="p">)</span>
+        <span class="n">X_scaled</span> <span class="o">=</span> <span class="n">X_new</span>
+        <span class="k">if</span> <span class="n">dist</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">dist</span> <span class="o">&lt;</span> <span class="n">tol</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="n">X_scaled</span>
+
+
+<span class="k">def</span> <span class="nf">_log_normalize</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Normalize ``X`` according to Kluger&#39;s log-interactions scheme.&quot;&quot;&quot;</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">make_nonnegative</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">min_value</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot compute log of a sparse matrix,&quot;</span>
+                         <span class="s2">&quot; because log(x) diverges to -infinity as x&quot;</span>
+                         <span class="s2">&quot; goes to 0.&quot;</span><span class="p">)</span>
+    <span class="n">L</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="n">row_avg</span> <span class="o">=</span> <span class="n">L</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+    <span class="n">col_avg</span> <span class="o">=</span> <span class="n">L</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">avg</span> <span class="o">=</span> <span class="n">L</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">L</span> <span class="o">-</span> <span class="n">row_avg</span> <span class="o">-</span> <span class="n">col_avg</span> <span class="o">+</span> <span class="n">avg</span>
+
+
+<span class="k">class</span> <span class="nc">BaseSpectral</span><span class="p">(</span><span class="n">six</span><span class="o">.</span><span class="n">with_metaclass</span><span class="p">(</span><span class="n">ABCMeta</span><span class="p">,</span> <span class="n">BaseEstimator</span><span class="p">,</span>
+                                      <span class="n">BiclusterMixin</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Base class for spectral biclustering.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_clusters</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">svd_method</span><span class="o">=</span><span class="s2">&quot;randomized&quot;</span><span class="p">,</span>
+                 <span class="n">n_svd_vecs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mini_batch</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="s2">&quot;k-means++&quot;</span><span class="p">,</span>
+                 <span class="n">n_init</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span> <span class="o">=</span> <span class="n">n_clusters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">svd_method</span> <span class="o">=</span> <span class="n">svd_method</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_svd_vecs</span> <span class="o">=</span> <span class="n">n_svd_vecs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mini_batch</span> <span class="o">=</span> <span class="n">mini_batch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init</span> <span class="o">=</span> <span class="n">init</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_init</span> <span class="o">=</span> <span class="n">n_init</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+
+    <span class="k">def</span> <span class="nf">_check_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">legal_svd_methods</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;randomized&#39;</span><span class="p">,</span> <span class="s1">&#39;arpack&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">svd_method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">legal_svd_methods</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknown SVD method: &#39;</span><span class="si">{0}</span><span class="s2">&#39;. svd_method must be&quot;</span>
+                             <span class="s2">&quot; one of </span><span class="si">{1}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">svd_method</span><span class="p">,</span>
+                                                   <span class="n">legal_svd_methods</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates a biclustering for X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_parameters</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">_svd</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">array</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span> <span class="n">n_discard</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns first `n_components` left and right singular</span>
+<span class="sd">        vectors u and v, discarding the first `n_discard`.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">svd_method</span> <span class="o">==</span> <span class="s1">&#39;randomized&#39;</span><span class="p">:</span>
+            <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_svd_vecs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;n_oversamples&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_svd_vecs</span>
+            <span class="n">u</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">vt</span> <span class="o">=</span> <span class="n">randomized_svd</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span>
+                                      <span class="n">random_state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">,</span>
+                                      <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">svd_method</span> <span class="o">==</span> <span class="s1">&#39;arpack&#39;</span><span class="p">:</span>
+            <span class="n">u</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">vt</span> <span class="o">=</span> <span class="n">svds</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span> <span class="n">ncv</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_svd_vecs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">vt</span><span class="p">)):</span>
+                <span class="c1"># some eigenvalues of A * A.T are negative, causing</span>
+                <span class="c1"># sqrt() to be np.nan. This causes some vectors in vt</span>
+                <span class="c1"># to be np.nan.</span>
+                <span class="n">A</span> <span class="o">=</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">array</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">array</span><span class="p">)</span>
+                <span class="n">random_state</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+                <span class="c1"># initialize with [-1,1] as in ARPACK</span>
+                <span class="n">v0</span> <span class="o">=</span> <span class="n">random_state</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">_</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">eigsh</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">ncv</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_svd_vecs</span><span class="p">,</span> <span class="n">v0</span><span class="o">=</span><span class="n">v0</span><span class="p">)</span>
+                <span class="n">vt</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">T</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">u</span><span class="p">)):</span>
+                <span class="n">A</span> <span class="o">=</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">array</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+                <span class="n">random_state</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+                <span class="c1"># initialize with [-1,1] as in ARPACK</span>
+                <span class="n">v0</span> <span class="o">=</span> <span class="n">random_state</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">_</span><span class="p">,</span> <span class="n">u</span> <span class="o">=</span> <span class="n">eigsh</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">ncv</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_svd_vecs</span><span class="p">,</span> <span class="n">v0</span><span class="o">=</span><span class="n">v0</span><span class="p">)</span>
+
+        <span class="n">assert_all_finite</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+        <span class="n">assert_all_finite</span><span class="p">(</span><span class="n">vt</span><span class="p">)</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="p">[:,</span> <span class="n">n_discard</span><span class="p">:]</span>
+        <span class="n">vt</span> <span class="o">=</span> <span class="n">vt</span><span class="p">[</span><span class="n">n_discard</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="n">u</span><span class="p">,</span> <span class="n">vt</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="k">def</span> <span class="nf">_k_means</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">n_clusters</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mini_batch</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">MiniBatchKMeans</span><span class="p">(</span><span class="n">n_clusters</span><span class="p">,</span>
+                                    <span class="n">init</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">,</span>
+                                    <span class="n">n_init</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_init</span><span class="p">,</span>
+                                    <span class="n">random_state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">KMeans</span><span class="p">(</span><span class="n">n_clusters</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">,</span>
+                           <span class="n">n_init</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_init</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">,</span>
+                           <span class="n">random_state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">centroid</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">cluster_centers_</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">labels_</span>
+        <span class="k">return</span> <span class="n">centroid</span><span class="p">,</span> <span class="n">labels</span>
+
+
+<span class="k">class</span> <span class="nc">SpectralCoclustering</span><span class="p">(</span><span class="n">BaseSpectral</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Spectral Co-Clustering algorithm (Dhillon, 2001).</span>
+
+<span class="sd">    Clusters rows and columns of an array `X` to solve the relaxed</span>
+<span class="sd">    normalized cut of the bipartite graph created from `X` as follows:</span>
+<span class="sd">    the edge between row vertex `i` and column vertex `j` has weight</span>
+<span class="sd">    `X[i, j]`.</span>
+
+<span class="sd">    The resulting bicluster structure is block-diagonal, since each</span>
+<span class="sd">    row and each column belongs to exactly one bicluster.</span>
+
+<span class="sd">    Supports sparse matrices, as long as they are nonnegative.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;spectral_coclustering&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_clusters : integer, optional, default: 3</span>
+<span class="sd">        The number of biclusters to find.</span>
+
+<span class="sd">    svd_method : string, optional, default: &#39;randomized&#39;</span>
+<span class="sd">        Selects the algorithm for finding singular vectors. May be</span>
+<span class="sd">        &#39;randomized&#39; or &#39;arpack&#39;. If &#39;randomized&#39;, use</span>
+<span class="sd">        :func:`sklearn.utils.extmath.randomized_svd`, which may be faster</span>
+<span class="sd">        for large matrices. If &#39;arpack&#39;, use</span>
+<span class="sd">        :func:`scipy.sparse.linalg.svds`, which is more accurate, but</span>
+<span class="sd">        possibly slower in some cases.</span>
+
+<span class="sd">    n_svd_vecs : int, optional, default: None</span>
+<span class="sd">        Number of vectors to use in calculating the SVD. Corresponds</span>
+<span class="sd">        to `ncv` when `svd_method=arpack` and `n_oversamples` when</span>
+<span class="sd">        `svd_method` is &#39;randomized`.</span>
+
+<span class="sd">    mini_batch : bool, optional, default: False</span>
+<span class="sd">        Whether to use mini-batch k-means, which is faster but may get</span>
+<span class="sd">        different results.</span>
+
+<span class="sd">    init : {&#39;k-means++&#39;, &#39;random&#39; or an ndarray}</span>
+<span class="sd">         Method for initialization of k-means algorithm; defaults to</span>
+<span class="sd">         &#39;k-means++&#39;.</span>
+
+<span class="sd">    n_init : int, optional, default: 10</span>
+<span class="sd">        Number of random initializations that are tried with the</span>
+<span class="sd">        k-means algorithm.</span>
+
+<span class="sd">        If mini-batch k-means is used, the best initialization is</span>
+<span class="sd">        chosen and the algorithm runs once. Otherwise, the algorithm</span>
+<span class="sd">        is run for each initialization and the best solution chosen.</span>
+
+<span class="sd">    n_jobs : int, optional, default: 1</span>
+<span class="sd">        The number of jobs to use for the computation. This works by breaking</span>
+<span class="sd">        down the pairwise matrix into n_jobs even slices and computing them in</span>
+<span class="sd">        parallel.</span>
+
+<span class="sd">        If -1 all CPUs are used. If 1 is given, no parallel computing code is</span>
+<span class="sd">        used at all, which is useful for debugging. For n_jobs below -1,</span>
+<span class="sd">        (n_cpus + 1 + n_jobs) are used. Thus for n_jobs = -2, all CPUs but one</span>
+<span class="sd">        are used.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional, default: None</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    rows_ : array-like, shape (n_row_clusters, n_rows)</span>
+<span class="sd">        Results of the clustering. `rows[i, r]` is True if</span>
+<span class="sd">        cluster `i` contains row `r`. Available only after calling ``fit``.</span>
+
+<span class="sd">    columns_ : array-like, shape (n_column_clusters, n_columns)</span>
+<span class="sd">        Results of the clustering, like `rows`.</span>
+
+<span class="sd">    row_labels_ : array-like, shape (n_rows,)</span>
+<span class="sd">        The bicluster label of each row.</span>
+
+<span class="sd">    column_labels_ : array-like, shape (n_cols,)</span>
+<span class="sd">        The bicluster label of each column.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    * Dhillon, Inderjit S, 2001. `Co-clustering documents and words using</span>
+<span class="sd">      bipartite spectral graph partitioning</span>
+<span class="sd">      &lt;http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.140.3011&gt;`__.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_clusters</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">svd_method</span><span class="o">=</span><span class="s1">&#39;randomized&#39;</span><span class="p">,</span>
+                 <span class="n">n_svd_vecs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mini_batch</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="s1">&#39;k-means++&#39;</span><span class="p">,</span>
+                 <span class="n">n_init</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SpectralCoclustering</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">n_clusters</span><span class="p">,</span>
+                                                   <span class="n">svd_method</span><span class="p">,</span>
+                                                   <span class="n">n_svd_vecs</span><span class="p">,</span>
+                                                   <span class="n">mini_batch</span><span class="p">,</span>
+                                                   <span class="n">init</span><span class="p">,</span>
+                                                   <span class="n">n_init</span><span class="p">,</span>
+                                                   <span class="n">n_jobs</span><span class="p">,</span>
+                                                   <span class="n">random_state</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">normalized_data</span><span class="p">,</span> <span class="n">row_diag</span><span class="p">,</span> <span class="n">col_diag</span> <span class="o">=</span> <span class="n">_scale_normalize</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">n_sv</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span><span class="p">)))</span>
+        <span class="n">u</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_svd</span><span class="p">(</span><span class="n">normalized_data</span><span class="p">,</span> <span class="n">n_sv</span><span class="p">,</span> <span class="n">n_discard</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">row_diag</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">u</span><span class="p">,</span>
+                       <span class="n">col_diag</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">))</span>
+
+        <span class="n">_</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_means</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span><span class="p">)</span>
+
+        <span class="n">n_rows</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">row_labels_</span> <span class="o">=</span> <span class="n">labels</span><span class="p">[:</span><span class="n">n_rows</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column_labels_</span> <span class="o">=</span> <span class="n">labels</span><span class="p">[</span><span class="n">n_rows</span><span class="p">:]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">rows_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">row_labels_</span> <span class="o">==</span> <span class="n">c</span>
+                               <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">columns_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">column_labels_</span> <span class="o">==</span> <span class="n">c</span>
+                                  <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span><span class="p">))</span>
+
+
+<span class="k">class</span> <span class="nc">SpectralBiclustering</span><span class="p">(</span><span class="n">BaseSpectral</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Spectral biclustering (Kluger, 2003).</span>
+
+<span class="sd">    Partitions rows and columns under the assumption that the data has</span>
+<span class="sd">    an underlying checkerboard structure. For instance, if there are</span>
+<span class="sd">    two row partitions and three column partitions, each row will</span>
+<span class="sd">    belong to three biclusters, and each column will belong to two</span>
+<span class="sd">    biclusters. The outer product of the corresponding row and column</span>
+<span class="sd">    label vectors gives this checkerboard structure.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;spectral_biclustering&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_clusters : integer or tuple (n_row_clusters, n_column_clusters)</span>
+<span class="sd">        The number of row and column clusters in the checkerboard</span>
+<span class="sd">        structure.</span>
+
+<span class="sd">    method : string, optional, default: &#39;bistochastic&#39;</span>
+<span class="sd">        Method of normalizing and converting singular vectors into</span>
+<span class="sd">        biclusters. May be one of &#39;scale&#39;, &#39;bistochastic&#39;, or &#39;log&#39;.</span>
+<span class="sd">        The authors recommend using &#39;log&#39;. If the data is sparse,</span>
+<span class="sd">        however, log normalization will not work, which is why the</span>
+<span class="sd">        default is &#39;bistochastic&#39;. CAUTION: if `method=&#39;log&#39;`, the</span>
+<span class="sd">        data must not be sparse.</span>
+
+<span class="sd">    n_components : integer, optional, default: 6</span>
+<span class="sd">        Number of singular vectors to check.</span>
+
+<span class="sd">    n_best : integer, optional, default: 3</span>
+<span class="sd">        Number of best singular vectors to which to project the data</span>
+<span class="sd">        for clustering.</span>
+
+<span class="sd">    svd_method : string, optional, default: &#39;randomized&#39;</span>
+<span class="sd">        Selects the algorithm for finding singular vectors. May be</span>
+<span class="sd">        &#39;randomized&#39; or &#39;arpack&#39;. If &#39;randomized&#39;, uses</span>
+<span class="sd">        `sklearn.utils.extmath.randomized_svd`, which may be faster</span>
+<span class="sd">        for large matrices. If &#39;arpack&#39;, uses</span>
+<span class="sd">        `scipy.sparse.linalg.svds`, which is more accurate, but</span>
+<span class="sd">        possibly slower in some cases.</span>
+
+<span class="sd">    n_svd_vecs : int, optional, default: None</span>
+<span class="sd">        Number of vectors to use in calculating the SVD. Corresponds</span>
+<span class="sd">        to `ncv` when `svd_method=arpack` and `n_oversamples` when</span>
+<span class="sd">        `svd_method` is &#39;randomized`.</span>
+
+<span class="sd">    mini_batch : bool, optional, default: False</span>
+<span class="sd">        Whether to use mini-batch k-means, which is faster but may get</span>
+<span class="sd">        different results.</span>
+
+<span class="sd">    init : {&#39;k-means++&#39;, &#39;random&#39; or an ndarray}</span>
+<span class="sd">         Method for initialization of k-means algorithm; defaults to</span>
+<span class="sd">         &#39;k-means++&#39;.</span>
+
+<span class="sd">    n_init : int, optional, default: 10</span>
+<span class="sd">        Number of random initializations that are tried with the</span>
+<span class="sd">        k-means algorithm.</span>
+
+<span class="sd">        If mini-batch k-means is used, the best initialization is</span>
+<span class="sd">        chosen and the algorithm runs once. Otherwise, the algorithm</span>
+<span class="sd">        is run for each initialization and the best solution chosen.</span>
+
+<span class="sd">    n_jobs : int, optional, default: 1</span>
+<span class="sd">        The number of jobs to use for the computation. This works by breaking</span>
+<span class="sd">        down the pairwise matrix into n_jobs even slices and computing them in</span>
+<span class="sd">        parallel.</span>
+
+<span class="sd">        If -1 all CPUs are used. If 1 is given, no parallel computing code is</span>
+<span class="sd">        used at all, which is useful for debugging. For n_jobs below -1,</span>
+<span class="sd">        (n_cpus + 1 + n_jobs) are used. Thus for n_jobs = -2, all CPUs but one</span>
+<span class="sd">        are used.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, optional, default: None</span>
+<span class="sd">        If int, random_state is the seed used by the random number generator;</span>
+<span class="sd">        If RandomState instance, random_state is the random number generator;</span>
+<span class="sd">        If None, the random number generator is the RandomState instance used</span>
+<span class="sd">        by `np.random`.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    rows_ : array-like, shape (n_row_clusters, n_rows)</span>
+<span class="sd">        Results of the clustering. `rows[i, r]` is True if</span>
+<span class="sd">        cluster `i` contains row `r`. Available only after calling ``fit``.</span>
+
+<span class="sd">    columns_ : array-like, shape (n_column_clusters, n_columns)</span>
+<span class="sd">        Results of the clustering, like `rows`.</span>
+
+<span class="sd">    row_labels_ : array-like, shape (n_rows,)</span>
+<span class="sd">        Row partition labels.</span>
+
+<span class="sd">    column_labels_ : array-like, shape (n_cols,)</span>
+<span class="sd">        Column partition labels.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    * Kluger, Yuval, et. al., 2003. `Spectral biclustering of microarray</span>
+<span class="sd">      data: coclustering genes and conditions</span>
+<span class="sd">      &lt;http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.135.1608&gt;`__.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_clusters</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;bistochastic&#39;</span><span class="p">,</span>
+                 <span class="n">n_components</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">n_best</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">svd_method</span><span class="o">=</span><span class="s1">&#39;randomized&#39;</span><span class="p">,</span>
+                 <span class="n">n_svd_vecs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mini_batch</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="s1">&#39;k-means++&#39;</span><span class="p">,</span>
+                 <span class="n">n_init</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SpectralBiclustering</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">n_clusters</span><span class="p">,</span>
+                                                   <span class="n">svd_method</span><span class="p">,</span>
+                                                   <span class="n">n_svd_vecs</span><span class="p">,</span>
+                                                   <span class="n">mini_batch</span><span class="p">,</span>
+                                                   <span class="n">init</span><span class="p">,</span>
+                                                   <span class="n">n_init</span><span class="p">,</span>
+                                                   <span class="n">n_jobs</span><span class="p">,</span>
+                                                   <span class="n">random_state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="n">method</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">=</span> <span class="n">n_components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_best</span> <span class="o">=</span> <span class="n">n_best</span>
+
+    <span class="k">def</span> <span class="nf">_check_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SpectralBiclustering</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_check_parameters</span><span class="p">()</span>
+        <span class="n">legal_methods</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;bistochastic&#39;</span><span class="p">,</span> <span class="s1">&#39;scale&#39;</span><span class="p">,</span> <span class="s1">&#39;log&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">legal_methods</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknown method: &#39;</span><span class="si">{0}</span><span class="s2">&#39;. method must be&quot;</span>
+                             <span class="s2">&quot; one of </span><span class="si">{1}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="p">,</span> <span class="n">legal_methods</span><span class="p">))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">r</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span>
+                <span class="nb">int</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+                <span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Incorrect parameter n_clusters has value:&quot;</span>
+                                 <span class="s2">&quot; </span><span class="si">{}</span><span class="s2">. It should either be a single integer&quot;</span>
+                                 <span class="s2">&quot; or an iterable with two integers:&quot;</span>
+                                 <span class="s2">&quot; (n_row_clusters, n_column_clusters)&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Parameter n_components must be greater than 0,&quot;</span>
+                             <span class="s2">&quot; but its value is </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_best</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Parameter n_best must be greater than 0,&quot;</span>
+                             <span class="s2">&quot; but its value is </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_best</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_best</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;n_best cannot be larger than&quot;</span>
+                             <span class="s2">&quot; n_components, but </span><span class="si">{}</span><span class="s2"> &gt;  </span><span class="si">{}</span><span class="s2">&quot;</span>
+                             <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_best</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">n_sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;bistochastic&#39;</span><span class="p">:</span>
+            <span class="n">normalized_data</span> <span class="o">=</span> <span class="n">_bistochastic_normalize</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">n_sv</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;scale&#39;</span><span class="p">:</span>
+            <span class="n">normalized_data</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_scale_normalize</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">n_sv</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;log&#39;</span><span class="p">:</span>
+            <span class="n">normalized_data</span> <span class="o">=</span> <span class="n">_log_normalize</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">n_discard</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;log&#39;</span> <span class="k">else</span> <span class="mi">1</span>
+        <span class="n">u</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_svd</span><span class="p">(</span><span class="n">normalized_data</span><span class="p">,</span> <span class="n">n_sv</span><span class="p">,</span> <span class="n">n_discard</span><span class="p">)</span>
+        <span class="n">ut</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">vt</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">n_row_clusters</span><span class="p">,</span> <span class="n">n_col_clusters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">n_row_clusters</span> <span class="o">=</span> <span class="n">n_col_clusters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_clusters</span>
+
+        <span class="n">best_ut</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_best_piecewise</span><span class="p">(</span><span class="n">ut</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_best</span><span class="p">,</span>
+                                           <span class="n">n_row_clusters</span><span class="p">)</span>
+
+        <span class="n">best_vt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_best_piecewise</span><span class="p">(</span><span class="n">vt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_best</span><span class="p">,</span>
+                                           <span class="n">n_col_clusters</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">row_labels_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_project_and_cluster</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">best_vt</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+                                                     <span class="n">n_row_clusters</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">column_labels_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_project_and_cluster</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">best_ut</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+                                                        <span class="n">n_col_clusters</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">rows_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">row_labels_</span> <span class="o">==</span> <span class="n">label</span>
+                               <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_row_clusters</span><span class="p">)</span>
+                               <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_col_clusters</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">columns_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">column_labels_</span> <span class="o">==</span> <span class="n">label</span>
+                                  <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_row_clusters</span><span class="p">)</span>
+                                  <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_col_clusters</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_fit_best_piecewise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vectors</span><span class="p">,</span> <span class="n">n_best</span><span class="p">,</span> <span class="n">n_clusters</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Find the ``n_best`` vectors that are best approximated by piecewise</span>
+<span class="sd">        constant vectors.</span>
+
+<span class="sd">        The piecewise vectors are found by k-means; the best is chosen</span>
+<span class="sd">        according to Euclidean distance.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">make_piecewise</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+            <span class="n">centroid</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_means</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">n_clusters</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">centroid</span><span class="p">[</span><span class="n">labels</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">piecewise_vectors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">apply_along_axis</span><span class="p">(</span><span class="n">make_piecewise</span><span class="p">,</span>
+                                                <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">arr</span><span class="o">=</span><span class="n">vectors</span><span class="p">)</span>
+        <span class="n">dists</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">apply_along_axis</span><span class="p">(</span><span class="n">norm</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                    <span class="n">arr</span><span class="o">=</span><span class="p">(</span><span class="n">vectors</span> <span class="o">-</span> <span class="n">piecewise_vectors</span><span class="p">))</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">vectors</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">dists</span><span class="p">)[:</span><span class="n">n_best</span><span class="p">]]</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span> <span class="nf">_project_and_cluster</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">vectors</span><span class="p">,</span> <span class="n">n_clusters</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Project ``data`` to ``vectors`` and cluster the result.&quot;&quot;&quot;</span>
+        <span class="n">projected</span> <span class="o">=</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">vectors</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_means</span><span class="p">(</span><span class="n">projected</span><span class="p">,</span> <span class="n">n_clusters</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">labels</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

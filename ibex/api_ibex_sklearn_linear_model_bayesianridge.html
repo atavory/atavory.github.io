@@ -1,0 +1,311 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>BayesianRidge &#8212; ibex latest documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'latest',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="bayesianridge">
+<h1><code class="docutils literal"><span class="pre">BayesianRidge</span></code><a class="headerlink" href="#bayesianridge" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="ibex.sklearn.linear_model.BayesianRidge">
+<em class="property">class </em><code class="descclassname">ibex.sklearn.linear_model.</code><code class="descname">BayesianRidge</code><span class="sig-paren">(</span><em>n_iter=300</em>, <em>tol=0.001</em>, <em>alpha_1=1e-06</em>, <em>alpha_2=1e-06</em>, <em>lambda_1=1e-06</em>, <em>lambda_2=1e-06</em>, <em>compute_score=False</em>, <em>fit_intercept=True</em>, <em>normalize=False</em>, <em>copy_X=True</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.BayesianRidge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.linear_model.bayes.BayesianRidge</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Bayesian ridge regression</p>
+<blockquote>
+<div><p>Fit a Bayesian ridge model and optimize the regularization parameters
+lambda (precision of the weights) and alpha (precision of the noise).</p>
+<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/linear_model.html#bayesian-regression" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
+<dl class="docutils">
+<dt>n_iter <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd>Maximum number of iterations.  Default is 300.</dd>
+<dt>tol <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd>Stop the algorithm if w has converged. Default is 1.e-3.</dd>
+<dt>alpha_1 <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd>Hyper-parameter : shape parameter for the Gamma distribution prior
+over the alpha parameter. Default is 1.e-6</dd>
+<dt>alpha_2 <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd>Hyper-parameter : inverse scale parameter (rate parameter) for the
+Gamma distribution prior over the alpha parameter.
+Default is 1.e-6.</dd>
+<dt>lambda_1 <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd>Hyper-parameter : shape parameter for the Gamma distribution prior
+over the lambda parameter. Default is 1.e-6.</dd>
+<dt>lambda_2 <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd>Hyper-parameter : inverse scale parameter (rate parameter) for the
+Gamma distribution prior over the lambda parameter.
+Default is 1.e-6</dd>
+<dt>compute_score <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional</span></dt>
+<dd>If True, compute the objective function at each step of the model.
+Default is False</dd>
+<dt>fit_intercept <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional</span></dt>
+<dd>whether to calculate the intercept for this model. If set
+to false, no intercept will be used in calculations
+(e.g. data is expected to be already centered).
+Default is True.</dd>
+<dt>normalize <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default False</span></dt>
+<dd>This parameter is ignored when <code class="docutils literal"><span class="pre">fit_intercept</span></code> is set to False.
+If True, the regressors X will be normalized before regression by
+subtracting the mean and dividing by the l2-norm.
+If you wish to standardize, please use
+<a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html#sklearn.preprocessing.StandardScaler" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.preprocessing.StandardScaler</span></code></a> before calling <code class="docutils literal"><span class="pre">fit</span></code>
+on an estimator with <code class="docutils literal"><span class="pre">normalize=False</span></code>.</dd>
+<dt>copy_X <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default True</span></dt>
+<dd>If True, X will be copied; else, it may be overwritten.</dd>
+<dt>verbose <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default False</span></dt>
+<dd>Verbose mode when fitting the model.</dd>
+</dl>
+<dl class="docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">coef_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = (n_features)</span></dt>
+<dd>Coefficients of the regression model (mean of distribution)</dd>
+<dt><a href="#id3"><span class="problematic" id="id4">alpha_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>estimated precision of the noise.</dd>
+<dt><a href="#id5"><span class="problematic" id="id6">lambda_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>estimated precision of the weights.</dd>
+<dt><a href="#id7"><span class="problematic" id="id8">sigma_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = (n_features, n_features)</span></dt>
+<dd>estimated variance-covariance matrix of the weights</dd>
+<dt><a href="#id9"><span class="problematic" id="id10">scores_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>if computed, value of the objective function (to be maximized)</dd>
+</dl>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">linear_model</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">linear_model</span><span class="o">.</span><span class="n">BayesianRidge</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+<span class="gp">... </span>
+<span class="go">BayesianRidge(alpha_1=1e-06, alpha_2=1e-06, compute_score=False,</span>
+<span class="go">        copy_X=True, fit_intercept=True, lambda_1=1e-06, lambda_2=1e-06,</span>
+<span class="go">        n_iter=300, normalize=False, tol=0.001, verbose=False)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
+<span class="go">array([ 1.])</span>
+</pre></div>
+</div>
+<p>For an example, see <a class="reference external" href="http://scikit-learn.org/stable/auto_examples/linear_model/plot_bayesian_ridge.html#sphx-glr-auto-examples-linear-model-plot-bayesian-ridge-py" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">examples/linear_model/plot_bayesian_ridge.py</span></a>.</p>
+<p>D. J. C. MacKay, Bayesian Interpolation, Computation and Neural Systems,
+Vol. 4, No. 3, 1992.</p>
+<p>R. Salakhutdinov, Lecture notes on Statistical Machine Learning,
+<a class="reference external" href="http://www.utstat.toronto.edu/~rsalakhu/sta4273/notes/Lecture2.pdf#page=15">http://www.utstat.toronto.edu/~rsalakhu/sta4273/notes/Lecture2.pdf#page=15</a>
+Their beta is our <code class="docutils literal"><span class="pre">self.alpha_</span></code>
+Their alpha is our <code class="docutils literal"><span class="pre">self.lambda_</span></code></p>
+</div></blockquote>
+<dl class="method">
+<dt id="ibex.sklearn.linear_model.BayesianRidge.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/linear_model/bayes.html#BayesianRidge.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.linear_model.BayesianRidge.fit" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Fit the model</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples,n_features]</span></dt>
+<dd>Training data</dd>
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples]</span></dt>
+<dd>Target values. Will be cast to X’s dtype if necessary</dd>
+</dl>
+<p>self : returns an instance of self.</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.linear_model.BayesianRidge.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>X</em>, <em>return_std=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/linear_model/bayes.html#BayesianRidge.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.linear_model.BayesianRidge.predict" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Predict using the linear model.</p>
+<blockquote>
+<div><p>In addition to the mean of the predictive distribution, also its
+standard deviation can be returned.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape = (n_samples, n_features)</span></dt>
+<dd>Samples.</dd>
+<dt>return_std <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional</span></dt>
+<dd>Whether to return the standard deviation of posterior prediction.</dd>
+</dl>
+<dl class="docutils">
+<dt>y_mean <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = (n_samples,)</span></dt>
+<dd>Mean of predictive distribution of query points.</dd>
+<dt>y_std <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = (n_samples,)</span></dt>
+<dd>Standard deviation of predictive distribution of query points.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ibex.sklearn.linear_model.BayesianRidge.score">
+<code class="descname">score</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.BayesianRidge.score" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The documentation following is of the class wrapped by this class. There
+are some changes, in particular:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
+<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</ul>
+</div></blockquote>
+</div>
+<p>Returns the coefficient of determination R^2 of the prediction.</p>
+<blockquote>
+<div><p>The coefficient R^2 is defined as (1 - u/v), where u is the residual
+sum of squares ((y_true - y_pred) ** 2).sum() and v is the total
+sum of squares ((y_true - y_true.mean()) ** 2).sum().
+The best possible score is 1.0 and it can be negative (because the
+model can be arbitrarily worse). A constant model that always
+predicts the expected value of y, disregarding the input features,
+would get a R^2 score of 0.0.</p>
+<dl class="docutils">
+<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = (n_samples, n_features)</span></dt>
+<dd>Test samples.</dd>
+<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = (n_samples) or (n_samples, n_outputs)</span></dt>
+<dd>True values for X.</dd>
+<dt>sample_weight <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = [n_samples], optional</span></dt>
+<dd>Sample weights.</dd>
+</dl>
+<dl class="docutils">
+<dt>score <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>R^2 of self.predict(X) wrt. y.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_ibex_sklearn_linear_model_bayesianridge.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api_ibex_sklearn_linear_model_bayesianridge.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atavory/ibex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
