@@ -63,7 +63,7 @@
 <span class="c1">###############################################################################</span>
 <span class="c1"># BayesianRidge regression</span>
 
-<span class="k">class</span> <span class="nc">BayesianRidge</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+<div class="viewcode-block" id="BayesianRidge"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_bayesianridge.html#ibex.sklearn.linear_model.BayesianRidge">[docs]</a><span class="k">class</span> <span class="nc">BayesianRidge</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Bayesian ridge regression</span>
 
 <span class="sd">    Fit a Bayesian ridge model and optimize the regularization parameters</span>
@@ -315,14 +315,14 @@
                 <span class="n">X</span> <span class="o">=</span> <span class="p">(</span><span class="n">X</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_offset_</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_scale_</span>
             <span class="n">sigmas_squared_data</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_</span><span class="p">)</span> <span class="o">*</span> <span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
             <span class="n">y_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">sigmas_squared_data</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span><span class="p">))</span>
-            <span class="k">return</span> <span class="n">y_mean</span><span class="p">,</span> <span class="n">y_std</span></div>
+            <span class="k">return</span> <span class="n">y_mean</span><span class="p">,</span> <span class="n">y_std</span></div></div>
 
 
 <span class="c1">###############################################################################</span>
 <span class="c1"># ARD (Automatic Relevance Determination) regression</span>
 
 
-<span class="k">class</span> <span class="nc">ARDRegression</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+<div class="viewcode-block" id="ARDRegression"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ardregression.html#ibex.sklearn.linear_model.ARDRegression">[docs]</a><span class="k">class</span> <span class="nc">ARDRegression</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Bayesian ARD regression.</span>
 
 <span class="sd">    Fit the weights of a regression model, using an ARD prior. The weights of</span>
@@ -575,7 +575,7 @@
             <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lambda_</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold_lambda</span><span class="p">]</span>
             <span class="n">sigmas_squared_data</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_</span><span class="p">)</span> <span class="o">*</span> <span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
             <span class="n">y_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">sigmas_squared_data</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span><span class="p">))</span>
-            <span class="k">return</span> <span class="n">y_mean</span><span class="p">,</span> <span class="n">y_std</span></div>
+            <span class="k">return</span> <span class="n">y_mean</span><span class="p">,</span> <span class="n">y_std</span></div></div>
 </pre></div>
 
           </div>

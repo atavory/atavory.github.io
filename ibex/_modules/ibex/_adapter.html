@@ -91,26 +91,23 @@
     <span class="k">return</span> <span class="n">est</span>
 
 
-<span class="k">def</span> <span class="nf">make_adapter</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">_make_adapter</span><span class="p">(</span>
         <span class="n">est</span><span class="p">,</span>
         <span class="n">extra_methods</span><span class="p">,</span>
         <span class="n">extra_attribs</span><span class="p">):</span>
     <span class="kn">from</span> <span class="nn">._base</span> <span class="k">import</span> <span class="n">FrameMixin</span>
 
-    <span class="n">extra_attribs_d</span> <span class="o">=</span> <span class="p">{</span><span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span><span class="p">:</span> <span class="n">fn</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">extra_attribs</span><span class="p">}</span>
-    <span class="n">extra_methods_d</span> <span class="o">=</span> <span class="p">{</span><span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span><span class="p">:</span> <span class="n">fn</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">extra_methods</span><span class="p">}</span>
-
     <span class="k">class</span> <span class="nc">_Adapter</span><span class="p">(</span><span class="n">est</span><span class="p">,</span> <span class="n">FrameMixin</span><span class="p">):</span>
         <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
             <span class="n">ret</span> <span class="o">=</span> <span class="n">_inject_to_str_repr</span><span class="p">(</span><span class="n">est</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
-            <span class="k">if</span> <span class="s1">&#39;__repr__ &#39;</span> <span class="ow">in</span> <span class="n">extra_attribs_d</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">extra_attribs_d</span><span class="p">[</span><span class="s1">&#39;__repr&#39;</span><span class="p">](</span><span class="bp">self</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s1">&#39;__repr__ &#39;</span> <span class="ow">in</span> <span class="n">extra_attribs</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">extra_attribs</span><span class="p">[</span><span class="s1">&#39;__repr&#39;</span><span class="p">](</span><span class="bp">self</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">ret</span>
 
         <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
             <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">()</span>
-            <span class="k">if</span> <span class="s1">&#39;__str__ &#39;</span> <span class="ow">in</span> <span class="n">extra_attribs_d</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">extra_attribs_d</span><span class="p">[</span><span class="s1">&#39;__str__&#39;</span><span class="p">](</span><span class="bp">self</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s1">&#39;__str__ &#39;</span> <span class="ow">in</span> <span class="n">extra_attribs</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">extra_attribs</span><span class="p">[</span><span class="s1">&#39;__str__&#39;</span><span class="p">](</span><span class="bp">self</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">ret</span>
 
         <span class="k">def</span> <span class="nf">aic</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -323,8 +320,8 @@
 
             <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__adapter_process_wrapped_call_res</span><span class="p">(</span><span class="n">inv</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
 
-            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">extra_methods_d</span><span class="p">:</span>
-                <span class="n">ret</span> <span class="o">=</span> <span class="n">extra_methods_d</span><span class="p">[</span><span class="n">name</span><span class="p">](</span><span class="bp">self</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">extra_methods</span><span class="p">:</span>
+                <span class="n">ret</span> <span class="o">=</span> <span class="n">extra_methods</span><span class="p">[</span><span class="n">name</span><span class="p">](</span><span class="bp">self</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span>
 
             <span class="k">return</span> <span class="n">ret</span>
 
@@ -356,8 +353,8 @@
 
         <span class="k">def</span> <span class="nf">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
             <span class="n">base_ret</span> <span class="o">=</span> <span class="n">est</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
-            <span class="k">if</span> <span class="bp">self</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_in_ops</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">extra_attribs_d</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">extra_attribs_d</span><span class="p">[</span><span class="n">name</span><span class="p">](</span><span class="bp">self</span><span class="p">,</span> <span class="n">base_ret</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_in_ops</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">extra_attribs</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">extra_attribs</span><span class="p">[</span><span class="n">name</span><span class="p">](</span><span class="bp">self</span><span class="p">,</span> <span class="n">base_ret</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">base_ret</span>
 
         <span class="k">def</span> <span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -368,7 +365,27 @@
     <span class="k">return</span> <span class="n">_Adapter</span>
 
 
-<span class="k">def</span> <span class="nf">frame_ex</span><span class="p">(</span><span class="n">est</span><span class="p">,</span> <span class="n">extra_methods</span><span class="o">=</span><span class="p">(),</span> <span class="n">extra_attribs</span><span class="o">=</span><span class="p">()):</span>
+<span class="k">def</span> <span class="nf">frame_ex</span><span class="p">(</span>
+        <span class="n">est</span><span class="p">,</span>
+        <span class="n">extra_methods</span><span class="o">=</span><span class="p">{},</span>
+        <span class="n">extra_attribs</span><span class="o">=</span><span class="p">{}):</span>
+
+    <span class="n">attrib_docs</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">extra_attribs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">extra_attribs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="vm">__doc__</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="n">attrib_docs</span> <span class="o">+=</span>  \
+            <span class="s1">&#39;.. note::</span><span class="se">\n\n</span><span class="s1">    The documentation following is of the class wrapped by this class. This class wraps the attribute &#39;</span> <span class="o">+</span> <span class="s2">&quot;``&quot;</span> <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;``&quot;</span>
+        <span class="n">attrib_docs</span> <span class="o">+=</span> <span class="n">extra_attribs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+
+    <span class="n">est</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">attrib_docs</span> <span class="o">+</span> <span class="n">est</span><span class="o">.</span><span class="vm">__doc__</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">extra_methods</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;extra_methods must be of type dict; got </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">extra_methods</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">extra_attribs</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;extra_attribs must be of type dict; got </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">extra_attribs</span><span class="p">)</span>
+
     <span class="kn">from</span> <span class="nn">._base</span> <span class="k">import</span> <span class="n">FrameMixin</span>
 
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">est</span><span class="p">,</span> <span class="n">FrameMixin</span><span class="p">):</span>
@@ -379,7 +396,7 @@
         <span class="n">f</span> <span class="o">=</span> <span class="n">frame</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">est</span><span class="p">))(</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">f</span>
 
-    <span class="n">_Adapter</span> <span class="o">=</span> <span class="n">make_adapter</span><span class="p">(</span><span class="n">est</span><span class="p">,</span> <span class="n">extra_methods</span><span class="p">,</span> <span class="n">extra_attribs</span><span class="p">)</span>
+    <span class="n">_Adapter</span> <span class="o">=</span> <span class="n">_make_adapter</span><span class="p">(</span><span class="n">est</span><span class="p">,</span> <span class="n">extra_methods</span><span class="p">,</span> <span class="n">extra_attribs</span><span class="p">)</span>
 
     <span class="n">update_class_wrapper</span><span class="p">(</span><span class="n">_Adapter</span><span class="p">,</span> <span class="n">est</span><span class="p">)</span>
 
@@ -439,7 +456,7 @@
 <span class="sd">        &gt;&gt;&gt; PdLinearRegression(fit_intercept=False)</span>
 <span class="sd">        Adapter[LinearRegression](copy_X=True, fit_intercept=False, n_jobs=1, normalize=False)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">frame_ex</span><span class="p">(</span><span class="n">est</span><span class="p">,</span> <span class="n">extra_methods</span><span class="o">=</span><span class="p">(),</span> <span class="n">extra_attribs</span><span class="o">=</span><span class="p">())</span></div>
+    <span class="k">return</span> <span class="n">frame_ex</span><span class="p">(</span><span class="n">est</span><span class="p">,</span> <span class="n">extra_methods</span><span class="o">=</span><span class="p">{},</span> <span class="n">extra_attribs</span><span class="o">=</span><span class="p">{})</span></div>
 
 
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;frame&#39;</span><span class="p">]</span>

@@ -621,7 +621,7 @@
                          <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span>
 
 
-<span class="k">class</span> <span class="nc">SGDClassifier</span><span class="p">(</span><span class="n">BaseSGDClassifier</span><span class="p">):</span>
+<div class="viewcode-block" id="SGDClassifier"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_sgdclassifier.html#ibex.sklearn.linear_model.SGDClassifier">[docs]</a><span class="k">class</span> <span class="nc">SGDClassifier</span><span class="p">(</span><span class="n">BaseSGDClassifier</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Linear classifiers (SVM, logistic regression, a.o.) with SGD training.</span>
 
 <span class="sd">    This estimator implements regularized linear models with stochastic</span>
@@ -936,7 +936,7 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_predict_log_proba</span>
 
     <span class="k">def</span> <span class="nf">_predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
 
 
 <span class="k">class</span> <span class="nc">BaseSGDRegressor</span><span class="p">(</span><span class="n">BaseSGD</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
@@ -1197,7 +1197,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span><span class="p">)</span>
 
 
-<span class="k">class</span> <span class="nc">SGDRegressor</span><span class="p">(</span><span class="n">BaseSGDRegressor</span><span class="p">):</span>
+<div class="viewcode-block" id="SGDRegressor"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_sgdregressor.html#ibex.sklearn.linear_model.SGDRegressor">[docs]</a><span class="k">class</span> <span class="nc">SGDRegressor</span><span class="p">(</span><span class="n">BaseSGDRegressor</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Linear model fitted by minimizing a regularized empirical loss with SGD</span>
 
 <span class="sd">    SGD stands for Stochastic Gradient Descent: the gradient of the loss is</span>
@@ -1375,7 +1375,7 @@
                                            <span class="n">learning_rate</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">,</span>
                                            <span class="n">eta0</span><span class="o">=</span><span class="n">eta0</span><span class="p">,</span> <span class="n">power_t</span><span class="o">=</span><span class="n">power_t</span><span class="p">,</span>
                                            <span class="n">warm_start</span><span class="o">=</span><span class="n">warm_start</span><span class="p">,</span>
-                                           <span class="n">average</span><span class="o">=</span><span class="n">average</span><span class="p">,</span> <span class="n">n_iter</span><span class="o">=</span><span class="n">n_iter</span><span class="p">)</span>
+                                           <span class="n">average</span><span class="o">=</span><span class="n">average</span><span class="p">,</span> <span class="n">n_iter</span><span class="o">=</span><span class="n">n_iter</span><span class="p">)</span></div>
 </pre></div>
 
           </div>

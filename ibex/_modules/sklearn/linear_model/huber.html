@@ -165,7 +165,7 @@
     <span class="k">return</span> <span class="n">loss</span><span class="p">,</span> <span class="n">grad</span>
 
 
-<span class="k">class</span> <span class="nc">HuberRegressor</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">,</span> <span class="n">BaseEstimator</span><span class="p">):</span>
+<div class="viewcode-block" id="HuberRegressor"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_huberregressor.html#ibex.sklearn.linear_model.HuberRegressor">[docs]</a><span class="k">class</span> <span class="nc">HuberRegressor</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">,</span> <span class="n">BaseEstimator</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Linear regression model that is robust to outliers.</span>
 
 <span class="sd">    The Huber Regressor optimizes the squared loss for the samples where</span>
@@ -326,7 +326,7 @@
         <span class="n">residual</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span>
             <span class="n">y</span> <span class="o">-</span> <span class="n">safe_sparse_dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">outliers_</span> <span class="o">=</span> <span class="n">residual</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span>
-        <span class="k">return</span> <span class="bp">self</span></div>
+        <span class="k">return</span> <span class="bp">self</span></div></div>
 </pre></div>
 
           </div>

@@ -445,7 +445,7 @@
         <span class="k">return</span> <span class="bp">self</span>
 
 
-<span class="k">class</span> <span class="nc">LinearRegression</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+<div class="viewcode-block" id="LinearRegression"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_linearregression.html#ibex.sklearn.linear_model.LinearRegression">[docs]</a><span class="k">class</span> <span class="nc">LinearRegression</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Ordinary least squares Linear Regression.</span>
 
@@ -555,7 +555,7 @@
         <span class="k">if</span> <span class="n">y</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coef_</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_set_intercept</span><span class="p">(</span><span class="n">X_offset</span><span class="p">,</span> <span class="n">y_offset</span><span class="p">,</span> <span class="n">X_scale</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span></div>
+        <span class="k">return</span> <span class="bp">self</span></div></div>
 
 
 <span class="k">def</span> <span class="nf">_pre_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">Xy</span><span class="p">,</span> <span class="n">precompute</span><span class="p">,</span> <span class="n">normalize</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="p">,</span> <span class="n">copy</span><span class="p">):</span>

@@ -44,146 +44,76 @@
 <h1>Regressor Example<a class="headerlink" href="#regressor-example" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
 <dt id="ibex.sklearn.linear_model.LinearRegression">
-<em class="property">class </em><code class="descclassname">ibex.sklearn.linear_model.</code><code class="descname">LinearRegression</code><span class="sig-paren">(</span><em>fit_intercept=True</em>, <em>normalize=False</em>, <em>copy_X=True</em>, <em>n_jobs=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.LinearRegression" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<blockquote>
-<div><p>Ordinary least squares Linear Regression.</p>
-<dl class="docutils">
-<dt>fit_intercept <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default True</span></dt>
-<dd>whether to calculate the intercept for this model. If set
+<em class="property">class </em><code class="descclassname">ibex.sklearn.linear_model.</code><code class="descname">LinearRegression</code><span class="sig-paren">(</span><em>fit_intercept=True</em>, <em>normalize=False</em>, <em>copy_X=True</em>, <em>n_jobs=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/linear_model/base.html#LinearRegression"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.linear_model.LinearRegression" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ordinary least squares Linear Regression.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fit_intercept</strong> (<em>boolean</em><em>, </em><em>optional</em><em>, </em><em>default True</em>) – whether to calculate the intercept for this model. If set
 to False, no intercept will be used in calculations
-(e.g. data is expected to be already centered).</dd>
-<dt>normalize <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default False</span></dt>
-<dd>This parameter is ignored when <code class="docutils literal"><span class="pre">fit_intercept</span></code> is set to False.
+(e.g. data is expected to be already centered).</li>
+<li><strong>normalize</strong> (<em>boolean</em><em>, </em><em>optional</em><em>, </em><em>default False</em>) – This parameter is ignored when <code class="docutils literal"><span class="pre">fit_intercept</span></code> is set to False.
 If True, the regressors X will be normalized before regression by
 subtracting the mean and dividing by the l2-norm.
 If you wish to standardize, please use
 <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html#sklearn.preprocessing.StandardScaler" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.preprocessing.StandardScaler</span></code></a> before calling <code class="docutils literal"><span class="pre">fit</span></code> on
-an estimator with <code class="docutils literal"><span class="pre">normalize=False</span></code>.</dd>
-<dt>copy_X <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default True</span></dt>
-<dd>If True, X will be copied; else, it may be overwritten.</dd>
-<dt>n_jobs <span class="classifier-delimiter">:</span> <span class="classifier">int, optional, default 1</span></dt>
-<dd>The number of jobs to use for the computation.
+an estimator with <code class="docutils literal"><span class="pre">normalize=False</span></code>.</li>
+<li><strong>copy_X</strong> (<em>boolean</em><em>, </em><em>optional</em><em>, </em><em>default True</em>) – If True, X will be copied; else, it may be overwritten.</li>
+<li><strong>n_jobs</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>, </em><em>optional</em><em>, </em><em>default 1</em>) – The number of jobs to use for the computation.
 If -1 all CPUs are used. This will only provide speedup for
-n_targets &gt; 1 and sufficient large problems.</dd>
-</dl>
-<dl class="docutils">
-<dt><a href="#id1"><span class="problematic" id="id2">coef_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_features, ) or (n_targets, n_features)</span></dt>
-<dd>Estimated coefficients for the linear regression problem.
+n_targets &gt; 1 and sufficient large problems.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="LinearRegression.coef_">
+<code class="descname">coef_</code><a class="headerlink" href="#LinearRegression.coef_" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>array, shape (n_features, ) or (n_targets, n_features)</em> – Estimated coefficients for the linear regression problem.
 If multiple targets are passed during the fit (y 2D), this
 is a 2D array of shape (n_targets, n_features), while if only
-one target is passed, this is a 1D array of length n_features.</dd>
-<dt><a href="#id3"><span class="problematic" id="id4">intercept_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
-<dd>Independent term in the linear model.</dd>
-</dl>
+one target is passed, this is a 1D array of length n_features.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="LinearRegression.intercept_">
+<code class="descname">intercept_</code><a class="headerlink" href="#LinearRegression.intercept_" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>array</em> – Independent term in the linear model.</p>
+</dd></dl>
+
+<p class="rubric">Notes</p>
 <p>From the implementation point of view, this is just plain Ordinary
 Least Squares (scipy.linalg.lstsq) wrapped as a predictor object.</p>
-</div></blockquote>
 <dl class="method">
 <dt id="ibex.sklearn.linear_model.LinearRegression.fit">
 <code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y</em>, <em>sample_weight=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/linear_model/base.html#LinearRegression.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.linear_model.LinearRegression.fit" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<blockquote>
-<div><p>Fit linear model.</p>
-<dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">numpy array or sparse matrix of shape [n_samples,n_features]</span></dt>
-<dd>Training data</dd>
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_targets]</span></dt>
-<dd>Target values. Will be cast to X’s dtype if necessary</dd>
-<dt>sample_weight <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples]</span></dt>
-<dd><p class="first">Individual weights for each sample</p>
-<div class="last versionadded">
+<dd><p>Fit linear model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>X</strong> (<em>numpy array</em><em> or </em><em>sparse matrix of shape</em><em> [</em><em>n_samples</em><em>,</em><em>n_features</em><em>]</em>) – Training data</li>
+<li><strong>y</strong> (<em>numpy array of shape</em><em> [</em><em>n_samples</em><em>, </em><em>n_targets</em><em>]</em>) – Target values. Will be cast to X’s dtype if necessary</li>
+<li><strong>sample_weight</strong> (<em>numpy array of shape</em><em> [</em><em>n_samples</em><em>]</em>) – <p>Individual weights for each sample</p>
+<div class="versionadded">
 <p><span class="versionmodified">New in version 0.17: </span>parameter <em>sample_weight</em> support to LinearRegression.</p>
 </div>
-</dd>
-</dl>
-<p>self : returns an instance of self.</p>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.linear_model.LinearRegression.predict">
-<code class="descname">predict</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.LinearRegression.predict" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
+</li>
 </ul>
-</div></blockquote>
-</div>
-<p>Predict using the linear model</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape = (n_samples, n_features)</span></dt>
-<dd>Samples.</dd>
-</dl>
-<dl class="docutils">
-<dt>C <span class="classifier-delimiter">:</span> <span class="classifier">array, shape = (n_samples,)</span></dt>
-<dd>Returns predicted values.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.linear_model.LinearRegression.score">
-<code class="descname">score</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.linear_model.LinearRegression.score" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Returns the coefficient of determination R^2 of the prediction.</p>
-<blockquote>
-<div><p>The coefficient R^2 is defined as (1 - u/v), where u is the residual
-sum of squares ((y_true - y_pred) ** 2).sum() and v is the total
-sum of squares ((y_true - y_true.mean()) ** 2).sum().
-The best possible score is 1.0 and it can be negative (because the
-model can be arbitrarily worse). A constant model that always
-predicts the expected value of y, disregarding the input features,
-would get a R^2 score of 0.0.</p>
-<dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = (n_samples, n_features)</span></dt>
-<dd>Test samples.</dd>
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = (n_samples) or (n_samples, n_outputs)</span></dt>
-<dd>True values for X.</dd>
-<dt>sample_weight <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = [n_samples], optional</span></dt>
-<dd>Sample weights.</dd>
-</dl>
-<dl class="docutils">
-<dt>score <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
-<dd>R^2 of self.predict(X) wrt. y.</dd>
-</dl>
-</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>self</strong></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">returns an instance of self.</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </dd></dl>

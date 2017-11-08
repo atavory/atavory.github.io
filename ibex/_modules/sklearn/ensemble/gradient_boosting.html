@@ -1265,7 +1265,7 @@
         <span class="k">return</span> <span class="n">leaves</span>
 
 
-<span class="k">class</span> <span class="nc">GradientBoostingClassifier</span><span class="p">(</span><span class="n">BaseGradientBoosting</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">):</span>
+<div class="viewcode-block" id="GradientBoostingClassifier"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier">[docs]</a><span class="k">class</span> <span class="nc">GradientBoostingClassifier</span><span class="p">(</span><span class="n">BaseGradientBoosting</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Gradient Boosting for classification.</span>
 
 <span class="sd">    GB builds an additive model in a</span>
@@ -1677,10 +1677,10 @@
             <span class="k">raise</span>
         <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s1">&#39;loss=</span><span class="si">%r</span><span class="s1"> does not support predict_proba&#39;</span> <span class="o">%</span>
-                                 <span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">)</span></div>
+                                 <span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">)</span></div></div>
 
 
-<span class="k">class</span> <span class="nc">GradientBoostingRegressor</span><span class="p">(</span><span class="n">BaseGradientBoosting</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+<div class="viewcode-block" id="GradientBoostingRegressor"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_gradientboostingregressor.html#ibex.sklearn.ensemble.GradientBoostingRegressor">[docs]</a><span class="k">class</span> <span class="nc">GradientBoostingRegressor</span><span class="p">(</span><span class="n">BaseGradientBoosting</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Gradient Boosting for regression.</span>
 
 <span class="sd">    GB builds an additive model in a forward stage-wise fashion;</span>
@@ -1976,7 +1976,7 @@
 
         <span class="n">leaves</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">GradientBoostingRegressor</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
         <span class="n">leaves</span> <span class="o">=</span> <span class="n">leaves</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimators_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="k">return</span> <span class="n">leaves</span></div>
+        <span class="k">return</span> <span class="n">leaves</span></div></div>
 </pre></div>
 
           </div>

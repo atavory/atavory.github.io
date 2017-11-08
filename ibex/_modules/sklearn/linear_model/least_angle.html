@@ -539,7 +539,7 @@
 <span class="c1">###############################################################################</span>
 <span class="c1"># Estimator classes</span>
 
-<span class="k">class</span> <span class="nc">Lars</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+<div class="viewcode-block" id="Lars"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_lars.html#ibex.sklearn.linear_model.Lars">[docs]</a><span class="k">class</span> <span class="nc">Lars</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Least Angle Regression model a.k.a. LAR</span>
 
 <span class="sd">    Read more in the :ref:`User Guide &lt;least_angle_regression&gt;`.</span>
@@ -751,10 +751,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span> <span class="n">fit_path</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_path</span><span class="p">,</span>
                   <span class="n">Xy</span><span class="o">=</span><span class="n">Xy</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="bp">self</span></div>
+        <span class="k">return</span> <span class="bp">self</span></div></div>
 
 
-<span class="k">class</span> <span class="nc">LassoLars</span><span class="p">(</span><span class="n">Lars</span><span class="p">):</span>
+<div class="viewcode-block" id="LassoLars"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_lassolars.html#ibex.sklearn.linear_model.LassoLars">[docs]</a><span class="k">class</span> <span class="nc">LassoLars</span><span class="p">(</span><span class="n">Lars</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Lasso model fit with Least Angle Regression a.k.a. Lars</span>
 
 <span class="sd">    It is a Linear Model trained with an L1 prior as regularizer.</span>
@@ -887,7 +887,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">precompute</span> <span class="o">=</span> <span class="n">precompute</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">copy_X</span> <span class="o">=</span> <span class="n">copy_X</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="n">eps</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fit_path</span> <span class="o">=</span> <span class="n">fit_path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_path</span> <span class="o">=</span> <span class="n">fit_path</span></div>
 
 
 <span class="c1">###############################################################################</span>
@@ -1012,7 +1012,7 @@
     <span class="k">return</span> <span class="n">alphas</span><span class="p">,</span> <span class="n">active</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="n">residues</span><span class="o">.</span><span class="n">T</span>
 
 
-<span class="k">class</span> <span class="nc">LarsCV</span><span class="p">(</span><span class="n">Lars</span><span class="p">):</span>
+<div class="viewcode-block" id="LarsCV"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_larscv.html#ibex.sklearn.linear_model.LarsCV">[docs]</a><span class="k">class</span> <span class="nc">LarsCV</span><span class="p">(</span><span class="n">Lars</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Cross-validated Least Angle Regression model</span>
 
 <span class="sd">    Read more in the :ref:`User Guide &lt;least_angle_regression&gt;`.</span>
@@ -1218,10 +1218,10 @@
     <span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;Attribute ``cv_mse_path_`` is deprecated in 0.18 and &quot;</span>
                 <span class="s2">&quot;will be removed in 0.20. Use ``mse_path_`` instead&quot;</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">cv_mse_path_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mse_path_</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mse_path_</span></div>
 
 
-<span class="k">class</span> <span class="nc">LassoLarsCV</span><span class="p">(</span><span class="n">LarsCV</span><span class="p">):</span>
+<div class="viewcode-block" id="LassoLarsCV"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_lassolarscv.html#ibex.sklearn.linear_model.LassoLarsCV">[docs]</a><span class="k">class</span> <span class="nc">LassoLarsCV</span><span class="p">(</span><span class="n">LarsCV</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Cross-validated Lasso, using the LARS algorithm</span>
 
 <span class="sd">    The optimization objective for Lasso is::</span>
@@ -1358,12 +1358,12 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="n">eps</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">copy_X</span> <span class="o">=</span> <span class="n">copy_X</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">positive</span> <span class="o">=</span> <span class="n">positive</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">positive</span> <span class="o">=</span> <span class="n">positive</span></div>
         <span class="c1"># XXX : we don&#39;t use super(LarsCV, self).__init__</span>
         <span class="c1"># to avoid setting n_nonzero_coefs</span>
 
 
-<span class="k">class</span> <span class="nc">LassoLarsIC</span><span class="p">(</span><span class="n">LassoLars</span><span class="p">):</span>
+<div class="viewcode-block" id="LassoLarsIC"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_lassolarsic.html#ibex.sklearn.linear_model.LassoLarsIC">[docs]</a><span class="k">class</span> <span class="nc">LassoLarsIC</span><span class="p">(</span><span class="n">LassoLars</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Lasso model fit with Lars using BIC or AIC for model selection</span>
 
 <span class="sd">    The optimization objective for Lasso is::</span>
@@ -1558,7 +1558,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span> <span class="o">=</span> <span class="n">alphas_</span><span class="p">[</span><span class="n">n_best</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">coef_path_</span><span class="p">[:,</span> <span class="n">n_best</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_set_intercept</span><span class="p">(</span><span class="n">Xmean</span><span class="p">,</span> <span class="n">ymean</span><span class="p">,</span> <span class="n">Xstd</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span></div>
+        <span class="k">return</span> <span class="bp">self</span></div></div>
 </pre></div>
 
           </div>

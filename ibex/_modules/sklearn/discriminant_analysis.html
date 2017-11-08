@@ -170,7 +170,7 @@
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">covs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">priors</span><span class="p">)</span>
 
 
-<span class="k">class</span> <span class="nc">LinearDiscriminantAnalysis</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">LinearClassifierMixin</span><span class="p">,</span>
+<div class="viewcode-block" id="LinearDiscriminantAnalysis"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_lineardiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.LinearDiscriminantAnalysis">[docs]</a><span class="k">class</span> <span class="nc">LinearDiscriminantAnalysis</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">LinearClassifierMixin</span><span class="p">,</span>
                                  <span class="n">TransformerMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Linear Discriminant Analysis</span>
 
@@ -573,7 +573,7 @@
 <span class="sd">        C : array, shape (n_samples, n_classes)</span>
 <span class="sd">            Estimated log probabilities.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div></div>
 
 
 <span class="k">class</span> <span class="nc">QuadraticDiscriminantAnalysis</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">):</span>

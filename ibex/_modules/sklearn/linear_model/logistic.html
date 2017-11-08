@@ -1002,7 +1002,7 @@
     <span class="k">return</span> <span class="n">coefs</span><span class="p">,</span> <span class="n">Cs</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">scores</span><span class="p">),</span> <span class="n">n_iter</span>
 
 
-<span class="k">class</span> <span class="nc">LogisticRegression</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">LinearClassifierMixin</span><span class="p">,</span>
+<div class="viewcode-block" id="LogisticRegression"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_logisticregression.html#ibex.sklearn.linear_model.LogisticRegression">[docs]</a><span class="k">class</span> <span class="nc">LogisticRegression</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">LinearClassifierMixin</span><span class="p">,</span>
                          <span class="n">SparseCoefMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Logistic Regression (aka logit, MaxEnt) classifier.</span>
 
@@ -1396,7 +1396,7 @@
 <span class="sd">            Returns the log-probability of the sample for each class in the</span>
 <span class="sd">            model, where classes are ordered as they are in ``self.classes_``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div></div>
 
 
 <span class="k">class</span> <span class="nc">LogisticRegressionCV</span><span class="p">(</span><span class="n">LogisticRegression</span><span class="p">,</span> <span class="n">BaseEstimator</span><span class="p">,</span>
