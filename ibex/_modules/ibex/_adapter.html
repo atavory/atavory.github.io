@@ -47,6 +47,8 @@
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">types</span>
 <span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">textwrap</span>
 
 <span class="kn">import</span> <span class="nn">six</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -379,7 +381,12 @@
             <span class="s1">&#39;.. note::</span><span class="se">\n\n</span><span class="s1">    The documentation following is of the class wrapped by this class. This class wraps the attribute &#39;</span> <span class="o">+</span> <span class="s2">&quot;``&quot;</span> <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;``&quot;</span>
         <span class="n">attrib_docs</span> <span class="o">+=</span> <span class="n">extra_attribs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1">&#39;</span>
 
-    <span class="n">est</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">attrib_docs</span> <span class="o">+</span> <span class="n">est</span><span class="o">.</span><span class="vm">__doc__</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">new_doc</span> <span class="o">=</span> <span class="n">attrib_docs</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">--------------</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">textwrap</span><span class="o">.</span><span class="n">dedent</span><span class="p">(</span><span class="n">est</span><span class="o">.</span><span class="vm">__doc__</span><span class="p">)</span>
+        <span class="n">est</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">new_doc</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">extra_methods</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;extra_methods must be of type dict; got </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">extra_methods</span><span class="p">)</span>

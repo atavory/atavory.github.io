@@ -159,7 +159,7 @@ Example:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span>  <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
+<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span>  <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">coef_</span>
 <span class="go">sepal length (cm)  sepal width (cm)  petal length (cm)  petal width (cm)</span>
 <span class="go">0...           0.414988          1.461297          -2.262141         -1.029095</span>
@@ -172,38 +172,49 @@ Example:</p>
 <span class="go">dtype: float64</span>
 </pre></div>
 </div>
+</div>
 <p>Ordinary least squares Linear Regression.</p>
-<dl class="docutils">
-<dt>fit_intercept <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default True</span></dt>
-<dd>whether to calculate the intercept for this model. If set
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fit_intercept</strong> (<em>boolean</em><em>, </em><em>optional</em><em>, </em><em>default True</em>) – whether to calculate the intercept for this model. If set
 to False, no intercept will be used in calculations
-(e.g. data is expected to be already centered).</dd>
-<dt>normalize <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default False</span></dt>
-<dd>This parameter is ignored when <code class="docutils literal"><span class="pre">fit_intercept</span></code> is set to False.
+(e.g. data is expected to be already centered).</li>
+<li><strong>normalize</strong> (<em>boolean</em><em>, </em><em>optional</em><em>, </em><em>default False</em>) – This parameter is ignored when <code class="docutils literal"><span class="pre">fit_intercept</span></code> is set to False.
 If True, the regressors X will be normalized before regression by
 subtracting the mean and dividing by the l2-norm.
 If you wish to standardize, please use
 <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html#sklearn.preprocessing.StandardScaler" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.preprocessing.StandardScaler</span></code></a> before calling <code class="docutils literal"><span class="pre">fit</span></code> on
-an estimator with <code class="docutils literal"><span class="pre">normalize=False</span></code>.</dd>
-<dt>copy_X <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default True</span></dt>
-<dd>If True, X will be copied; else, it may be overwritten.</dd>
-<dt>n_jobs <span class="classifier-delimiter">:</span> <span class="classifier">int, optional, default 1</span></dt>
-<dd>The number of jobs to use for the computation.
+an estimator with <code class="docutils literal"><span class="pre">normalize=False</span></code>.</li>
+<li><strong>copy_X</strong> (<em>boolean</em><em>, </em><em>optional</em><em>, </em><em>default True</em>) – If True, X will be copied; else, it may be overwritten.</li>
+<li><strong>n_jobs</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>, </em><em>optional</em><em>, </em><em>default 1</em>) – The number of jobs to use for the computation.
 If -1 all CPUs are used. This will only provide speedup for
-n_targets &gt; 1 and sufficient large problems.</dd>
-</dl>
-<dl class="docutils">
-<dt><a href="#id1"><span class="problematic" id="id2">coef_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_features, ) or (n_targets, n_features)</span></dt>
-<dd>Estimated coefficients for the linear regression problem.
+n_targets &gt; 1 and sufficient large problems.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="LinearRegression.coef_">
+<code class="descname">coef_</code><a class="headerlink" href="#LinearRegression.coef_" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>array, shape (n_features, ) or (n_targets, n_features)</em> – Estimated coefficients for the linear regression problem.
 If multiple targets are passed during the fit (y 2D), this
 is a 2D array of shape (n_targets, n_features), while if only
-one target is passed, this is a 1D array of length n_features.</dd>
-<dt><a href="#id3"><span class="problematic" id="id4">intercept_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
-<dd>Independent term in the linear model.</dd>
-</dl>
-<p class="last">From the implementation point of view, this is just plain Ordinary
+one target is passed, this is a 1D array of length n_features.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="LinearRegression.intercept_">
+<code class="descname">intercept_</code><a class="headerlink" href="#LinearRegression.intercept_" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>array</em> – Independent term in the linear model.</p>
+</dd></dl>
+
+<p class="rubric">Notes</p>
+<p>From the implementation point of view, this is just plain Ordinary
 Least Squares (scipy.linalg.lstsq) wrapped as a predictor object.</p>
-</div>
 <dl class="method">
 <dt id="ibex.sklearn.linear_model.LinearRegression.fit">
 <code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y</em>, <em>sample_weight=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/linear_model/base.html#LinearRegression.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.linear_model.LinearRegression.fit" title="Permalink to this definition">¶</a></dt>
