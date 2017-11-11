@@ -52,7 +52,7 @@
 <span class="kn">from</span> <span class="nn">.._base</span> <span class="k">import</span> <span class="n">FeatureUnion</span> <span class="k">as</span> <span class="n">PdFeatureUnion</span>
 
 
-<span class="k">def</span> <span class="nf">pd_make_pipeline</span><span class="p">(</span><span class="o">*</span><span class="n">estimators</span><span class="p">):</span>
+<div class="viewcode-block" id="make_pipeline"><a class="viewcode-back" href="../../../api_ibex_sklearn_pipeline_make_pipeline.html#ibex.sklearn.pipeline.make_pipeline">[docs]</a><span class="k">def</span> <span class="nf">make_pipeline</span><span class="p">(</span><span class="o">*</span><span class="n">estimators</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Creates a pipeline from estimators.</span>
 
@@ -80,10 +80,10 @@
         <span class="k">return</span> <span class="n">six</span><span class="o">.</span><span class="n">moves</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">or_</span><span class="p">,</span> <span class="n">estimators</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">estimators</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
     <span class="n">name</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">estimators</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">PdPipeline</span><span class="p">([(</span><span class="n">name</span><span class="p">,</span> <span class="n">estimators</span><span class="p">[</span><span class="mi">0</span><span class="p">])])</span>
+    <span class="k">return</span> <span class="n">PdPipeline</span><span class="p">([(</span><span class="n">name</span><span class="p">,</span> <span class="n">estimators</span><span class="p">[</span><span class="mi">0</span><span class="p">])])</span></div>
 
 
-<span class="k">def</span> <span class="nf">pd_make_union</span><span class="p">(</span><span class="o">*</span><span class="n">transformers</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">make_union</span><span class="p">(</span><span class="o">*</span><span class="n">transformers</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Creates a union from transformers.</span>
 
@@ -113,13 +113,6 @@
 
     <span class="n">name</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">transformers</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">PdFeatureUnion</span><span class="p">([(</span><span class="n">name</span><span class="p">,</span> <span class="n">transformers</span><span class="p">[</span><span class="mi">0</span><span class="p">])])</span>
-
-
-<span class="k">def</span> <span class="nf">update_module</span><span class="p">(</span><span class="n">module</span><span class="p">):</span>
-    <span class="nb">setattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="s1">&#39;Pipeline&#39;</span><span class="p">,</span> <span class="n">PdPipeline</span><span class="p">)</span>
-    <span class="nb">setattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="s1">&#39;FeatureUnion&#39;</span><span class="p">,</span> <span class="n">PdFeatureUnion</span><span class="p">)</span>
-    <span class="nb">setattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="s1">&#39;make_pipeline&#39;</span><span class="p">,</span> <span class="n">pd_make_pipeline</span><span class="p">)</span>
-    <span class="nb">setattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="s1">&#39;make_union&#39;</span><span class="p">,</span> <span class="n">pd_make_union</span><span class="p">)</span>
 </pre></div>
 
           </div>

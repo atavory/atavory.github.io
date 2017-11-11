@@ -403,7 +403,10 @@
         <span class="n">f</span> <span class="o">=</span> <span class="n">frame</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">est</span><span class="p">))(</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">f</span>
 
-    <span class="n">_Adapter</span> <span class="o">=</span> <span class="n">_make_adapter</span><span class="p">(</span><span class="n">est</span><span class="p">,</span> <span class="n">extra_methods</span><span class="p">,</span> <span class="n">extra_attribs</span><span class="p">)</span>
+    <span class="n">_Adapter</span> <span class="o">=</span> <span class="n">_make_adapter</span><span class="p">(</span>
+        <span class="n">est</span><span class="p">,</span>
+        <span class="n">extra_methods</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+        <span class="n">extra_attribs</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
 
     <span class="n">update_class_wrapper</span><span class="p">(</span><span class="n">_Adapter</span><span class="p">,</span> <span class="n">est</span><span class="p">)</span>
 

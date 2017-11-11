@@ -127,9 +127,7 @@ approach.)</p>
 <div><div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">svc</span> <span class="o">=</span> <span class="n">PdSVC</span><span class="p">(</span><span class="n">kernel</span><span class="o">=</span><span class="s2">&quot;linear&quot;</span><span class="p">,</span> <span class="n">probability</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
-<blockquote>
-<div><p>Find the coefficients of the boundaries between the different classes:</p>
-</div></blockquote>
+<p>Find the coefficients of the boundaries between the different classes:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">svc</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">coef_</span>
 <span class="go">            sepal length (cm)  sepal width (cm)  petal length (cm)  \</span>
 <span class="go">setosa              -0.046259          0.521183          -1.003045</span>
@@ -142,27 +140,22 @@ approach.)</p>
 <span class="go">virginica          -2.006303</span>
 </pre></div>
 </div>
-<blockquote>
-<div><p>Predict belonging to classes:</p>
-</div></blockquote>
+<p>Predict belonging to classes:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">svc</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">       setosa  versicolor  virginica</span>
+<span class="go">    setosa  versicolor  virginica</span>
 <span class="go">0    0.97...    0.01...   0.00...</span>
-<span class="go">    ...</span>
+<span class="gp">...</span>
 </pre></div>
 </div>
-<blockquote>
-<div><p>Find the coefficients of the boundaries between the different classes in a pipeline:
-&gt;&gt;&gt; clf = PdPCA(n_components=2) + PdSelectKBest(k=1) | svc</p>
-</div></blockquote>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">...</span>
+<p>Find the coefficients of the boundaries between the different classes in a pipeline:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdPCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">PdSelectKBest</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">|</span> <span class="n">svc</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">svc</span><span class="o">.</span><span class="n">coef_</span>
-<span class="go">                 pca                 selectkbest</span>
-<span class="go">              comp_0    comp_1 petal length (cm)</span>
-<span class="go">setosa     -0.757016  0.376680         -0.575197</span>
-<span class="go">versicolor -0.351218  0.141699         -0.317562</span>
-<span class="go">virginica  -1.529320  1.472771         -1.509391</span>
+<span class="go">                pca                 selectkbest</span>
+<span class="go">            comp_0    comp_1 petal length (cm)</span>
+<span class="go">setosa     -0.757016  ...0.376680         -0.575197</span>
+<span class="go">versicolor -0.351218  ...0.141699         -0.317562</span>
+<span class="go">virginica  -1.529320  ...1.472771         -1.509391</span>
 </pre></div>
 </div>
 </div></blockquote>

@@ -116,91 +116,6 @@ therefore <a class="reference internal" href="api_ibex.html#module-ibex.sklearn"
 <div class="section" id="id5">
 <h5>Module Doc<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h5>
 <span class="target" id="module-ibex.sklearn.cluster"></span><p>Auto-generated <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.cluster" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.cluster</span></code></a>.</p>
-<p># Tmp Ami</p>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.cluster</span> <span class="k">import</span> <span class="n">KMeans</span> <span class="k">as</span> <span class="n">PdKMeans</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">]</span>
-<span class="go">sepal length (cm)  sepal width (cm)  petal length (cm)  petal width (cm)</span>
-<span class="go">0                5.1               3.5                1.4               0.2</span>
-<span class="go">1                4.9               3.0                1.4               0.2</span>
-<span class="go">2                4.7               3.2                1.3               0.2</span>
-<span class="go">3                4.6               3.1                1.5               0.2</span>
-<span class="go">4                5.0               3.6                1.4               0.2</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clt</span> <span class="o">=</span> <span class="n">PdKMeans</span><span class="p">(</span><span class="n">n_clusters</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">clt</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">    0         1         2</span>
-<span class="go">0    3.419251  0.146942  5.059542</span>
-<span class="go">1    3.398574  0.438169  5.114943</span>
-<span class="go">2    3.569357  0.412301  5.279355</span>
-<span class="go">3    3.422410  0.518837  5.153590</span>
-<span class="go">4    3.467264  0.197970  5.104334</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
-<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
-<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
-<span class="go">array([ 0.,  1.,  2.])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">         0...      1...          2...</span>
-<span class="go">0    0.879682  0.120308  1.081314e-05</span>
-<span class="go">1    0.799706  0.200263  3.038254e-05</span>
-<span class="go">2    0.853797  0.146177  2.590313e-05</span>
-<span class="go">3    0.825383  0.174559  5.793567e-05</span>
-<span class="go">4    0.897324  0.102665  1.120500e-05</span>
-<span class="go">5    0.926987  0.073000  1.296939e-05</span>
-<span class="go"> ...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">          0...      1...       2...</span>
-<span class="go">0    -0.128195 -2.117704 -11.434749</span>
-<span class="go">1    -0.223511 -1.608122 -10.401643</span>
-<span class="go">2    -0.158062 -1.922935 -10.561147</span>
-<span class="go">3    -0.191908 -1.745493  -9.756177</span>
-<span class="go">4    -0.108339 -2.276282 -11.399150</span>
-<span class="go">5    -0.075816 -2.617290 -11.252919</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
 </div>
 <div class="section" id="id6">
 <h5>Members<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h5>
@@ -279,52 +194,6 @@ therefore <a class="reference internal" href="api_ibex.html#module-ibex.sklearn"
 <div class="section" id="id15">
 <h5>Module Doc<a class="headerlink" href="#id15" title="Permalink to this headline">¶</a></h5>
 <span class="target" id="module-ibex.sklearn.decomposition"></span><p>Auto-generated <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.decomposition" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.decomposition</span></code></a>.</p>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
-<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
-<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
-<span class="go">array([ 0.,  1.,  2.])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">         0...      1...          2...</span>
-<span class="go">0    0.879682  0.120308  1.081314e-05</span>
-<span class="go">1    0.799706  0.200263  3.038254e-05</span>
-<span class="go">2    0.853797  0.146177  2.590313e-05</span>
-<span class="go">3    0.825383  0.174559  5.793567e-05</span>
-<span class="go">4    0.897324  0.102665  1.120500e-05</span>
-<span class="go">5    0.926987  0.073000  1.296939e-05</span>
-<span class="go"> ...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">          0...      1...       2...</span>
-<span class="go">0    -0.128195 -2.117704 -11.434749</span>
-<span class="go">1    -0.223511 -1.608122 -10.401643</span>
-<span class="go">2    -0.158062 -1.922935 -10.561147</span>
-<span class="go">3    -0.191908 -1.745493  -9.756177</span>
-<span class="go">4    -0.108339 -2.276282 -11.399150</span>
-<span class="go">5    -0.075816 -2.617290 -11.252919</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
 </div>
 <div class="section" id="id16">
 <h5>Members<a class="headerlink" href="#id16" title="Permalink to this headline">¶</a></h5>
@@ -351,52 +220,6 @@ therefore <a class="reference internal" href="api_ibex.html#module-ibex.sklearn"
 <div class="section" id="id17">
 <h5>Module Doc<a class="headerlink" href="#id17" title="Permalink to this headline">¶</a></h5>
 <span class="target" id="module-ibex.sklearn.discriminant_analysis"></span><p>Auto-generated <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.discriminant_analysis" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.discriminant_analysis</span></code></a>.</p>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
-<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
-<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
-<span class="go">array([ 0.,  1.,  2.])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">         0...      1...          2...</span>
-<span class="go">0    0.879682  0.120308  1.081314e-05</span>
-<span class="go">1    0.799706  0.200263  3.038254e-05</span>
-<span class="go">2    0.853797  0.146177  2.590313e-05</span>
-<span class="go">3    0.825383  0.174559  5.793567e-05</span>
-<span class="go">4    0.897324  0.102665  1.120500e-05</span>
-<span class="go">5    0.926987  0.073000  1.296939e-05</span>
-<span class="go"> ...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">          0...      1...       2...</span>
-<span class="go">0    -0.128195 -2.117704 -11.434749</span>
-<span class="go">1    -0.223511 -1.608122 -10.401643</span>
-<span class="go">2    -0.158062 -1.922935 -10.561147</span>
-<span class="go">3    -0.191908 -1.745493  -9.756177</span>
-<span class="go">4    -0.108339 -2.276282 -11.399150</span>
-<span class="go">5    -0.075816 -2.617290 -11.252919</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
 </div>
 <div class="section" id="id18">
 <h5>Members<a class="headerlink" href="#id18" title="Permalink to this headline">¶</a></h5>
@@ -427,52 +250,6 @@ therefore <a class="reference internal" href="api_ibex.html#module-ibex.sklearn"
 <div class="section" id="id21">
 <h5>Module Doc<a class="headerlink" href="#id21" title="Permalink to this headline">¶</a></h5>
 <span class="target" id="module-ibex.sklearn.ensemble"></span><p>Auto-generated <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.ensemble" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.ensemble</span></code></a>.</p>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
-<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
-<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
-<span class="go">array([ 0.,  1.,  2.])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">         0...      1...          2...</span>
-<span class="go">0    0.879682  0.120308  1.081314e-05</span>
-<span class="go">1    0.799706  0.200263  3.038254e-05</span>
-<span class="go">2    0.853797  0.146177  2.590313e-05</span>
-<span class="go">3    0.825383  0.174559  5.793567e-05</span>
-<span class="go">4    0.897324  0.102665  1.120500e-05</span>
-<span class="go">5    0.926987  0.073000  1.296939e-05</span>
-<span class="go"> ...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">          0...      1...       2...</span>
-<span class="go">0    -0.128195 -2.117704 -11.434749</span>
-<span class="go">1    -0.223511 -1.608122 -10.401643</span>
-<span class="go">2    -0.158062 -1.922935 -10.561147</span>
-<span class="go">3    -0.191908 -1.745493  -9.756177</span>
-<span class="go">4    -0.108339 -2.276282 -11.399150</span>
-<span class="go">5    -0.075816 -2.617290 -11.252919</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
 </div>
 <div class="section" id="id22">
 <h5>Members<a class="headerlink" href="#id22" title="Permalink to this headline">¶</a></h5>
@@ -518,52 +295,6 @@ therefore <a class="reference internal" href="api_ibex.html#module-ibex.sklearn"
 <div class="section" id="id27">
 <h5>Module Doc<a class="headerlink" href="#id27" title="Permalink to this headline">¶</a></h5>
 <span class="target" id="module-ibex.sklearn.feature_extraction"></span><p>Auto-generated <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.feature_extraction" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.feature_extraction</span></code></a>.</p>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
-<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
-<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
-<span class="go">array([ 0.,  1.,  2.])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">         0...      1...          2...</span>
-<span class="go">0    0.879682  0.120308  1.081314e-05</span>
-<span class="go">1    0.799706  0.200263  3.038254e-05</span>
-<span class="go">2    0.853797  0.146177  2.590313e-05</span>
-<span class="go">3    0.825383  0.174559  5.793567e-05</span>
-<span class="go">4    0.897324  0.102665  1.120500e-05</span>
-<span class="go">5    0.926987  0.073000  1.296939e-05</span>
-<span class="go"> ...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">          0...      1...       2...</span>
-<span class="go">0    -0.128195 -2.117704 -11.434749</span>
-<span class="go">1    -0.223511 -1.608122 -10.401643</span>
-<span class="go">2    -0.158062 -1.922935 -10.561147</span>
-<span class="go">3    -0.191908 -1.745493  -9.756177</span>
-<span class="go">4    -0.108339 -2.276282 -11.399150</span>
-<span class="go">5    -0.075816 -2.617290 -11.252919</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
 </div>
 <div class="section" id="id28">
 <h5>Members<a class="headerlink" href="#id28" title="Permalink to this headline">¶</a></h5>
@@ -578,91 +309,6 @@ therefore <a class="reference internal" href="api_ibex.html#module-ibex.sklearn"
 <div class="section" id="id29">
 <h5>Module Doc<a class="headerlink" href="#id29" title="Permalink to this headline">¶</a></h5>
 <span class="target" id="module-ibex.sklearn.feature_selection"></span><p>Auto-generated <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.feature_selection" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.feature_selection</span></code></a>.</p>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>Transformers in this module label their columns by the original names they
-were called (prior to their selection).</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.feature_selection</span> <span class="k">import</span> <span class="n">SelectKBest</span> <span class="k">as</span> <span class="n">PdSelectKBest</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">]</span>
-<span class="go">sepal length (cm)  sepal width (cm)  petal length (cm)  petal width (cm)</span>
-<span class="go">0                5.1               3.5                1.4               0.2</span>
-<span class="go">1                4.9               3.0                1.4               0.2</span>
-<span class="go">2                4.7               3.2                1.3               0.2</span>
-<span class="go">3                4.6               3.1                1.5               0.2</span>
-<span class="go">4                5.0               3.6                1.4               0.2</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">PdSelectKBest</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">    petal length (cm)</span>
-<span class="go">0                  1.4</span>
-<span class="go">1                  1.4</span>
-<span class="go">2                  1.3</span>
-<span class="go">3                  1.5</span>
-<span class="go">4                  1.4</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
-<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
-<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
-<span class="go">array([ 0.,  1.,  2.])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">         0...      1...          2...</span>
-<span class="go">0    0.879682  0.120308  1.081314e-05</span>
-<span class="go">1    0.799706  0.200263  3.038254e-05</span>
-<span class="go">2    0.853797  0.146177  2.590313e-05</span>
-<span class="go">3    0.825383  0.174559  5.793567e-05</span>
-<span class="go">4    0.897324  0.102665  1.120500e-05</span>
-<span class="go">5    0.926987  0.073000  1.296939e-05</span>
-<span class="go"> ...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">          0...      1...       2...</span>
-<span class="go">0    -0.128195 -2.117704 -11.434749</span>
-<span class="go">1    -0.223511 -1.608122 -10.401643</span>
-<span class="go">2    -0.158062 -1.922935 -10.561147</span>
-<span class="go">3    -0.191908 -1.745493  -9.756177</span>
-<span class="go">4    -0.108339 -2.276282 -11.399150</span>
-<span class="go">5    -0.075816 -2.617290 -11.252919</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
 </div>
 <div class="section" id="id30">
 <h5>Members<a class="headerlink" href="#id30" title="Permalink to this headline">¶</a></h5>
@@ -716,52 +362,6 @@ were called (prior to their selection).</p>
 <div class="section" id="id35">
 <h5>Module Doc<a class="headerlink" href="#id35" title="Permalink to this headline">¶</a></h5>
 <span class="target" id="module-ibex.sklearn.isotonic"></span><p>Auto-generated <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.isotonic" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.isotonic</span></code></a>.</p>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
-<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
-<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
-<span class="go">array([ 0.,  1.,  2.])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">         0...      1...          2...</span>
-<span class="go">0    0.879682  0.120308  1.081314e-05</span>
-<span class="go">1    0.799706  0.200263  3.038254e-05</span>
-<span class="go">2    0.853797  0.146177  2.590313e-05</span>
-<span class="go">3    0.825383  0.174559  5.793567e-05</span>
-<span class="go">4    0.897324  0.102665  1.120500e-05</span>
-<span class="go">5    0.926987  0.073000  1.296939e-05</span>
-<span class="go"> ...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">          0...      1...       2...</span>
-<span class="go">0    -0.128195 -2.117704 -11.434749</span>
-<span class="go">1    -0.223511 -1.608122 -10.401643</span>
-<span class="go">2    -0.158062 -1.922935 -10.561147</span>
-<span class="go">3    -0.191908 -1.745493  -9.756177</span>
-<span class="go">4    -0.108339 -2.276282 -11.399150</span>
-<span class="go">5    -0.075816 -2.617290 -11.252919</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
 </div>
 <div class="section" id="id36">
 <h5>Members<a class="headerlink" href="#id36" title="Permalink to this headline">¶</a></h5>
@@ -815,52 +415,6 @@ were called (prior to their selection).</p>
 <div class="section" id="id43">
 <h5>Module Doc<a class="headerlink" href="#id43" title="Permalink to this headline">¶</a></h5>
 <span class="target" id="module-ibex.sklearn.linear_model"></span><p>Auto-generated <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.linear_model" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.linear_model</span></code></a>.</p>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
-<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
-<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
-<span class="go">array([ 0.,  1.,  2.])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">         0...      1...          2...</span>
-<span class="go">0    0.879682  0.120308  1.081314e-05</span>
-<span class="go">1    0.799706  0.200263  3.038254e-05</span>
-<span class="go">2    0.853797  0.146177  2.590313e-05</span>
-<span class="go">3    0.825383  0.174559  5.793567e-05</span>
-<span class="go">4    0.897324  0.102665  1.120500e-05</span>
-<span class="go">5    0.926987  0.073000  1.296939e-05</span>
-<span class="go"> ...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">          0...      1...       2...</span>
-<span class="go">0    -0.128195 -2.117704 -11.434749</span>
-<span class="go">1    -0.223511 -1.608122 -10.401643</span>
-<span class="go">2    -0.158062 -1.922935 -10.561147</span>
-<span class="go">3    -0.191908 -1.745493  -9.756177</span>
-<span class="go">4    -0.108339 -2.276282 -11.399150</span>
-<span class="go">5    -0.075816 -2.617290 -11.252919</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
 </div>
 <div class="section" id="id44">
 <h5>Members<a class="headerlink" href="#id44" title="Permalink to this headline">¶</a></h5>
@@ -907,52 +461,6 @@ were called (prior to their selection).</p>
 <div class="section" id="id45">
 <h5>Module Doc<a class="headerlink" href="#id45" title="Permalink to this headline">¶</a></h5>
 <span class="target" id="module-ibex.sklearn.manifold"></span><p>Auto-generated <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.manifold" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.manifold</span></code></a>.</p>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
-<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
-<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
-<span class="go">array([ 0.,  1.,  2.])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">         0...      1...          2...</span>
-<span class="go">0    0.879682  0.120308  1.081314e-05</span>
-<span class="go">1    0.799706  0.200263  3.038254e-05</span>
-<span class="go">2    0.853797  0.146177  2.590313e-05</span>
-<span class="go">3    0.825383  0.174559  5.793567e-05</span>
-<span class="go">4    0.897324  0.102665  1.120500e-05</span>
-<span class="go">5    0.926987  0.073000  1.296939e-05</span>
-<span class="go"> ...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">          0...      1...       2...</span>
-<span class="go">0    -0.128195 -2.117704 -11.434749</span>
-<span class="go">1    -0.223511 -1.608122 -10.401643</span>
-<span class="go">2    -0.158062 -1.922935 -10.561147</span>
-<span class="go">3    -0.191908 -1.745493  -9.756177</span>
-<span class="go">4    -0.108339 -2.276282 -11.399150</span>
-<span class="go">5    -0.075816 -2.617290 -11.252919</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
 </div>
 <div class="section" id="id46">
 <h5>Members<a class="headerlink" href="#id46" title="Permalink to this headline">¶</a></h5>
@@ -1086,52 +594,6 @@ were called (prior to their selection).</p>
 <div class="section" id="id61">
 <h5>Module Doc<a class="headerlink" href="#id61" title="Permalink to this headline">¶</a></h5>
 <span class="target" id="module-ibex.sklearn.neural_network"></span><p>Auto-generated <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.neural_network" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.neural_network</span></code></a>.</p>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
-<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
-<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
-<span class="go">array([ 0.,  1.,  2.])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">         0...      1...          2...</span>
-<span class="go">0    0.879682  0.120308  1.081314e-05</span>
-<span class="go">1    0.799706  0.200263  3.038254e-05</span>
-<span class="go">2    0.853797  0.146177  2.590313e-05</span>
-<span class="go">3    0.825383  0.174559  5.793567e-05</span>
-<span class="go">4    0.897324  0.102665  1.120500e-05</span>
-<span class="go">5    0.926987  0.073000  1.296939e-05</span>
-<span class="go"> ...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">          0...      1...       2...</span>
-<span class="go">0    -0.128195 -2.117704 -11.434749</span>
-<span class="go">1    -0.223511 -1.608122 -10.401643</span>
-<span class="go">2    -0.158062 -1.922935 -10.561147</span>
-<span class="go">3    -0.191908 -1.745493  -9.756177</span>
-<span class="go">4    -0.108339 -2.276282 -11.399150</span>
-<span class="go">5    -0.075816 -2.617290 -11.252919</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
 </div>
 <div class="section" id="id62">
 <h5>Members<a class="headerlink" href="#id62" title="Permalink to this headline">¶</a></h5>
@@ -1147,52 +609,6 @@ were called (prior to their selection).</p>
 <div class="section" id="id63">
 <h5>Module Doc<a class="headerlink" href="#id63" title="Permalink to this headline">¶</a></h5>
 <span class="target" id="module-ibex.sklearn.pipeline"></span><p>Auto-generated <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.pipeline" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.pipeline</span></code></a>.</p>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
-<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
-<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
-<span class="go">array([ 0.,  1.,  2.])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">         0...      1...          2...</span>
-<span class="go">0    0.879682  0.120308  1.081314e-05</span>
-<span class="go">1    0.799706  0.200263  3.038254e-05</span>
-<span class="go">2    0.853797  0.146177  2.590313e-05</span>
-<span class="go">3    0.825383  0.174559  5.793567e-05</span>
-<span class="go">4    0.897324  0.102665  1.120500e-05</span>
-<span class="go">5    0.926987  0.073000  1.296939e-05</span>
-<span class="go"> ...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">          0...      1...       2...</span>
-<span class="go">0    -0.128195 -2.117704 -11.434749</span>
-<span class="go">1    -0.223511 -1.608122 -10.401643</span>
-<span class="go">2    -0.158062 -1.922935 -10.561147</span>
-<span class="go">3    -0.191908 -1.745493  -9.756177</span>
-<span class="go">4    -0.108339 -2.276282 -11.399150</span>
-<span class="go">5    -0.075816 -2.617290 -11.252919</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
 </div>
 <div class="section" id="id64">
 <h5>Members<a class="headerlink" href="#id64" title="Permalink to this headline">¶</a></h5>
@@ -1208,52 +624,6 @@ were called (prior to their selection).</p>
 <div class="section" id="id65">
 <h5>Module Doc<a class="headerlink" href="#id65" title="Permalink to this headline">¶</a></h5>
 <span class="target" id="module-ibex.sklearn.preprocessing"></span><p>Auto-generated <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.preprocessing" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.preprocessing</span></code></a>.</p>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
-<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
-<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
-<span class="go">array([ 0.,  1.,  2.])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">         0...      1...          2...</span>
-<span class="go">0    0.879682  0.120308  1.081314e-05</span>
-<span class="go">1    0.799706  0.200263  3.038254e-05</span>
-<span class="go">2    0.853797  0.146177  2.590313e-05</span>
-<span class="go">3    0.825383  0.174559  5.793567e-05</span>
-<span class="go">4    0.897324  0.102665  1.120500e-05</span>
-<span class="go">5    0.926987  0.073000  1.296939e-05</span>
-<span class="go"> ...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">          0...      1...       2...</span>
-<span class="go">0    -0.128195 -2.117704 -11.434749</span>
-<span class="go">1    -0.223511 -1.608122 -10.401643</span>
-<span class="go">2    -0.158062 -1.922935 -10.561147</span>
-<span class="go">3    -0.191908 -1.745493  -9.756177</span>
-<span class="go">4    -0.108339 -2.276282 -11.399150</span>
-<span class="go">5    -0.075816 -2.617290 -11.252919</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
 </div>
 <div class="section" id="id66">
 <h5>Members<a class="headerlink" href="#id66" title="Permalink to this headline">¶</a></h5>
@@ -1281,52 +651,6 @@ were called (prior to their selection).</p>
 <div class="section" id="id67">
 <h5>Module Doc<a class="headerlink" href="#id67" title="Permalink to this headline">¶</a></h5>
 <span class="target" id="module-ibex.sklearn.random_projection"></span><p>Auto-generated <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.random_projection" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.random_projection</span></code></a>.</p>
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>This module contains classifiers. The <code class="docutils literal"><span class="pre">predict_proba</span></code>  and
-<code class="docutils literal"><span class="pre">predict_log_proba</span></code> methods for Ibex classifiers, return
-<code class="xref py py-mod docutils literal"><span class="pre">pandas.DataFrame</span></code> objects whose columns are the classes.</p>
-<p>Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LogisticRegression</span> <span class="k">as</span> <span class="n">PdLogisticRegression</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">PdLogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">classes_</span>
-<span class="go">array([ 0.,  1.,  2.])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">         0...      1...          2...</span>
-<span class="go">0    0.879682  0.120308  1.081314e-05</span>
-<span class="go">1    0.799706  0.200263  3.038254e-05</span>
-<span class="go">2    0.853797  0.146177  2.590313e-05</span>
-<span class="go">3    0.825383  0.174559  5.793567e-05</span>
-<span class="go">4    0.897324  0.102665  1.120500e-05</span>
-<span class="go">5    0.926987  0.073000  1.296939e-05</span>
-<span class="go"> ...</span>
-</pre></div>
-</div>
-<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">          0...      1...       2...</span>
-<span class="go">0    -0.128195 -2.117704 -11.434749</span>
-<span class="go">1    -0.223511 -1.608122 -10.401643</span>
-<span class="go">2    -0.158062 -1.922935 -10.561147</span>
-<span class="go">3    -0.191908 -1.745493  -9.756177</span>
-<span class="go">4    -0.108339 -2.276282 -11.399150</span>
-<span class="go">5    -0.075816 -2.617290 -11.252919</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</div>
 </div>
 <div class="section" id="id68">
 <h5>Members<a class="headerlink" href="#id68" title="Permalink to this headline">¶</a></h5>
