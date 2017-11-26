@@ -1265,7 +1265,7 @@
         <span class="k">return</span> <span class="n">leaves</span>
 
 
-<div class="viewcode-block" id="GradientBoostingClassifier"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier">[docs]</a><span class="k">class</span> <span class="nc">GradientBoostingClassifier</span><span class="p">(</span><span class="n">BaseGradientBoosting</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">GradientBoostingClassifier</span><span class="p">(</span><span class="n">BaseGradientBoosting</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Gradient Boosting for classification.</span>
 
 <span class="sd">    GB builds an additive model in a</span>
@@ -1508,7 +1508,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">n_classes_</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">y</span>
 
-<div class="viewcode-block" id="GradientBoostingClassifier.decision_function"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier.decision_function">[docs]</a>    <span class="k">def</span> <span class="nf">decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="GradientBoostingClassifier.decision_function"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier.decision_function">[docs]</a>    <span class="k">def</span> <span class="nf">decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Compute the decision function of ``X``.</span>
 
 <span class="sd">        Parameters</span>
@@ -1532,7 +1532,7 @@
             <span class="k">return</span> <span class="n">score</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">score</span></div>
 
-<div class="viewcode-block" id="GradientBoostingClassifier.staged_decision_function"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier.staged_decision_function">[docs]</a>    <span class="k">def</span> <span class="nf">staged_decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="GradientBoostingClassifier.staged_decision_function"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier.staged_decision_function">[docs]</a>    <span class="k">def</span> <span class="nf">staged_decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Compute decision function of ``X`` for each iteration.</span>
 
 <span class="sd">        This method allows monitoring (i.e. determine error on testing set)</span>
@@ -1557,7 +1557,7 @@
             <span class="c1"># no yield from in Python2.X</span>
             <span class="k">yield</span> <span class="n">dec</span></div>
 
-<div class="viewcode-block" id="GradientBoostingClassifier.predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="GradientBoostingClassifier.predict"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Predict class for X.</span>
 
 <span class="sd">        Parameters</span>
@@ -1576,7 +1576,7 @@
         <span class="n">decisions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_</span><span class="o">.</span><span class="n">_score_to_decision</span><span class="p">(</span><span class="n">score</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">decisions</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="GradientBoostingClassifier.staged_predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier.staged_predict">[docs]</a>    <span class="k">def</span> <span class="nf">staged_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="GradientBoostingClassifier.staged_predict"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier.staged_predict">[docs]</a>    <span class="k">def</span> <span class="nf">staged_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Predict class at each stage for X.</span>
 
 <span class="sd">        This method allows monitoring (i.e. determine error on testing set)</span>
@@ -1598,7 +1598,7 @@
             <span class="n">decisions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_</span><span class="o">.</span><span class="n">_score_to_decision</span><span class="p">(</span><span class="n">score</span><span class="p">)</span>
             <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">decisions</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="GradientBoostingClassifier.predict_proba"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier.predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="GradientBoostingClassifier.predict_proba"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier.predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Predict class probabilities for X.</span>
 
 <span class="sd">        Parameters</span>
@@ -1628,7 +1628,7 @@
             <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s1">&#39;loss=</span><span class="si">%r</span><span class="s1"> does not support predict_proba&#39;</span> <span class="o">%</span>
                                  <span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="GradientBoostingClassifier.predict_log_proba"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier.predict_log_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="GradientBoostingClassifier.predict_log_proba"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier.predict_log_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Predict class log-probabilities for X.</span>
 
 <span class="sd">        Parameters</span>
@@ -1652,7 +1652,7 @@
         <span class="n">proba</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">proba</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="GradientBoostingClassifier.staged_predict_proba"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier.staged_predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">staged_predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="GradientBoostingClassifier.staged_predict_proba"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_gradientboostingclassifier.html#ibex.sklearn.ensemble.GradientBoostingClassifier.staged_predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">staged_predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Predict class probabilities at each stage for X.</span>
 
 <span class="sd">        This method allows monitoring (i.e. determine error on testing set)</span>
@@ -1677,10 +1677,10 @@
             <span class="k">raise</span>
         <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s1">&#39;loss=</span><span class="si">%r</span><span class="s1"> does not support predict_proba&#39;</span> <span class="o">%</span>
-                                 <span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">)</span></div></div>
+                                 <span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="GradientBoostingRegressor"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_gradientboostingregressor.html#ibex.sklearn.ensemble.GradientBoostingRegressor">[docs]</a><span class="k">class</span> <span class="nc">GradientBoostingRegressor</span><span class="p">(</span><span class="n">BaseGradientBoosting</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">GradientBoostingRegressor</span><span class="p">(</span><span class="n">BaseGradientBoosting</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Gradient Boosting for regression.</span>
 
 <span class="sd">    GB builds an additive model in a forward stage-wise fashion;</span>
@@ -1916,7 +1916,7 @@
             <span class="n">max_leaf_nodes</span><span class="o">=</span><span class="n">max_leaf_nodes</span><span class="p">,</span> <span class="n">warm_start</span><span class="o">=</span><span class="n">warm_start</span><span class="p">,</span>
             <span class="n">presort</span><span class="o">=</span><span class="n">presort</span><span class="p">)</span>
 
-<div class="viewcode-block" id="GradientBoostingRegressor.predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_gradientboostingregressor.html#ibex.sklearn.ensemble.GradientBoostingRegressor.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="GradientBoostingRegressor.predict"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_gradientboostingregressor.html#ibex.sklearn.ensemble.GradientBoostingRegressor.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Predict regression target for X.</span>
 
 <span class="sd">        Parameters</span>
@@ -1934,7 +1934,7 @@
         <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s2">&quot;C&quot;</span><span class="p">,</span>  <span class="n">accept_sparse</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="GradientBoostingRegressor.staged_predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_gradientboostingregressor.html#ibex.sklearn.ensemble.GradientBoostingRegressor.staged_predict">[docs]</a>    <span class="k">def</span> <span class="nf">staged_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="GradientBoostingRegressor.staged_predict"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_gradientboostingregressor.html#ibex.sklearn.ensemble.GradientBoostingRegressor.staged_predict">[docs]</a>    <span class="k">def</span> <span class="nf">staged_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Predict regression target at each stage for X.</span>
 
 <span class="sd">        This method allows monitoring (i.e. determine error on testing set)</span>
@@ -1955,7 +1955,7 @@
         <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_staged_decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
             <span class="k">yield</span> <span class="n">y</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="GradientBoostingRegressor.apply"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_gradientboostingregressor.html#ibex.sklearn.ensemble.GradientBoostingRegressor.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="GradientBoostingRegressor.apply"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_gradientboostingregressor.html#ibex.sklearn.ensemble.GradientBoostingRegressor.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Apply trees in the ensemble to X, return leaf indices.</span>
 
 <span class="sd">        .. versionadded:: 0.17</span>
@@ -1976,7 +1976,7 @@
 
         <span class="n">leaves</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">GradientBoostingRegressor</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
         <span class="n">leaves</span> <span class="o">=</span> <span class="n">leaves</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimators_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="k">return</span> <span class="n">leaves</span></div></div>
+        <span class="k">return</span> <span class="n">leaves</span></div>
 </pre></div>
 
           </div>
@@ -1986,26 +1986,7 @@
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../index.html">
               <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="../../../index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../../../index.html">Documentation overview</a><ul>
@@ -2032,7 +2013,7 @@
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
     </div>

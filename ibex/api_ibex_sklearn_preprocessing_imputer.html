@@ -42,157 +42,6 @@
             
   <div class="section" id="imputer">
 <h1><code class="docutils literal"><span class="pre">Imputer</span></code><a class="headerlink" href="#imputer" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="ibex.sklearn.preprocessing.Imputer">
-<em class="property">class </em><code class="descclassname">ibex.sklearn.preprocessing.</code><code class="descname">Imputer</code><span class="sig-paren">(</span><em>missing_values='NaN'</em>, <em>strategy='mean'</em>, <em>axis=0</em>, <em>verbose=0</em>, <em>copy=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.preprocessing.Imputer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.preprocessing.imputation.Imputer</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Imputation transformer for completing missing values.</p>
-<blockquote>
-<div><p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/preprocessing.html#imputation" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
-<dl class="docutils">
-<dt>missing_values <span class="classifier-delimiter">:</span> <span class="classifier">integer or “NaN”, optional (default=”NaN”)</span></dt>
-<dd>The placeholder for the missing values. All occurrences of
-<cite>missing_values</cite> will be imputed. For missing values encoded as np.nan,
-use the string value “NaN”.</dd>
-<dt>strategy <span class="classifier-delimiter">:</span> <span class="classifier">string, optional (default=”mean”)</span></dt>
-<dd><p class="first">The imputation strategy.</p>
-<ul class="last simple">
-<li>If “mean”, then replace missing values using the mean along
-the axis.</li>
-<li>If “median”, then replace missing values using the median along
-the axis.</li>
-<li>If “most_frequent”, then replace missing using the most frequent
-value along the axis.</li>
-</ul>
-</dd>
-<dt>axis <span class="classifier-delimiter">:</span> <span class="classifier">integer, optional (default=0)</span></dt>
-<dd><p class="first">The axis along which to impute.</p>
-<ul class="last simple">
-<li>If <cite>axis=0</cite>, then impute along columns.</li>
-<li>If <cite>axis=1</cite>, then impute along rows.</li>
-</ul>
-</dd>
-<dt>verbose <span class="classifier-delimiter">:</span> <span class="classifier">integer, optional (default=0)</span></dt>
-<dd>Controls the verbosity of the imputer.</dd>
-<dt>copy <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional (default=True)</span></dt>
-<dd><p class="first">If True, a copy of X will be created. If False, imputation will
-be done in-place whenever possible. Note that, in the following cases,
-a new copy will always be made, even if <cite>copy=False</cite>:</p>
-<ul class="last simple">
-<li>If X is not an array of floating values;</li>
-<li>If X is sparse and <cite>missing_values=0</cite>;</li>
-<li>If <cite>axis=0</cite> and X is encoded as a CSR matrix;</li>
-<li>If <cite>axis=1</cite> and X is encoded as a CSC matrix.</li>
-</ul>
-</dd>
-</dl>
-<dl class="docutils">
-<dt><a href="#id1"><span class="problematic" id="id2">statistics_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array of shape (n_features,)</span></dt>
-<dd>The imputation fill value for each feature if axis == 0.</dd>
-</dl>
-<ul class="simple">
-<li>When <code class="docutils literal"><span class="pre">axis=0</span></code>, columns which only contained missing values at <cite>fit</cite>
-are discarded upon <cite>transform</cite>.</li>
-<li>When <code class="docutils literal"><span class="pre">axis=1</span></code>, an exception is raised if there are rows for which it is
-not possible to fill in the missing values (e.g., because they only
-contain missing values).</li>
-</ul>
-</div></blockquote>
-<dl class="method">
-<dt id="ibex.sklearn.preprocessing.Imputer.fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/imputation.html#Imputer.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.Imputer.fit" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit the imputer on X.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape (n_samples, n_features)</span></dt>
-<dd>Input data, where <code class="docutils literal"><span class="pre">n_samples</span></code> is the number of samples and
-<code class="docutils literal"><span class="pre">n_features</span></code> is the number of features.</dd>
-</dl>
-<dl class="docutils">
-<dt>self <span class="classifier-delimiter">:</span> <span class="classifier">object</span></dt>
-<dd>Returns self.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.preprocessing.Imputer.fit_transform">
-<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em>, <em>**fit_params</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.preprocessing.Imputer.fit_transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit to data, then transform it.</p>
-<blockquote>
-<div><p>Fits transformer to X and y with optional parameters fit_params
-and returns a transformed version of X.</p>
-<dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_features]</span></dt>
-<dd>Training set.</dd>
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples]</span></dt>
-<dd>Target values.</dd>
-</dl>
-<dl class="docutils">
-<dt>X_new <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_features_new]</span></dt>
-<dd>Transformed array.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.preprocessing.Imputer.transform">
-<code class="descname">transform</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/imputation.html#Imputer.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.Imputer.transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Impute all missing values in X.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix}, shape = [n_samples, n_features]</span></dt>
-<dd>The input data to complete.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 
 
@@ -203,26 +52,7 @@ are some changes, in particular:</p>
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -254,7 +84,7 @@ are some changes, in particular:</p>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

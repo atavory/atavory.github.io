@@ -42,177 +42,6 @@
             
   <div class="section" id="outputcodeclassifier">
 <h1><code class="docutils literal"><span class="pre">OutputCodeClassifier</span></code><a class="headerlink" href="#outputcodeclassifier" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="ibex.sklearn.multiclass.OutputCodeClassifier">
-<em class="property">class </em><code class="descclassname">ibex.sklearn.multiclass.</code><code class="descname">OutputCodeClassifier</code><span class="sig-paren">(</span><em>estimator</em>, <em>code_size=1.5</em>, <em>random_state=None</em>, <em>n_jobs=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.multiclass.OutputCodeClassifier" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.multiclass.OutputCodeClassifier.html#sklearn.multiclass.OutputCodeClassifier" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.multiclass.OutputCodeClassifier</span></code></a>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>(Error-Correcting) Output-Code multiclass strategy</p>
-<blockquote>
-<div><p>Output-code based strategies consist in representing each class with a
-binary code (an array of 0s and 1s). At fitting time, one binary
-classifier per bit in the code book is fitted.  At prediction time, the
-classifiers are used to project new points in the class space and the class
-closest to the points is chosen. The main advantage of these strategies is
-that the number of classifiers used can be controlled by the user, either
-for compressing the model (0 &lt; code_size &lt; 1) or for making the model more
-robust to errors (code_size &gt; 1). See the documentation for more details.</p>
-<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/multiclass.html#ecoc" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
-<dl class="docutils">
-<dt>estimator <span class="classifier-delimiter">:</span> <span class="classifier">estimator object</span></dt>
-<dd>An estimator object implementing <cite>fit</cite> and one of <cite>decision_function</cite>
-or <cite>predict_proba</cite>.</dd>
-<dt>code_size <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
-<dd>Percentage of the number of classes to be used to create the code book.
-A number between 0 and 1 will require fewer classifiers than
-one-vs-the-rest. A number greater than 1 will require more classifiers
-than one-vs-the-rest.</dd>
-<dt>random_state <span class="classifier-delimiter">:</span> <span class="classifier">int, RandomState instance or None, optional, default: None</span></dt>
-<dd>The generator used to initialize the codebook.  If int, random_state is
-the seed used by the random number generator; If RandomState instance,
-random_state is the random number generator; If None, the random number
-generator is the RandomState instance used by <cite>np.random</cite>.</dd>
-<dt>n_jobs <span class="classifier-delimiter">:</span> <span class="classifier">int, optional, default: 1</span></dt>
-<dd>The number of jobs to use for the computation. If -1 all CPUs are used.
-If 1 is given, no parallel computing code is used at all, which is
-useful for debugging. For n_jobs below -1, (n_cpus + 1 + n_jobs) are
-used. Thus for n_jobs = -2, all CPUs but one are used.</dd>
-</dl>
-<dl class="docutils">
-<dt><a href="#id4"><span class="problematic" id="id5">estimators_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">list of <cite>int(n_classes * code_size)</cite> estimators</span></dt>
-<dd>Estimators used for predictions.</dd>
-<dt><a href="#id6"><span class="problematic" id="id7">classes_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_classes]</span></dt>
-<dd>Array containing labels.</dd>
-<dt><a href="#id8"><span class="problematic" id="id9">code_book_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_classes, code_size]</span></dt>
-<dd>Binary array containing the code of each class.</dd>
-</dl>
-<table class="docutils footnote" frame="void" id="id1" rules="none">
-<colgroup><col class="label" /><col /></colgroup>
-<tbody valign="top">
-<tr><td class="label">[1]</td><td>“Solving multiclass learning problems via error-correcting output
-codes”,
-Dietterich T., Bakiri G.,
-Journal of Artificial Intelligence Research 2,
-1995.</td></tr>
-</tbody>
-</table>
-<table class="docutils footnote" frame="void" id="id2" rules="none">
-<colgroup><col class="label" /><col /></colgroup>
-<tbody valign="top">
-<tr><td class="label">[2]</td><td>“The error coding method and PICTs”,
-James G., Hastie T.,
-Journal of Computational and Graphical statistics 7,
-1998.</td></tr>
-</tbody>
-</table>
-<table class="docutils footnote" frame="void" id="id3" rules="none">
-<colgroup><col class="label" /><col /></colgroup>
-<tbody valign="top">
-<tr><td class="label">[3]</td><td>“The Elements of Statistical Learning”,
-Hastie T., Tibshirani R., Friedman J., page 606 (second-edition)
-2008.</td></tr>
-</tbody>
-</table>
-</div></blockquote>
-<dl class="method">
-<dt id="ibex.sklearn.multiclass.OutputCodeClassifier.fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/multiclass.html#OutputCodeClassifier.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.multiclass.OutputCodeClassifier.fit" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit underlying estimators.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">(sparse) array-like, shape = [n_samples, n_features]</span></dt>
-<dd>Data.</dd>
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples]</span></dt>
-<dd>Multi-class targets.</dd>
-</dl>
-<p>self</p>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.multiclass.OutputCodeClassifier.predict">
-<code class="descname">predict</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/multiclass.html#OutputCodeClassifier.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.multiclass.OutputCodeClassifier.predict" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Predict multi-class targets using underlying estimators.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">(sparse) array-like, shape = [n_samples, n_features]</span></dt>
-<dd>Data.</dd>
-</dl>
-<dl class="docutils">
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples]</span></dt>
-<dd>Predicted multi-class targets.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.multiclass.OutputCodeClassifier.score">
-<code class="descname">score</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.multiclass.OutputCodeClassifier.score" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Returns the mean accuracy on the given test data and labels.</p>
-<blockquote>
-<div><p>In multi-label classification, this is the subset accuracy
-which is a harsh metric since you require for each sample that
-each label set be correctly predicted.</p>
-<dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = (n_samples, n_features)</span></dt>
-<dd>Test samples.</dd>
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = (n_samples) or (n_samples, n_outputs)</span></dt>
-<dd>True labels for X.</dd>
-<dt>sample_weight <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = [n_samples], optional</span></dt>
-<dd>Sample weights.</dd>
-</dl>
-<dl class="docutils">
-<dt>score <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
-<dd>Mean accuracy of self.predict(X) wrt. y.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 
 
@@ -223,26 +52,7 @@ each label set be correctly predicted.</p>
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -274,7 +84,7 @@ each label set be correctly predicted.</p>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

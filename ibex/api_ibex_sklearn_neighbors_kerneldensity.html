@@ -42,141 +42,6 @@
             
   <div class="section" id="kerneldensity">
 <h1><code class="docutils literal"><span class="pre">KernelDensity</span></code><a class="headerlink" href="#kerneldensity" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="ibex.sklearn.neighbors.KernelDensity">
-<em class="property">class </em><code class="descclassname">ibex.sklearn.neighbors.</code><code class="descname">KernelDensity</code><span class="sig-paren">(</span><em>bandwidth=1.0</em>, <em>algorithm='auto'</em>, <em>kernel='gaussian'</em>, <em>metric='euclidean'</em>, <em>atol=0</em>, <em>rtol=0</em>, <em>breadth_first=True</em>, <em>leaf_size=40</em>, <em>metric_params=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.neighbors.KernelDensity" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.neighbors.kde.KernelDensity</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Kernel Density Estimation</p>
-<blockquote>
-<div><p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/density.html#kernel-density" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
-<dl class="docutils">
-<dt>bandwidth <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
-<dd>The bandwidth of the kernel.</dd>
-<dt>algorithm <span class="classifier-delimiter">:</span> <span class="classifier">string</span></dt>
-<dd>The tree algorithm to use.  Valid options are
-[‘kd_tree’|’ball_tree’|’auto’].  Default is ‘auto’.</dd>
-<dt>kernel <span class="classifier-delimiter">:</span> <span class="classifier">string</span></dt>
-<dd>The kernel to use.  Valid kernels are
-[‘gaussian’|’tophat’|’epanechnikov’|’exponential’|’linear’|’cosine’]
-Default is ‘gaussian’.</dd>
-<dt>metric <span class="classifier-delimiter">:</span> <span class="classifier">string</span></dt>
-<dd>The distance metric to use.  Note that not all metrics are
-valid with all algorithms.  Refer to the documentation of
-<code class="xref py py-class docutils literal"><span class="pre">BallTree</span></code> and <code class="xref py py-class docutils literal"><span class="pre">KDTree</span></code> for a description of
-available algorithms.  Note that the normalization of the density
-output is correct only for the Euclidean distance metric. Default
-is ‘euclidean’.</dd>
-<dt>atol <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
-<dd>The desired absolute tolerance of the result.  A larger tolerance will
-generally lead to faster execution. Default is 0.</dd>
-<dt>rtol <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
-<dd>The desired relative tolerance of the result.  A larger tolerance will
-generally lead to faster execution.  Default is 1E-8.</dd>
-<dt>breadth_first <span class="classifier-delimiter">:</span> <span class="classifier">boolean</span></dt>
-<dd>If true (default), use a breadth-first approach to the problem.
-Otherwise use a depth-first approach.</dd>
-<dt>leaf_size <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
-<dd>Specify the leaf size of the underlying tree.  See <code class="xref py py-class docutils literal"><span class="pre">BallTree</span></code>
-or <code class="xref py py-class docutils literal"><span class="pre">KDTree</span></code> for details.  Default is 40.</dd>
-<dt>metric_params <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
-<dd>Additional parameters to be passed to the tree for use with the
-metric.  For more information, see the documentation of
-<code class="xref py py-class docutils literal"><span class="pre">BallTree</span></code> or <code class="xref py py-class docutils literal"><span class="pre">KDTree</span></code>.</dd>
-</dl>
-</div></blockquote>
-<dl class="method">
-<dt id="ibex.sklearn.neighbors.KernelDensity.fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/neighbors/kde.html#KernelDensity.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.neighbors.KernelDensity.fit" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit the Kernel Density model on the data.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array_like, shape (n_samples, n_features)</span></dt>
-<dd>List of n_features-dimensional data points.  Each row
-corresponds to a single data point.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.neighbors.KernelDensity.score">
-<code class="descname">score</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/neighbors/kde.html#KernelDensity.score"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.neighbors.KernelDensity.score" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Compute the total log probability under the model.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array_like, shape (n_samples, n_features)</span></dt>
-<dd>List of n_features-dimensional data points.  Each row
-corresponds to a single data point.</dd>
-</dl>
-<dl class="docutils">
-<dt>logprob <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
-<dd>Total log-likelihood of the data in X.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.neighbors.KernelDensity.score_samples">
-<code class="descname">score_samples</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/neighbors/kde.html#KernelDensity.score_samples"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.neighbors.KernelDensity.score_samples" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Evaluate the density model on the data.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array_like, shape (n_samples, n_features)</span></dt>
-<dd>An array of points to query.  Last dimension should match dimension
-of training data (n_features).</dd>
-</dl>
-<dl class="docutils">
-<dt>density <span class="classifier-delimiter">:</span> <span class="classifier">ndarray, shape (n_samples,)</span></dt>
-<dd>The array of log(density) evaluations.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 
 
@@ -187,26 +52,7 @@ of training data (n_features).</dd>
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -238,7 +84,7 @@ of training data (n_features).</dd>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

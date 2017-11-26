@@ -180,6 +180,11 @@ var StepGroup = function(elems) {
                     <img id="example_1_substeps_img_4" src="generated/col_aggregating_further_transformations_transformers_predictor_focus.png" style="opacity: 0">
                     </div>
                 </div>
+                <div class="abs-box">
+                    <div class="smaller">
+                    <img id="example_1_substeps_img_5" src="generated/col_aggregating_further_transformations_forest_focus.png" style="opacity: 0">
+                    </div>
+                </div>
             </div>
         </div>
         <div id="example_1_substeps" class="step slide abs-box base smaller" data-scale="0.01" data-x="1400" data-y="34" data-z="10">
@@ -188,9 +193,10 @@ var StepGroup = function(elems) {
             X = np.c_[X0, X1]
 
             features = make_union(SelectKBest(k=1), PCA(n_components=2))
+            forest = RandomForestRegressor(
             prd = make_pipeline(
                 features,
-                RandomForestRegressor())
+                forest))
 
             prd.fit(X, y)
                 </pre>
@@ -200,39 +206,55 @@ var StepGroup = function(elems) {
             X = np.c_[X0, X1]
 
             features = make_union(SelectKBest(k=1), PCA(n_components=2))
+            forest = RandomForestRegressor(
             prd = make_pipeline(
                 features,
-                RandomForestRegressor())
+                forest))
 
             prd.fit(X, y)
                 </pre>
             </div>
             <div class="abs-box substep smaller">
-                <pre class="brush: python; gutter: true; toolbar: false highlight: [4, 5, 6]">            
+                <pre class="brush: python; gutter: true; toolbar: false highlight: [4]">            
             X = np.c_[X0, X1]
 
             features = make_union(SelectKBest(k=1), PCA(n_components=2))
+            forest = RandomForestRegressor(
             prd = make_pipeline(
                 features,
-                RandomForestRegressor())
+                forest))
 
             prd.fit(X, y)
                 </pre>
             </div>
             <div class="abs-box substep smaller">
-                <pre class="brush: python; gutter: true; toolbar: false highlight: [8]">            
+                <pre class="brush: python; gutter: true; toolbar: false highlight: [5, 6, 7]">            
             X = np.c_[X0, X1]
 
             features = make_union(SelectKBest(k=1), PCA(n_components=2))
+            forest = RandomForestRegressor(
             prd = make_pipeline(
                 features,
-                RandomForestRegressor())
+                forest))
+
+            prd.fit(X, y)
+                </pre>
+            </div>
+            <div class="abs-box substep smaller">
+                <pre class="brush: python; gutter: true; toolbar: false highlight: [9]">            
+            X = np.c_[X0, X1]
+
+            features = make_union(SelectKBest(k=1), PCA(n_components=2))
+            forest = RandomForestRegressor(
+            prd = make_pipeline(
+                features,
+                forest))
 
             prd.fit(X, y)
                 </pre>
             </div>
         </div>
-        <div class="step slide abs-box base" data-scale="0.01" data-x="1400" data-y="37" data-z="10">
+        <div class="step slide abs-box base" data-scale="0.01" data-x="1400" data-y="37.5" data-z="10">
             <div class="abs-box substep smaller">
                 <pre class="brush: python; gutter: false; toolbar: false">            
             &gt;&gt;&gt; X0
@@ -253,7 +275,7 @@ var StepGroup = function(elems) {
             </div>
             <div class="abs-box substep smaller">
                 <pre class="brush: python; gutter: false; toolbar: false">            
-            &gt;&gt;&gt; prd.feature_importances_
+            &gt;&gt;&gt; forest.feature_importances_
             array([0.1, 0.3, 0.7])
             </pre>
             </div>
@@ -263,7 +285,7 @@ var StepGroup = function(elems) {
             <img src="generated/col_aggregating_further_transformations_with_feature_importances_.png">
             <div class="smaller">
                 <pre class="brush: python; gutter: false; toolbar: false">          
-            &gt;&gt;&gt; prd.feature_importances_
+            &gt;&gt;&gt; forest.feature_importances_
             array([0.1, 0.3, 0.7])
         </pre>
             </div>
@@ -2707,12 +2729,14 @@ var StepGroup = function(elems) {
             "example_1_substeps_img_2",
             "example_1_substeps_img_3",
             "example_1_substeps_img_4",
+            "example_1_substeps_img_5",
         ]);
         example1Group
             .addSubstep("example_1_substeps", 1, 1)
             .addSubstep("example_1_substeps", 3, 2)
-            .addSubstep("example_1_substeps", 5, 3)
-            .addSubstep("example_1_substeps", 7, 0)
+            .addSubstep("example_1_substeps", 5, 4)
+            .addSubstep("example_1_substeps", 7, 3)
+            .addSubstep("example_1_substeps", 9, 0)
 
         var wrapperWrappedGroup = StepGroup([
             "wrapper_wrapped_1",

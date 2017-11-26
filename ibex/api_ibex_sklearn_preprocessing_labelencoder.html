@@ -42,157 +42,6 @@
             
   <div class="section" id="labelencoder">
 <h1><code class="docutils literal"><span class="pre">LabelEncoder</span></code><a class="headerlink" href="#labelencoder" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="ibex.sklearn.preprocessing.LabelEncoder">
-<em class="property">class </em><code class="descclassname">ibex.sklearn.preprocessing.</code><code class="descname">LabelEncoder</code><a class="headerlink" href="#ibex.sklearn.preprocessing.LabelEncoder" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.preprocessing.label.LabelEncoder</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Encode labels with value between 0 and n_classes-1.</p>
-<blockquote>
-<div><p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/preprocessing_targets.html#preprocessing-targets" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
-<dl class="docutils">
-<dt><a href="#id1"><span class="problematic" id="id2">classes_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array of shape (n_class,)</span></dt>
-<dd>Holds the label for each class.</dd>
-</dl>
-<p><cite>LabelEncoder</cite> can be used to normalize labels.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">preprocessing</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">le</span> <span class="o">=</span> <span class="n">preprocessing</span><span class="o">.</span><span class="n">LabelEncoder</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">le</span><span class="o">.</span><span class="n">fit</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">])</span>
-<span class="go">LabelEncoder()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">le</span><span class="o">.</span><span class="n">classes_</span>
-<span class="go">array([1, 2, 6])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">le</span><span class="o">.</span><span class="n">transform</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">])</span> 
-<span class="go">array([0, 0, 1, 2]...)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">le</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
-<span class="go">array([1, 1, 2, 6])</span>
-</pre></div>
-</div>
-<p>It can also be used to transform non-numerical labels (as long as they are
-hashable and comparable) to numerical labels.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">le</span> <span class="o">=</span> <span class="n">preprocessing</span><span class="o">.</span><span class="n">LabelEncoder</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">le</span><span class="o">.</span><span class="n">fit</span><span class="p">([</span><span class="s2">&quot;paris&quot;</span><span class="p">,</span> <span class="s2">&quot;paris&quot;</span><span class="p">,</span> <span class="s2">&quot;tokyo&quot;</span><span class="p">,</span> <span class="s2">&quot;amsterdam&quot;</span><span class="p">])</span>
-<span class="go">LabelEncoder()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">le</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span>
-<span class="go">[&#39;amsterdam&#39;, &#39;paris&#39;, &#39;tokyo&#39;]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">le</span><span class="o">.</span><span class="n">transform</span><span class="p">([</span><span class="s2">&quot;tokyo&quot;</span><span class="p">,</span> <span class="s2">&quot;tokyo&quot;</span><span class="p">,</span> <span class="s2">&quot;paris&quot;</span><span class="p">])</span> 
-<span class="go">array([2, 2, 1]...)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">le</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
-<span class="go">[&#39;tokyo&#39;, &#39;tokyo&#39;, &#39;paris&#39;]</span>
-</pre></div>
-</div>
-<dl class="docutils">
-<dt>sklearn.preprocessing.OneHotEncoder <span class="classifier-delimiter">:</span> <span class="classifier">encode categorical integer features</span></dt>
-<dd>using a one-hot aka one-of-K scheme.</dd>
-</dl>
-</div></blockquote>
-<dl class="method">
-<dt id="ibex.sklearn.preprocessing.LabelEncoder.fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/label.html#LabelEncoder.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.LabelEncoder.fit" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit label encoder</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">array-like of shape (n_samples,)</span></dt>
-<dd>Target values.</dd>
-</dl>
-<p>self : returns an instance of self.</p>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.preprocessing.LabelEncoder.fit_transform">
-<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/label.html#LabelEncoder.fit_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.LabelEncoder.fit_transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit label encoder and return encoded labels</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">array-like of shape [n_samples]</span></dt>
-<dd>Target values.</dd>
-</dl>
-<p>y : array-like of shape [n_samples]</p>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.preprocessing.LabelEncoder.inverse_transform">
-<code class="descname">inverse_transform</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/label.html#LabelEncoder.inverse_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.LabelEncoder.inverse_transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Transform labels back to original encoding.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples]</span></dt>
-<dd>Target values.</dd>
-</dl>
-<p>y : numpy array of shape [n_samples]</p>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.preprocessing.LabelEncoder.transform">
-<code class="descname">transform</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/label.html#LabelEncoder.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.LabelEncoder.transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Transform labels to normalized encoding.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">array-like of shape [n_samples]</span></dt>
-<dd>Target values.</dd>
-</dl>
-<p>y : array-like of shape [n_samples]</p>
-</div></blockquote>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 
 
@@ -203,26 +52,7 @@ are some changes, in particular:</p>
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -254,7 +84,7 @@ are some changes, in particular:</p>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

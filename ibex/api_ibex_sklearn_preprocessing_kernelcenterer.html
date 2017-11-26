@@ -42,118 +42,6 @@
             
   <div class="section" id="kernelcenterer">
 <h1><code class="docutils literal"><span class="pre">KernelCenterer</span></code><a class="headerlink" href="#kernelcenterer" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="ibex.sklearn.preprocessing.KernelCenterer">
-<em class="property">class </em><code class="descclassname">ibex.sklearn.preprocessing.</code><code class="descname">KernelCenterer</code><a class="headerlink" href="#ibex.sklearn.preprocessing.KernelCenterer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.preprocessing.data.KernelCenterer</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Center a kernel matrix</p>
-<blockquote>
-<div><p>Let K(x, z) be a kernel defined by phi(x)^T phi(z), where phi is a
-function mapping x to a Hilbert space. KernelCenterer centers (i.e.,
-normalize to have zero mean) the data without explicitly computing phi(x).
-It is equivalent to centering phi(x) with
-sklearn.preprocessing.StandardScaler(with_std=False).</p>
-<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/preprocessing.html#kernel-centering" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
-</div></blockquote>
-<dl class="method">
-<dt id="ibex.sklearn.preprocessing.KernelCenterer.fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>K</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/data.html#KernelCenterer.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.KernelCenterer.fit" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit KernelCenterer</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>K <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_samples]</span></dt>
-<dd>Kernel matrix.</dd>
-</dl>
-<p>self : returns an instance of self.</p>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.preprocessing.KernelCenterer.fit_transform">
-<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em>, <em>**fit_params</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.preprocessing.KernelCenterer.fit_transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit to data, then transform it.</p>
-<blockquote>
-<div><p>Fits transformer to X and y with optional parameters fit_params
-and returns a transformed version of X.</p>
-<dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_features]</span></dt>
-<dd>Training set.</dd>
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples]</span></dt>
-<dd>Target values.</dd>
-</dl>
-<dl class="docutils">
-<dt>X_new <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_features_new]</span></dt>
-<dd>Transformed array.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.preprocessing.KernelCenterer.transform">
-<code class="descname">transform</code><span class="sig-paren">(</span><em>K</em>, <em>y='deprecated'</em>, <em>copy=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/data.html#KernelCenterer.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.KernelCenterer.transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Center kernel matrix.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>K <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples1, n_samples2]</span></dt>
-<dd>Kernel matrix.</dd>
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">(ignored)</span></dt>
-<dd><div class="first last deprecated">
-<p><span class="versionmodified">Deprecated since version 0.19: </span>This parameter will be removed in 0.21.</p>
-</div>
-</dd>
-<dt>copy <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default True</span></dt>
-<dd>Set to False to perform inplace computation.</dd>
-</dl>
-<p>K_new : numpy array of shape [n_samples1, n_samples2]</p>
-</div></blockquote>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 
 
@@ -164,26 +52,7 @@ are some changes, in particular:</p>
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -215,7 +84,7 @@ are some changes, in particular:</p>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

@@ -42,150 +42,6 @@
             
   <div class="section" id="agglomerativeclustering">
 <h1><code class="docutils literal"><span class="pre">AgglomerativeClustering</span></code><a class="headerlink" href="#agglomerativeclustering" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="ibex.sklearn.cluster.AgglomerativeClustering">
-<em class="property">class </em><code class="descclassname">ibex.sklearn.cluster.</code><code class="descname">AgglomerativeClustering</code><span class="sig-paren">(</span><em>n_clusters=2</em>, <em>affinity='euclidean'</em>, <em>memory=None</em>, <em>connectivity=None</em>, <em>compute_full_tree='auto'</em>, <em>linkage='ward'</em>, <em>pooling_func=&lt;function mean&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.cluster.AgglomerativeClustering" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.cluster.hierarchical.AgglomerativeClustering</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Agglomerative Clustering</p>
-<p>Recursively merges the pair of clusters that minimally increases
-a given linkage distance.</p>
-<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/clustering.html#hierarchical-clustering" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>n_clusters</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>, </em><em>default=2</em>) – The number of clusters to find.</li>
-<li><strong>affinity</strong> (<a class="reference external" href="https://docs.python.org/2/library/string.html#module-string" title="(in Python v2.7)"><em>string</em></a><em> or </em><a class="reference external" href="https://docs.python.org/2/library/functions.html#callable" title="(in Python v2.7)"><em>callable</em></a><em>, </em><em>default: &quot;euclidean&quot;</em>) – Metric used to compute the linkage. Can be “euclidean”, “l1”, “l2”,
-“manhattan”, “cosine”, or ‘precomputed’.
-If linkage is “ward”, only “euclidean” is accepted.</li>
-<li><strong>memory</strong> (<em>Instance of sklearn.externals.joblib.Memory</em><em> or </em><a class="reference external" href="https://docs.python.org/2/library/string.html#module-string" title="(in Python v2.7)"><em>string</em></a><em>, </em><em>optional</em><em>             (</em><em>default=None</em><em>)</em>) – Used to cache the output of the computation of the tree.
-By default, no caching is done. If a string is given, it is the
-path to the caching directory.</li>
-<li><strong>connectivity</strong> (<em>array-like</em><em> or </em><a class="reference external" href="https://docs.python.org/2/library/functions.html#callable" title="(in Python v2.7)"><em>callable</em></a><em>, </em><em>optional</em>) – Connectivity matrix. Defines for each sample the neighboring
-samples following a given structure of the data.
-This can be a connectivity matrix itself or a callable that transforms
-the data into a connectivity matrix, such as derived from
-kneighbors_graph. Default is None, i.e, the
-hierarchical clustering algorithm is unstructured.</li>
-<li><strong>compute_full_tree</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em> or </em><em>'auto'</em><em> (</em><em>optional</em><em>)</em>) – Stop early the construction of the tree at n_clusters. This is
-useful to decrease computation time if the number of clusters is
-not small compared to the number of samples. This option is
-useful only when specifying a connectivity matrix. Note also that
-when varying the number of clusters and using caching, it may
-be advantageous to compute the full tree.</li>
-<li><strong>linkage</strong> (<em>{&quot;ward&quot;</em><em>, </em><em>&quot;complete&quot;</em><em>, </em><em>&quot;average&quot;}</em><em>, </em><em>optional</em><em>, </em><em>default: &quot;ward&quot;</em>) – <p>Which linkage criterion to use. The linkage criterion determines which
-distance to use between sets of observation. The algorithm will merge
-the pairs of cluster that minimize this criterion.</p>
-<ul>
-<li>ward minimizes the variance of the clusters being merged.</li>
-<li>average uses the average of the distances of each observation of
-the two sets.</li>
-<li>complete or maximum linkage uses the maximum distances between
-all observations of the two sets.</li>
-</ul>
-</li>
-<li><strong>pooling_func</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#callable" title="(in Python v2.7)"><em>callable</em></a><em>, </em><em>default=np.mean</em>) – This combines the values of agglomerated features into a single
-value, and should accept an array of shape [M, N] and the keyword
-argument <code class="docutils literal"><span class="pre">axis=1</span></code>, and reduce it to an array of size [M].</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-<dl class="attribute">
-<dt id="AgglomerativeClustering.labels_">
-<code class="descname">labels_</code><a class="headerlink" href="#AgglomerativeClustering.labels_" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>array [n_samples]</em> – cluster labels for each point</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="AgglomerativeClustering.n_leaves_">
-<code class="descname">n_leaves_</code><a class="headerlink" href="#AgglomerativeClustering.n_leaves_" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>int</em> – Number of leaves in the hierarchical tree.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="AgglomerativeClustering.n_components_">
-<code class="descname">n_components_</code><a class="headerlink" href="#AgglomerativeClustering.n_components_" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>int</em> – The estimated number of connected components in the graph.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="AgglomerativeClustering.children_">
-<code class="descname">children_</code><a class="headerlink" href="#AgglomerativeClustering.children_" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>array-like, shape (n_nodes-1, 2)</em> – The children of each non-leaf node. Values less than <cite>n_samples</cite>
-correspond to leaves of the tree which are the original samples.
-A node <cite>i</cite> greater than or equal to <cite>n_samples</cite> is a non-leaf
-node and has children <cite>children_[i - n_samples]</cite>. Alternatively
-at the i-th iteration, children[i][0] and children[i][1]
-are merged to form node <cite>n_samples + i</cite></p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.cluster.AgglomerativeClustering.fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/cluster/hierarchical.html#AgglomerativeClustering.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.cluster.AgglomerativeClustering.fit" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit the hierarchical clustering on the data</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape = [n_samples, n_features]</span></dt>
-<dd>The samples a.k.a. observations.</dd>
-</dl>
-<p>self</p>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.cluster.AgglomerativeClustering.fit_predict">
-<code class="descname">fit_predict</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.cluster.AgglomerativeClustering.fit_predict" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Performs clustering on X and returns cluster labels.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">ndarray, shape (n_samples, n_features)</span></dt>
-<dd>Input data.</dd>
-</dl>
-<dl class="docutils">
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">ndarray, shape (n_samples,)</span></dt>
-<dd>cluster labels</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 
 
@@ -196,26 +52,7 @@ are some changes, in particular:</p>
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -247,7 +84,7 @@ are some changes, in particular:</p>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

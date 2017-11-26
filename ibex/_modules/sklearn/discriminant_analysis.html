@@ -170,7 +170,7 @@
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">covs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">priors</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="LinearDiscriminantAnalysis"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_lineardiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.LinearDiscriminantAnalysis">[docs]</a><span class="k">class</span> <span class="nc">LinearDiscriminantAnalysis</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">LinearClassifierMixin</span><span class="p">,</span>
+<span class="k">class</span> <span class="nc">LinearDiscriminantAnalysis</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">LinearClassifierMixin</span><span class="p">,</span>
                                  <span class="n">TransformerMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Linear Discriminant Analysis</span>
 
@@ -451,7 +451,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">coef</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalings_</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xbar_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
 
-<div class="viewcode-block" id="LinearDiscriminantAnalysis.fit"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_lineardiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.LinearDiscriminantAnalysis.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+<div class="viewcode-block" id="LinearDiscriminantAnalysis.fit"><a class="viewcode-back" href="../../tmp/api_ibex_sklearn_discriminant_analysis_lineardiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.LinearDiscriminantAnalysis.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Fit LinearDiscriminantAnalysis model according to the given</span>
 <span class="sd">           training data and parameters.</span>
 
@@ -509,7 +509,7 @@
                                        <span class="n">ndmin</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="LinearDiscriminantAnalysis.transform"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_lineardiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.LinearDiscriminantAnalysis.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="LinearDiscriminantAnalysis.transform"><a class="viewcode-back" href="../../tmp/api_ibex_sklearn_discriminant_analysis_lineardiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.LinearDiscriminantAnalysis.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Project data to maximize class separation.</span>
 
 <span class="sd">        Parameters</span>
@@ -535,7 +535,7 @@
 
         <span class="k">return</span> <span class="n">X_new</span><span class="p">[:,</span> <span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">_max_components</span><span class="p">]</span></div>
 
-<div class="viewcode-block" id="LinearDiscriminantAnalysis.predict_proba"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_lineardiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.LinearDiscriminantAnalysis.predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="LinearDiscriminantAnalysis.predict_proba"><a class="viewcode-back" href="../../tmp/api_ibex_sklearn_discriminant_analysis_lineardiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.LinearDiscriminantAnalysis.predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Estimate probability.</span>
 
 <span class="sd">        Parameters</span>
@@ -560,7 +560,7 @@
             <span class="n">prob</span> <span class="o">/=</span> <span class="n">prob</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">prob</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
             <span class="k">return</span> <span class="n">prob</span></div>
 
-<div class="viewcode-block" id="LinearDiscriminantAnalysis.predict_log_proba"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_lineardiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.LinearDiscriminantAnalysis.predict_log_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="LinearDiscriminantAnalysis.predict_log_proba"><a class="viewcode-back" href="../../tmp/api_ibex_sklearn_discriminant_analysis_lineardiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.LinearDiscriminantAnalysis.predict_log_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Estimate log probability.</span>
 
 <span class="sd">        Parameters</span>
@@ -573,7 +573,7 @@
 <span class="sd">        C : array, shape (n_samples, n_classes)</span>
 <span class="sd">            Estimated log probabilities.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div></div>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
 
 
 <span class="k">class</span> <span class="nc">QuadraticDiscriminantAnalysis</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">):</span>
@@ -668,7 +668,7 @@
     <span class="k">def</span> <span class="nf">covariances_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_</span>
 
-<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.fit"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.fit"><a class="viewcode-back" href="../../tmp/api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Fit the model according to the given training data and parameters.</span>
 
 <span class="sd">            .. versionchanged:: 0.19</span>
@@ -752,7 +752,7 @@
         <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalings_</span><span class="p">])</span>
         <span class="k">return</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">norm2</span> <span class="o">+</span> <span class="n">u</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">priors_</span><span class="p">))</span>
 
-<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.decision_function"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.decision_function">[docs]</a>    <span class="k">def</span> <span class="nf">decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.decision_function"><a class="viewcode-back" href="../../tmp/api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.decision_function">[docs]</a>    <span class="k">def</span> <span class="nf">decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Apply decision function to an array of samples.</span>
 
 <span class="sd">        Parameters</span>
@@ -773,7 +773,7 @@
             <span class="k">return</span> <span class="n">dec_func</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">dec_func</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">dec_func</span></div>
 
-<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.predict"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.predict"><a class="viewcode-back" href="../../tmp/api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Perform classification on an array of test vectors X.</span>
 
 <span class="sd">        The predicted class C for each sample in X is returned.</span>
@@ -790,7 +790,7 @@
         <span class="n">y_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">y_pred</span></div>
 
-<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.predict_proba"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.predict_proba"><a class="viewcode-back" href="../../tmp/api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Return posterior probabilities of classification.</span>
 
 <span class="sd">        Parameters</span>
@@ -810,7 +810,7 @@
         <span class="c1"># compute posterior probabilities</span>
         <span class="k">return</span> <span class="n">likelihood</span> <span class="o">/</span> <span class="n">likelihood</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span></div>
 
-<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.predict_log_proba"><a class="viewcode-back" href="../../api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.predict_log_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysis.predict_log_proba"><a class="viewcode-back" href="../../tmp/api_ibex_sklearn_discriminant_analysis_quadraticdiscriminantanalysis.html#ibex.sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis.predict_log_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Return posterior probabilities of classification.</span>
 
 <span class="sd">        Parameters</span>
@@ -835,26 +835,7 @@
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../index.html">
               <img class="logo" src="../../_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="../../index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../../index.html">Documentation overview</a><ul>
@@ -881,7 +862,7 @@
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
     </div>

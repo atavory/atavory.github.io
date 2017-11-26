@@ -62,41 +62,18 @@
 <div class="admonition seealso">
 <p class="first admonition-title">See also</p>
 <ul class="last simple">
-<li>See <a class="reference internal" href="api.html#module-ibex.tensorflow.contrib.keras.wrappers.scikit_learn" title="ibex.tensorflow.contrib.keras.wrappers.scikit_learn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code></a> in <a class="reference internal" href="api.html#api"><span class="std std-ref">API</span></a>.</li>
+<li>See <code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code> in <a class="reference internal" href="tmp/api.html#api"><span class="std std-ref">API</span></a>.</li>
 <li>See <a class="reference external" href="https://github.com/atavory/ibex/blob/master/examples/iris_tensorflow.ipynb">Tensorflow/Keras Classification In The Iris Dataset</a> in <a class="reference internal" href="examples.html#examples"><span class="std std-ref">Examples</span></a>.</li>
 </ul>
 </div>
 </div>
 <div class="section" id="differences-from-tensorflow-contrib-keras-wrappers-scikit-learn">
 <span id="tensorflow-diffs"></span><h2>Differences From <code class="xref py py-mod docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn</span></code><a class="headerlink" href="#differences-from-tensorflow-contrib-keras-wrappers-scikit-learn" title="Permalink to this headline">¶</a></h2>
-<p><a class="reference internal" href="api.html#module-ibex.tensorflow.contrib.keras.wrappers.scikit_learn" title="ibex.tensorflow.contrib.keras.wrappers.scikit_learn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code></a> differs from the estimators of <code class="xref py py-mod docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn</span></code>, which it wraps, in three ways:</p>
+<p><code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code> differs from the estimators of <code class="xref py py-mod docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn</span></code>, which it wraps, in three ways:</p>
 <ol class="arabic">
-<li><p class="first">In <a class="reference internal" href="api.html#module-ibex.tensorflow.contrib.keras.wrappers.scikit_learn" title="ibex.tensorflow.contrib.keras.wrappers.scikit_learn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code></a>, <code class="xref py py-class docutils literal"><span class="pre">KerasClassifier</span></code> subclasses <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.ClassifierMixin.html#sklearn.base.ClassifierMixin" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.ClassifierMixin</span></code></a>, and <code class="xref py py-class docutils literal"><span class="pre">KerasClassifier</span></code> subclasses <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.ClassifierMixin.html#sklearn.base.ClassifierMixin" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.ClassifierMixin</span></code></a>.</p>
+<li><p class="first">In <code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code>, <code class="xref py py-class docutils literal"><span class="pre">KerasClassifier</span></code> subclasses <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.ClassifierMixin.html#sklearn.base.ClassifierMixin" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.ClassifierMixin</span></code></a>, and <code class="xref py py-class docutils literal"><span class="pre">KerasClassifier</span></code> subclasses <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.ClassifierMixin.html#sklearn.base.ClassifierMixin" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.ClassifierMixin</span></code></a>.</p>
 <blockquote>
-<div><div class="figure" id="id5">
-<p class="plantuml">
-<img src="_images/plantuml-86be8e51f0ef6df0bd1ab5d41a66e3ea5f776da0.png" alt="skinparam monochrome true
-skinparam shadowing false
-
-        namespace tensorflow.contrib.keras.wrappers.scikit_learn {
-                class KerasClassifier
-                class KerasRegressor
-        }
-
-        namespace ibex.tensorflow.contrib.keras.wrappers.scikit_learn {
-                .KerasClassifier --&gt; sklearn.base.ClassifierMixin
-                .KerasRegressor --&gt; sklearn.base.RegressorMixin
-        }
-
-        namespace sklearn.base {
-                class ClassifierMixin
-                class RegressorMixin
-        }" />
-</p>
-<p class="caption"><span class="caption-text"><p>Use and absense of subclassing mixins from <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.base" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.base</span></code></a>.</p>
-</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
-</div>
-</div></blockquote>
+<div></div></blockquote>
 </li>
 <li><p class="first">In <code class="xref py py-mod docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn</span></code>, <code class="xref py py-class docutils literal"><span class="pre">KerasClassifier</span></code> and <code class="xref py py-class docutils literal"><span class="pre">KerasRegressor</span></code> each have a <code class="docutils literal"><span class="pre">fit</span></code> method which returns a <code class="xref py py-class docutils literal"><span class="pre">tensorflow.keras.History</span></code> object. E.g., starting with</p>
 <blockquote>
@@ -140,7 +117,7 @@ skinparam shadowing false
 </pre></div>
 </div>
 <p>This differs from the usual convention in <code class="xref py py-mod docutils literal"><span class="pre">sklearn</span></code> of allowing chained methods:</p>
-<p>Conversely, in <a class="reference internal" href="api.html#module-ibex.tensorflow.contrib.keras.wrappers.scikit_learn" title="ibex.tensorflow.contrib.keras.wrappers.scikit_learn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code></a>, <code class="docutils literal"><span class="pre">history_</span></code> is an attribute of an estimator following <code class="docutils literal"><span class="pre">fit</span></code>:</p>
+<p>Conversely, in <code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code>, <code class="docutils literal"><span class="pre">history_</span></code> is an attribute of an estimator following <code class="docutils literal"><span class="pre">fit</span></code>:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ibex</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span> <span class="o">=</span> <span class="n">ibex</span><span class="o">.</span><span class="n">tensorflow</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">wrappers</span><span class="o">.</span><span class="n">scikit_learn</span><span class="o">.</span><span class="n">KerasRegressor</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">build_fn</span><span class="o">=</span><span class="n">build_regressor_nn</span><span class="p">,</span>
@@ -159,7 +136,7 @@ skinparam shadowing false
 </div>
 </div></blockquote>
 </li>
-<li><p class="first">In <a class="reference internal" href="api.html#module-ibex.tensorflow.contrib.keras.wrappers.scikit_learn" title="ibex.tensorflow.contrib.keras.wrappers.scikit_learn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code></a>, <code class="xref py py-class docutils literal"><span class="pre">KerasClassifier</span></code> takes a one-hot encoding of the dependent variable. For example, using the above dataset, if we have</p>
+<li><p class="first">In <code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code>, <code class="xref py py-class docutils literal"><span class="pre">KerasClassifier</span></code> takes a one-hot encoding of the dependent variable. For example, using the above dataset, if we have</p>
 <blockquote>
 <div><div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 <span class="go">        0    0.0</span>
@@ -181,7 +158,7 @@ skinparam shadowing false
 </pre></div>
 </div>
 <p>which is nonstandard.</p>
-<p>Conversely, in <a class="reference internal" href="api.html#module-ibex.tensorflow.contrib.keras.wrappers.scikit_learn" title="ibex.tensorflow.contrib.keras.wrappers.scikit_learn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code></a>, the dependent variable is a <a href="#id2"><span class="problematic" id="id3">:clas:`pandas.Series`</span></a> (see ee <a class="reference external" href="https://github.com/atavory/ibex/blob/master/examples/iris_tensorflow.ipynb">Tensorflow/Keras Classification In The Iris Dataset</a> in <a class="reference internal" href="examples.html#examples"><span class="std std-ref">Examples</span></a>).</p>
+<p>Conversely, in <code class="xref py py-mod docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span></code>, the dependent variable is a <a href="#id2"><span class="problematic" id="id3">:clas:`pandas.Series`</span></a> (see ee <a class="reference external" href="https://github.com/atavory/ibex/blob/master/examples/iris_tensorflow.ipynb">Tensorflow/Keras Classification In The Iris Dataset</a> in <a class="reference internal" href="examples.html#examples"><span class="std std-ref">Examples</span></a>).</p>
 </div></blockquote>
 </li>
 </ol>
@@ -199,25 +176,11 @@ skinparam shadowing false
             </a></p>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="docutils literal"><span class="pre">tensorflow</span></code></a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#general-idea">General Idea</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#differences-from-tensorflow-contrib-keras-wrappers-scikit-learn">Differences From <code class="docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn</span></code></a></li>
+<li><a class="reference internal" href="#"><code class="docutils literal"><span class="pre">tensorflow</span></code></a><ul>
+<li><a class="reference internal" href="#general-idea">General Idea</a></li>
+<li><a class="reference internal" href="#differences-from-tensorflow-contrib-keras-wrappers-scikit-learn">Differences From <code class="docutils literal"><span class="pre">tensorflow.contrib.keras.wrappers.scikit_learn</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
 </ul>
 <div class="relations">
 <h3>Related Topics</h3>
@@ -253,7 +216,7 @@ skinparam shadowing false
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

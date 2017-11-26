@@ -42,145 +42,6 @@
             
   <div class="section" id="gaussianrandomprojection">
 <h1><code class="docutils literal"><span class="pre">GaussianRandomProjection</span></code><a class="headerlink" href="#gaussianrandomprojection" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="ibex.sklearn.random_projection.GaussianRandomProjection">
-<em class="property">class </em><code class="descclassname">ibex.sklearn.random_projection.</code><code class="descname">GaussianRandomProjection</code><span class="sig-paren">(</span><em>n_components='auto'</em>, <em>eps=0.1</em>, <em>random_state=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.random_projection.GaussianRandomProjection" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.random_projection.GaussianRandomProjection.html#sklearn.random_projection.GaussianRandomProjection" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.random_projection.GaussianRandomProjection</span></code></a>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Reduce dimensionality through Gaussian random projection</p>
-<blockquote>
-<div><p>The components of the random matrix are drawn from N(0, 1 / n_components).</p>
-<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/random_projection.html#gaussian-random-matrix" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
-<dl class="docutils">
-<dt>n_components <span class="classifier-delimiter">:</span> <span class="classifier">int or ‘auto’, optional (default = ‘auto’)</span></dt>
-<dd><p class="first">Dimensionality of the target projection space.</p>
-<p>n_components can be automatically adjusted according to the
-number of samples in the dataset and the bound given by the
-Johnson-Lindenstrauss lemma. In that case the quality of the
-embedding is controlled by the <code class="docutils literal"><span class="pre">eps</span></code> parameter.</p>
-<p class="last">It should be noted that Johnson-Lindenstrauss lemma can yield
-very conservative estimated of the required number of components
-as it makes no assumption on the structure of the dataset.</p>
-</dd>
-<dt>eps <span class="classifier-delimiter">:</span> <span class="classifier">strictly positive float, optional (default=0.1)</span></dt>
-<dd><p class="first">Parameter to control the quality of the embedding according to
-the Johnson-Lindenstrauss lemma when n_components is set to
-‘auto’.</p>
-<p class="last">Smaller values lead to better embedding and higher number of
-dimensions (n_components) in the target projection space.</p>
-</dd>
-<dt>random_state <span class="classifier-delimiter">:</span> <span class="classifier">int, RandomState instance or None, optional (default=None)</span></dt>
-<dd>Control the pseudo random number generator used to generate the matrix
-at fit time.  If int, random_state is the seed used by the random
-number generator; If RandomState instance, random_state is the random
-number generator; If None, the random number generator is the
-RandomState instance used by <cite>np.random</cite>.</dd>
-</dl>
-<dl class="docutils">
-<dt><a href="#id1"><span class="problematic" id="id2">n_component_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
-<dd>Concrete number of components computed when n_components=”auto”.</dd>
-<dt><a href="#id3"><span class="problematic" id="id4">components_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_components, n_features]</span></dt>
-<dd>Random matrix used for the projection.</dd>
-</dl>
-<p>SparseRandomProjection</p>
-</div></blockquote>
-<dl class="method">
-<dt id="ibex.sklearn.random_projection.GaussianRandomProjection.fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.random_projection.GaussianRandomProjection.fit" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Generate a sparse random projection matrix</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">numpy array or scipy.sparse of shape [n_samples, n_features]</span></dt>
-<dd>Training set: only the shape is used to find optimal random
-matrix dimensions based on the theory referenced in the
-afore mentioned papers.</dd>
-</dl>
-<p>y : is not used: placeholder to allow for usage in a Pipeline.</p>
-<p>self</p>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.random_projection.GaussianRandomProjection.fit_transform">
-<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em>, <em>**fit_params</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.random_projection.GaussianRandomProjection.fit_transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit to data, then transform it.</p>
-<blockquote>
-<div><p>Fits transformer to X and y with optional parameters fit_params
-and returns a transformed version of X.</p>
-<dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_features]</span></dt>
-<dd>Training set.</dd>
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples]</span></dt>
-<dd>Target values.</dd>
-</dl>
-<dl class="docutils">
-<dt>X_new <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_features_new]</span></dt>
-<dd>Transformed array.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.random_projection.GaussianRandomProjection.transform">
-<code class="descname">transform</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.random_projection.GaussianRandomProjection.transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Project the data by using matrix product with the random matrix</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">numpy array or scipy.sparse of shape [n_samples, n_features]</span></dt>
-<dd>The input data to project into a smaller dimensional space.</dd>
-</dl>
-<dl class="docutils">
-<dt>X_new <span class="classifier-delimiter">:</span> <span class="classifier">numpy array or scipy sparse of shape [n_samples, n_components]</span></dt>
-<dd>Projected array.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 
 
@@ -191,26 +52,7 @@ are some changes, in particular:</p>
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -242,7 +84,7 @@ are some changes, in particular:</p>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

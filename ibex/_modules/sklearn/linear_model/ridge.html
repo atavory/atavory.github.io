@@ -552,7 +552,7 @@
         <span class="k">return</span> <span class="bp">self</span>
 
 
-<div class="viewcode-block" id="Ridge"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ridge.html#ibex.sklearn.linear_model.Ridge">[docs]</a><span class="k">class</span> <span class="nc">Ridge</span><span class="p">(</span><span class="n">_BaseRidge</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">Ridge</span><span class="p">(</span><span class="n">_BaseRidge</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Linear least squares with l2 regularization.</span>
 
 <span class="sd">    This model solves a regression model where the loss function is</span>
@@ -687,7 +687,7 @@
                                     <span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="n">solver</span><span class="p">,</span>
                                     <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">)</span>
 
-<div class="viewcode-block" id="Ridge.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ridge.html#ibex.sklearn.linear_model.Ridge.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Ridge.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_linear_model_ridge.html#ibex.sklearn.linear_model.Ridge.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Fit Ridge regression model</span>
 
 <span class="sd">        Parameters</span>
@@ -705,10 +705,10 @@
 <span class="sd">        -------</span>
 <span class="sd">        self : returns an instance of self.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">Ridge</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span></div></div>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">Ridge</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="RidgeClassifier"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ridgeclassifier.html#ibex.sklearn.linear_model.RidgeClassifier">[docs]</a><span class="k">class</span> <span class="nc">RidgeClassifier</span><span class="p">(</span><span class="n">LinearClassifierMixin</span><span class="p">,</span> <span class="n">_BaseRidge</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">RidgeClassifier</span><span class="p">(</span><span class="n">LinearClassifierMixin</span><span class="p">,</span> <span class="n">_BaseRidge</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Classifier using Ridge regression.</span>
 
 <span class="sd">    Read more in the :ref:`User Guide &lt;ridge_regression&gt;`.</span>
@@ -826,7 +826,7 @@
             <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">class_weight</span> <span class="o">=</span> <span class="n">class_weight</span>
 
-<div class="viewcode-block" id="RidgeClassifier.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ridgeclassifier.html#ibex.sklearn.linear_model.RidgeClassifier.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="RidgeClassifier.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_linear_model_ridgeclassifier.html#ibex.sklearn.linear_model.RidgeClassifier.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Fit Ridge regression model.</span>
 
 <span class="sd">        Parameters</span>
@@ -869,7 +869,7 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">classes_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">classes_</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">classes_</span>
 
 
 <span class="k">class</span> <span class="nc">_RidgeGCV</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">):</span>
@@ -1176,7 +1176,7 @@
         <span class="k">return</span> <span class="bp">self</span>
 
 
-<div class="viewcode-block" id="RidgeCV"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ridgecv.html#ibex.sklearn.linear_model.RidgeCV">[docs]</a><span class="k">class</span> <span class="nc">RidgeCV</span><span class="p">(</span><span class="n">_BaseRidgeCV</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">RidgeCV</span><span class="p">(</span><span class="n">_BaseRidgeCV</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Ridge regression with built-in cross-validation.</span>
 
 <span class="sd">    By default, it performs Generalized Cross-Validation, which is a form of</span>
@@ -1273,10 +1273,10 @@
 <span class="sd">    RidgeClassifier: Ridge classifier</span>
 <span class="sd">    RidgeClassifierCV: Ridge classifier with built-in cross validation</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">pass</span></div>
+    <span class="k">pass</span>
 
 
-<div class="viewcode-block" id="RidgeClassifierCV"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ridgeclassifiercv.html#ibex.sklearn.linear_model.RidgeClassifierCV">[docs]</a><span class="k">class</span> <span class="nc">RidgeClassifierCV</span><span class="p">(</span><span class="n">LinearClassifierMixin</span><span class="p">,</span> <span class="n">_BaseRidgeCV</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">RidgeClassifierCV</span><span class="p">(</span><span class="n">LinearClassifierMixin</span><span class="p">,</span> <span class="n">_BaseRidgeCV</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Ridge classifier with built-in cross-validation.</span>
 
 <span class="sd">    By default, it performs Generalized Cross-Validation, which is a form of</span>
@@ -1371,7 +1371,7 @@
             <span class="n">scoring</span><span class="o">=</span><span class="n">scoring</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="n">cv</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">class_weight</span> <span class="o">=</span> <span class="n">class_weight</span>
 
-<div class="viewcode-block" id="RidgeClassifierCV.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ridgeclassifiercv.html#ibex.sklearn.linear_model.RidgeClassifierCV.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="RidgeClassifierCV.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_linear_model_ridgeclassifiercv.html#ibex.sklearn.linear_model.RidgeClassifierCV.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Fit the ridge classifier.</span>
 
 <span class="sd">        Parameters</span>
@@ -1408,7 +1408,7 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">classes_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">classes_</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_binarizer</span><span class="o">.</span><span class="n">classes_</span>
 </pre></div>
 
           </div>
@@ -1418,26 +1418,7 @@
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../index.html">
               <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="../../../index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../../../index.html">Documentation overview</a><ul>
@@ -1464,7 +1445,7 @@
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
     </div>

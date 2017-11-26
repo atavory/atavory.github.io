@@ -48,43 +48,6 @@
 <h2>Goals<a class="headerlink" href="#goals" title="Permalink to this headline">¶</a></h2>
 <p>Ibex library aims for two (somewhat independent) goals:</p>
 <p>The first, primary goal, is providing <a class="reference external" href="http://pandas.pydata.org/">pandas</a> adapters for <a class="reference external" href="http://scikit-learn.org/stable/developers/contributing.html#apis-of-scikit-learn-objects">estimators conforming to the sickit-learn protocol</a>, in particular those of <a class="reference external" href="http://scikit-learn.org/stable/">scikit-learn</a> itself</p>
-<div class="figure" id="id1">
-<p class="plantuml">
-<img src="_images/plantuml-13d82c222d0927a3b76018d236ad8a16b51870cd.png" alt="skinparam monochrome true
-skinparam shadowing false
-
-skinparam package {
-    FontColor #777777
-    BorderColor lightgrey
-}
-
-package &quot;Plotting&quot; {
-    [seaborn]
-    [bokeh]
-    [matplotlib]
-}
-
-package &quot;Machine Learning&quot; {
-    [sklearn]
-    [**ibex**]
-}
-
-package &quot;Data Structures&quot; {
-    [numpy]
-    [pandas]
-}
-
-[sklearn] -&gt; [numpy] : interfaced by
-[matplotlib] -&gt; [numpy] : interfaced by
-[pandas] ..&gt; [numpy] : implemented over
-[seaborn] -&gt; [pandas] : interfaced by
-[bokeh] -&gt; [pandas] : interfaced by
-[seaborn] ..-&gt; [matplotlib] : implemented over
-[**ibex**] -&gt; [pandas] : interfaced by
-[**ibex**] ..-&gt; [sklearn] : implemented over" />
-</p>
-<p class="caption"><span class="caption-text">Relation of Ibex to some other packages in the scientific python stack.</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
-</div>
 <p>Consider the preceding UML figure. <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/index.html#module-numpy" title="(in NumPy v1.13)"><code class="xref py py-mod docutils literal"><span class="pre">numpy</span></code></a> is a (highly efficient) low-level data structure (strictly speaking, it is more of a buffer interface). both <code class="xref py py-mod docutils literal"><span class="pre">matplotlib</span></code> and <code class="xref py py-mod docutils literal"><span class="pre">sklearn</span></code> provide a <code class="docutils literal"><span class="pre">numpy</span></code> interface. Subsequently, <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/index.html#module-pandas" title="(in pandas v0.21.0)"><code class="xref py py-mod docutils literal"><span class="pre">pandas</span></code></a> provided a higher-level interface to <code class="docutils literal"><span class="pre">numpy</span></code>, and some plotting libraries, e.g., <code class="xref py py-mod docutils literal"><span class="pre">seaborn</span></code> provide a <code class="docutils literal"><span class="pre">pandas</span></code> interface to plotting, while being implemented by <code class="docutils literal"><span class="pre">matplotlib</span></code>, but . Similarly, the first aim of Ibex is to provide a <code class="docutils literal"><span class="pre">pandas</span></code> interface to machine learning, while being implemented by <code class="docutils literal"><span class="pre">sklearn</span></code>.</p>
 <p>The second goal is providing easier, and more succinct ways of combining estimators, features, and pipelines.</p>
 </div>
@@ -94,18 +57,18 @@ package &quot;Data Structures&quot; {
 <div class="section" id="interface">
 <h2>Interface<a class="headerlink" href="#interface" title="Permalink to this headline">¶</a></h2>
 <p>Ibex has a very small interface. The core library has a single public class and two functions. The rest of the library is a (mainly auto-generated) wrapper for <code class="xref py py-mod docutils literal"><span class="pre">sklearn</span></code>, with nearly all of the classes and functions having a straightforward correspondence to <code class="docutils literal"><span class="pre">sklearn</span></code>.</p>
-<p><a class="reference internal" href="api_ibex_frame_mixin.html#ibex.FrameMixin" title="ibex.FrameMixin"><code class="xref py py-class docutils literal"><span class="pre">ibex.FrameMixin</span></code></a> is a mixin class providing both some utilities for <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/index.html#module-pandas" title="(in pandas v0.21.0)"><code class="xref py py-mod docutils literal"><span class="pre">pandas</span></code></a> support for higher-up classes, as well as pipeline and feature operators. It is described in <a class="reference internal" href="frame_adapter.html#adapting"><span class="std std-ref">Adapting Estimators</span></a>. <a class="reference internal" href="api_ibex_frame.html#ibex.frame" title="ibex.frame"><code class="xref py py-func docutils literal"><span class="pre">ibex.frame()</span></code></a> is a function taking an
+<p><code class="xref py py-class docutils literal"><span class="pre">ibex.FrameMixin</span></code> is a mixin class providing both some utilities for <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/index.html#module-pandas" title="(in pandas v0.21.0)"><code class="xref py py-mod docutils literal"><span class="pre">pandas</span></code></a> support for higher-up classes, as well as pipeline and feature operators. It is described in <a class="reference internal" href="frame_adapter.html#adapting"><span class="std std-ref">Adapting Estimators</span></a>. <code class="xref py py-func docutils literal"><span class="pre">ibex.frame()</span></code> is a function taking an
 <a class="reference external" href="http://scikit-learn.org/stable/developers/contributing.html#apis-of-scikit-learn-objects">estimator conforming to the sickit-learn protocol</a> (either an object or a class), and returning a <code class="docutils literal"><span class="pre">pandas</span></code>-aware estimator (correspondingly, an object or a class). If estimators are already wrapped (which is the case for all of <code class="docutils literal"><span class="pre">sklearn</span></code>), it is not necessary to be concerned with these at all.</p>
-<p><a class="reference internal" href="api_ibex_trans.html#ibex.trans" title="ibex.trans"><code class="xref py py-func docutils literal"><span class="pre">ibex.trans()</span></code></a> is a utility function that creates an estimator applying a regular Python function, or a different estimator, to a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>, optionally specifying the input and output columns. Again, you do not need to use it if you are just planning on using <code class="docutils literal"><span class="pre">sklearn</span></code> estimators.</p>
-<p>Ibex (mostly automatically) wraps all of <code class="xref py py-mod docutils literal"><span class="pre">sklearn</span></code> in <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a>. In almost all cases (except those noted explicitly), the wrapping has a direct correspondence with <code class="docutils literal"><span class="pre">sklearn</span></code>.</p>
+<p><code class="xref py py-func docutils literal"><span class="pre">ibex.trans()</span></code> is a utility function that creates an estimator applying a regular Python function, or a different estimator, to a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>, optionally specifying the input and output columns. Again, you do not need to use it if you are just planning on using <code class="docutils literal"><span class="pre">sklearn</span></code> estimators.</p>
+<p>Ibex (mostly automatically) wraps all of <code class="xref py py-mod docutils literal"><span class="pre">sklearn</span></code> in <code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code>. In almost all cases (except those noted explicitly), the wrapping has a direct correspondence with <code class="docutils literal"><span class="pre">sklearn</span></code>.</p>
 </div>
 <div class="section" id="documentation-structure">
 <h2>Documentation Structure<a class="headerlink" href="#documentation-structure" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.preprocessing" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.preprocessing</span></code></a></p>
-<p><a class="reference internal" href="api_ibex.html#module-ibex.sklearn.preprocessing" title="ibex.sklearn.preprocessing"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn.preprocessing</span></code></a></p>
+<p><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn.preprocessing</span></code></p>
 <p><a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.FunctionTransformer.html#sklearn.preprocessing.FunctionTransformer" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.preprocessing.FunctionTransformer</span></code></a></p>
-<p><a class="reference internal" href="api_ibex_sklearn_preprocessing_functiontransformer.html#ibex.sklearn.preprocessing.FunctionTransformer" title="ibex.sklearn.preprocessing.FunctionTransformer"><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.preprocessing.FunctionTransformer</span></code></a></p>
-<p><a class="reference internal" href="api_ibex_sklearn_pipeline_featureunion.html#ibex.sklearn.pipeline.FeatureUnion" title="ibex.sklearn.pipeline.FeatureUnion"><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.pipeline.FeatureUnion</span></code></a></p>
+<p><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.preprocessing.FunctionTransformer</span></code></p>
+<p><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.pipeline.FeatureUnion</span></code></p>
 </div>
 </div>
 
@@ -120,27 +83,13 @@ package &quot;Data Structures&quot; {
             </a></p>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Overview</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#goals">Goals</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#motivation">Motivation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#interface">Interface</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#documentation-structure">Documentation Structure</a></li>
+<li><a class="reference internal" href="#">Overview</a><ul>
+<li><a class="reference internal" href="#goals">Goals</a></li>
+<li><a class="reference internal" href="#motivation">Motivation</a></li>
+<li><a class="reference internal" href="#interface">Interface</a></li>
+<li><a class="reference internal" href="#documentation-structure">Documentation Structure</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
 </ul>
 <div class="relations">
 <h3>Related Topics</h3>
@@ -176,7 +125,7 @@ package &quot;Data Structures&quot; {
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

@@ -42,48 +42,6 @@
             
   <div class="section" id="frame">
 <h1><code class="docutils literal"><span class="pre">frame</span></code><a class="headerlink" href="#frame" title="Permalink to this headline">¶</a></h1>
-<dl class="function">
-<dt id="ibex.frame">
-<code class="descclassname">ibex.</code><code class="descname">frame</code><span class="sig-paren">(</span><em>est</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibex/_adapter.html#frame"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.frame" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>est</strong> – either an estimator class or an estimator object. The class (or class of the
-object) should subclass <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.BaseEstimator.html#sklearn.base.BaseEstimator" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.BaseEstimator</span></code></a>.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="docutils">
-<dt>If <code class="docutils literal"><span class="pre">est</span></code> is a class, returns a class; if <code class="docutils literal"><span class="pre">est</span></code> is an object,</dt>
-<dd>returns an object. Note that the result will subclass <code class="docutils literal"><span class="pre">est</span></code>
-and <a class="reference internal" href="api_ibex_frame_mixin.html#ibex.FrameMixin" title="ibex.FrameMixin"><code class="xref py py-class docutils literal"><span class="pre">ibex.FrameMixin</span></code></a></dd>
-</dl>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Example</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">linear_model</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex</span> <span class="k">import</span> <span class="n">frame</span>
-</pre></div>
-</div>
-<p>We can use <code class="docutils literal"><span class="pre">frame</span></code> to adapt an object:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span> <span class="o">=</span> <span class="n">frame</span><span class="p">(</span><span class="n">linear_model</span><span class="o">.</span><span class="n">LinearRegression</span><span class="p">())</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span>
-<span class="go">Adapter[LinearRegression](copy_X=True, fit_intercept=True, n_jobs=1, normalize=False)</span>
-</pre></div>
-</div>
-<p>We can use <code class="docutils literal"><span class="pre">frame</span></code> to adapt a class:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">PdLinearRegression</span> <span class="o">=</span> <span class="n">frame</span><span class="p">(</span><span class="n">linear_model</span><span class="o">.</span><span class="n">LinearRegression</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">PdLinearRegression</span><span class="p">()</span>
-<span class="go">Adapter[LinearRegression](copy_X=True, fit_intercept=True, n_jobs=1, normalize=False)</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">PdLinearRegression</span><span class="p">(</span><span class="n">fit_intercept</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="go">Adapter[LinearRegression](copy_X=True, fit_intercept=False, n_jobs=1, normalize=False)</span>
-</pre></div>
-</div>
-</dd></dl>
-
 </div>
 
 
@@ -94,26 +52,7 @@ and <a class="reference internal" href="api_ibex_frame_mixin.html#ibex.FrameMixi
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -145,7 +84,7 @@ and <a class="reference internal" href="api_ibex_frame_mixin.html#ibex.FrameMixi
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

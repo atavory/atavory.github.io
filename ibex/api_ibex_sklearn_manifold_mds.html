@@ -42,143 +42,6 @@
             
   <div class="section" id="mds">
 <h1><code class="docutils literal"><span class="pre">MDS</span></code><a class="headerlink" href="#mds" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="ibex.sklearn.manifold.MDS">
-<em class="property">class </em><code class="descclassname">ibex.sklearn.manifold.</code><code class="descname">MDS</code><span class="sig-paren">(</span><em>n_components=2</em>, <em>metric=True</em>, <em>n_init=4</em>, <em>max_iter=300</em>, <em>verbose=0</em>, <em>eps=0.001</em>, <em>n_jobs=1</em>, <em>random_state=None</em>, <em>dissimilarity='euclidean'</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.manifold.MDS" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.manifold.mds.MDS</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Multidimensional scaling</p>
-<blockquote>
-<div><p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/manifold.html#multidimensional-scaling" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
-<dl class="docutils">
-<dt>n_components <span class="classifier-delimiter">:</span> <span class="classifier">int, optional, default: 2</span></dt>
-<dd>Number of dimensions in which to immerse the dissimilarities.</dd>
-<dt>metric <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional, default: True</span></dt>
-<dd>If <code class="docutils literal"><span class="pre">True</span></code>, perform metric MDS; otherwise, perform nonmetric MDS.</dd>
-<dt>n_init <span class="classifier-delimiter">:</span> <span class="classifier">int, optional, default: 4</span></dt>
-<dd>Number of times the SMACOF algorithm will be run with different
-initializations. The final results will be the best output of the runs,
-determined by the run with the smallest final stress.</dd>
-<dt>max_iter <span class="classifier-delimiter">:</span> <span class="classifier">int, optional, default: 300</span></dt>
-<dd>Maximum number of iterations of the SMACOF algorithm for a single run.</dd>
-<dt>verbose <span class="classifier-delimiter">:</span> <span class="classifier">int, optional, default: 0</span></dt>
-<dd>Level of verbosity.</dd>
-<dt>eps <span class="classifier-delimiter">:</span> <span class="classifier">float, optional, default: 1e-3</span></dt>
-<dd>Relative tolerance with respect to stress at which to declare
-convergence.</dd>
-<dt>n_jobs <span class="classifier-delimiter">:</span> <span class="classifier">int, optional, default: 1</span></dt>
-<dd><p class="first">The number of jobs to use for the computation. If multiple
-initializations are used (<code class="docutils literal"><span class="pre">n_init</span></code>), each run of the algorithm is
-computed in parallel.</p>
-<p class="last">If -1 all CPUs are used. If 1 is given, no parallel computing code is
-used at all, which is useful for debugging. For <code class="docutils literal"><span class="pre">n_jobs</span></code> below -1,
-(<code class="docutils literal"><span class="pre">n_cpus</span> <span class="pre">+</span> <span class="pre">1</span> <span class="pre">+</span> <span class="pre">n_jobs</span></code>) are used. Thus for <code class="docutils literal"><span class="pre">n_jobs</span> <span class="pre">=</span> <span class="pre">-2</span></code>, all CPUs
-but one are used.</p>
-</dd>
-<dt>random_state <span class="classifier-delimiter">:</span> <span class="classifier">int, RandomState instance or None, optional, default: None</span></dt>
-<dd>The generator used to initialize the centers.  If int, random_state is
-the seed used by the random number generator; If RandomState instance,
-random_state is the random number generator; If None, the random number
-generator is the RandomState instance used by <cite>np.random</cite>.</dd>
-<dt>dissimilarity <span class="classifier-delimiter">:</span> <span class="classifier">‘euclidean’ | ‘precomputed’, optional, default: ‘euclidean’</span></dt>
-<dd><p class="first">Dissimilarity measure to use:</p>
-<ul class="last simple">
-<li><dl class="first docutils">
-<dt>‘euclidean’:</dt>
-<dd>Pairwise Euclidean distances between points in the dataset.</dd>
-</dl>
-</li>
-<li><dl class="first docutils">
-<dt>‘precomputed’:</dt>
-<dd>Pre-computed dissimilarities are passed directly to <code class="docutils literal"><span class="pre">fit</span></code> and
-<code class="docutils literal"><span class="pre">fit_transform</span></code>.</dd>
-</dl>
-</li>
-</ul>
-</dd>
-</dl>
-<dl class="docutils">
-<dt><a href="#id1"><span class="problematic" id="id2">embedding_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape (n_components, n_samples)</span></dt>
-<dd>Stores the position of the dataset in the embedding space.</dd>
-<dt><a href="#id3"><span class="problematic" id="id4">stress_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
-<dd>The final value of the stress (sum of squared distance of the
-disparities and the distances for all constrained points).</dd>
-</dl>
-<p>“Modern Multidimensional Scaling - Theory and Applications” Borg, I.;
-Groenen P. Springer Series in Statistics (1997)</p>
-<p>“Nonmetric multidimensional scaling: a numerical method” Kruskal, J.
-Psychometrika, 29 (1964)</p>
-<p>“Multidimensional scaling by optimizing goodness of fit to a nonmetric
-hypothesis” Kruskal, J. Psychometrika, 29, (1964)</p>
-</div></blockquote>
-<dl class="method">
-<dt id="ibex.sklearn.manifold.MDS.fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em>, <em>init=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/manifold/mds.html#MDS.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.manifold.MDS.fit" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<blockquote>
-<div><p>Computes the position of the points in the embedding space</p>
-<dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_samples, n_features) or (n_samples, n_samples)</span></dt>
-<dd>Input data. If <code class="docutils literal"><span class="pre">dissimilarity=='precomputed'</span></code>, the input should
-be the dissimilarity matrix.</dd>
-<dt>init <span class="classifier-delimiter">:</span> <span class="classifier">ndarray, shape (n_samples,), optional, default: None</span></dt>
-<dd>Starting configuration of the embedding to initialize the SMACOF
-algorithm. By default, the algorithm is initialized with a randomly
-chosen array.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.manifold.MDS.fit_transform">
-<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em>, <em>init=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/manifold/mds.html#MDS.fit_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.manifold.MDS.fit_transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<blockquote>
-<div><p>Fit the data from X, and returns the embedded coordinates</p>
-<dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array, shape (n_samples, n_features) or (n_samples, n_samples)</span></dt>
-<dd>Input data. If <code class="docutils literal"><span class="pre">dissimilarity=='precomputed'</span></code>, the input should
-be the dissimilarity matrix.</dd>
-<dt>init <span class="classifier-delimiter">:</span> <span class="classifier">ndarray, shape (n_samples,), optional, default: None</span></dt>
-<dd>Starting configuration of the embedding to initialize the SMACOF
-algorithm. By default, the algorithm is initialized with a randomly
-chosen array.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 
 
@@ -189,26 +52,7 @@ chosen array.</dd>
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -240,7 +84,7 @@ chosen array.</dd>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

@@ -42,95 +42,6 @@
             
   <div class="section" id="featureunion">
 <h1><code class="docutils literal"><span class="pre">FeatureUnion</span></code><a class="headerlink" href="#featureunion" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="ibex.sklearn.pipeline.FeatureUnion">
-<em class="property">class </em><code class="descclassname">ibex.sklearn.pipeline.</code><code class="descname">FeatureUnion</code><span class="sig-paren">(</span><em>transformer_list</em>, <em>n_jobs=1</em>, <em>transformer_weights=None</em>, <em>as_index=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibex/_base.html#FeatureUnion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.pipeline.FeatureUnion" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.FeatureUnion.html#sklearn.pipeline.FeatureUnion" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.pipeline.FeatureUnion</span></code></a>, <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.TransformerMixin.html#sklearn.base.TransformerMixin" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.TransformerMixin</span></code></a>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
-<p>Concatenates results of multiple transformer objects.
-This estimator applies a list of transformer objects in parallel to the
-input data, then concatenates the results. This is useful to combine
-several feature extraction mechanisms into a single transformer.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>transformer_list</strong> – list of (string, transformer) tuples.
-List of transformer objects to be applied to the data.
-The first half of each tuple is the name of the transformer.</li>
-<li><strong>n_jobs</strong> – int, optional.
-Number of jobs to run in parallel (default 1).</li>
-<li><strong>transformer_weights</strong> – dict, optional
-Multiplicative weights for features per transformer.
-Keys are transformer names, values the weights.</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Example</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]})</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">preprocessing</span> <span class="k">as</span> <span class="n">pd_preprocessing</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">pipeline</span> <span class="k">as</span> <span class="n">pd_pipeline</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span> <span class="o">=</span> <span class="n">pd_pipeline</span><span class="o">.</span><span class="n">FeatureUnion</span><span class="p">([</span>
-<span class="gp">... </span>    <span class="p">(</span><span class="s1">&#39;std&#39;</span><span class="p">,</span> <span class="n">pd_preprocessing</span><span class="o">.</span><span class="n">StandardScaler</span><span class="p">()),</span>
-<span class="gp">... </span>    <span class="p">(</span><span class="s1">&#39;asb&#39;</span><span class="p">,</span> <span class="n">pd_preprocessing</span><span class="o">.</span><span class="n">MaxAbsScaler</span><span class="p">())])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-<span class="go">        a         b         a    b</span>
-<span class="go">0 -1.224745  1.192166  0.333333  1.0</span>
-<span class="go">1  0.000000 -1.254912  0.666667 -0.3</span>
-<span class="go">2  1.224745  0.062746  1.000000  0.4</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex</span> <span class="k">import</span> <span class="n">trans</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span> <span class="o">=</span> <span class="n">pd_preprocessing</span><span class="o">.</span><span class="n">StandardScaler</span><span class="p">()</span> <span class="o">+</span> <span class="n">pd_preprocessing</span><span class="o">.</span><span class="n">MaxAbsScaler</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-<span class="go">        a         b         a    b</span>
-<span class="go">0 -1.224745  1.192166  0.333333  1.0</span>
-<span class="go">1  0.000000 -1.254912  0.666667 -0.3</span>
-<span class="go">2  1.224745  0.062746  1.000000  0.4</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span> <span class="o">=</span> <span class="n">trans</span><span class="p">(</span><span class="n">pd_preprocessing</span><span class="o">.</span><span class="n">StandardScaler</span><span class="p">(),</span> <span class="n">out_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;std_scale_a&#39;</span><span class="p">,</span> <span class="s1">&#39;std_scale_b&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span> <span class="o">+=</span> <span class="n">trans</span><span class="p">(</span><span class="n">pd_preprocessing</span><span class="o">.</span><span class="n">MaxAbsScaler</span><span class="p">(),</span> <span class="n">out_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;max_scale_a&#39;</span><span class="p">,</span> <span class="s1">&#39;max_scale_b&#39;</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">trn</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-<span class="go">std_scale_a  std_scale_b  max_scale_a  max_scale_b</span>
-<span class="go">0    -1.224745     1.192166     0.333333          1.0</span>
-<span class="go">1     0.000000    -1.254912     0.666667         -0.3</span>
-<span class="go">2     1.224745     0.062746     1.000000          0.4</span>
-</pre></div>
-</div>
-<dl class="method">
-<dt id="ibex.sklearn.pipeline.FeatureUnion.fit_transform">
-<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em>, <em>**fit_params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibex/_base.html#FeatureUnion.fit_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.pipeline.FeatureUnion.fit_transform" title="Permalink to this definition">¶</a></dt>
-<dd><p>Fits the transformer using <code class="docutils literal"><span class="pre">X</span></code> (and possibly <code class="docutils literal"><span class="pre">y</span></code>). Transforms
-<code class="docutils literal"><span class="pre">X</span></code> using the transformers, uses <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.concat.html#pandas.concat" title="(in pandas v0.21.0)"><code class="xref py py-func docutils literal"><span class="pre">pandas.concat()</span></code></a>
-to horizontally concatenate the results.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><code class="docutils literal"><span class="pre">self</span></code></td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.pipeline.FeatureUnion.transform">
-<code class="descname">transform</code><span class="sig-paren">(</span><em>X</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibex/_base.html#FeatureUnion.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.pipeline.FeatureUnion.transform" title="Permalink to this definition">¶</a></dt>
-<dd><p>Transforms <code class="docutils literal"><span class="pre">X</span></code> using the transformers, uses <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.concat.html#pandas.concat" title="(in pandas v0.21.0)"><code class="xref py py-func docutils literal"><span class="pre">pandas.concat()</span></code></a>
-to horizontally concatenate the results.</p>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 
 
@@ -141,26 +52,7 @@ to horizontally concatenate the results.</p>
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -192,7 +84,7 @@ to horizontally concatenate the results.</p>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

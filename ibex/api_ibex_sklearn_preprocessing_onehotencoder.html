@@ -42,191 +42,6 @@
             
   <div class="section" id="onehotencoder">
 <h1><code class="docutils literal"><span class="pre">OneHotEncoder</span></code><a class="headerlink" href="#onehotencoder" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="ibex.sklearn.preprocessing.OneHotEncoder">
-<em class="property">class </em><code class="descclassname">ibex.sklearn.preprocessing.</code><code class="descname">OneHotEncoder</code><span class="sig-paren">(</span><em>n_values='auto'</em>, <em>categorical_features='all'</em>, <em>dtype=&lt;class 'numpy.float64'&gt;</em>, <em>sparse=True</em>, <em>handle_unknown='error'</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.preprocessing.OneHotEncoder" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.preprocessing.data.OneHotEncoder</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Encode categorical integer features using a one-hot aka one-of-K scheme.</p>
-<blockquote>
-<div><p>The input to this transformer should be a matrix of integers, denoting
-the values taken on by categorical (discrete) features. The output will be
-a sparse matrix where each column corresponds to one possible value of one
-feature. It is assumed that input features take on values in the range
-[0, n_values).</p>
-<p>This encoding is needed for feeding categorical data to many scikit-learn
-estimators, notably linear models and SVMs with the standard kernels.</p>
-<p>Note: a one-hot encoding of y labels should use a LabelBinarizer
-instead.</p>
-<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/preprocessing.html#preprocessing-categorical-features" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
-<dl class="docutils">
-<dt>n_values <span class="classifier-delimiter">:</span> <span class="classifier">‘auto’, int or array of ints</span></dt>
-<dd><p class="first">Number of values per feature.</p>
-<ul class="last">
-<li><p class="first">‘auto’ : determine value range from training data.</p>
-</li>
-<li><dl class="first docutils">
-<dt>int <span class="classifier-delimiter">:</span> <span class="classifier">number of categorical values per feature.</span></dt>
-<dd><p class="first last">Each feature value should be in <code class="docutils literal"><span class="pre">range(n_values)</span></code></p>
-</dd>
-</dl>
-</li>
-<li><dl class="first docutils">
-<dt>array <span class="classifier-delimiter">:</span> <span class="classifier"><code class="docutils literal"><span class="pre">n_values[i]</span></code> is the number of categorical values in</span></dt>
-<dd><p class="first last"><code class="docutils literal"><span class="pre">X[:,</span> <span class="pre">i]</span></code>. Each feature value should be
-in <code class="docutils literal"><span class="pre">range(n_values[i])</span></code></p>
-</dd>
-</dl>
-</li>
-</ul>
-</dd>
-<dt>categorical_features <span class="classifier-delimiter">:</span> <span class="classifier">“all” or array of indices or mask</span></dt>
-<dd><p class="first">Specify what features are treated as categorical.</p>
-<ul class="simple">
-<li>‘all’ (default): All features are treated as categorical.</li>
-<li>array of indices: Array of categorical feature indices.</li>
-<li>mask: Array of length n_features and with dtype=bool.</li>
-</ul>
-<p class="last">Non-categorical features are always stacked to the right of the matrix.</p>
-</dd>
-<dt>dtype <span class="classifier-delimiter">:</span> <span class="classifier">number type, default=np.float</span></dt>
-<dd>Desired dtype of output.</dd>
-<dt>sparse <span class="classifier-delimiter">:</span> <span class="classifier">boolean, default=True</span></dt>
-<dd>Will return sparse matrix if set True else will return an array.</dd>
-<dt>handle_unknown <span class="classifier-delimiter">:</span> <span class="classifier">str, ‘error’ or ‘ignore’</span></dt>
-<dd>Whether to raise an error or ignore if a unknown categorical feature is
-present during transform.</dd>
-</dl>
-<dl class="docutils">
-<dt><a href="#id1"><span class="problematic" id="id2">active_features_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
-<dd>Indices for active features, meaning values that actually occur
-in the training set. Only available when n_values is <code class="docutils literal"><span class="pre">'auto'</span></code>.</dd>
-<dt><a href="#id3"><span class="problematic" id="id4">feature_indices_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array of shape (n_features,)</span></dt>
-<dd>Indices to feature ranges.
-Feature <code class="docutils literal"><span class="pre">i</span></code> in the original data is mapped to features
-from <code class="docutils literal"><span class="pre">feature_indices_[i]</span></code> to <code class="docutils literal"><span class="pre">feature_indices_[i+1]</span></code>
-(and then potentially masked by <cite>active_features_</cite> afterwards)</dd>
-<dt><a href="#id5"><span class="problematic" id="id6">n_values_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array of shape (n_features,)</span></dt>
-<dd>Maximum number of values per feature.</dd>
-</dl>
-<p>Given a dataset with three features and four samples, we let the encoder
-find the maximum value per feature and transform the data to a binary
-one-hot encoding.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="k">import</span> <span class="n">OneHotEncoder</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">enc</span> <span class="o">=</span> <span class="n">OneHotEncoder</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">enc</span><span class="o">.</span><span class="n">fit</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]])</span>  
-<span class="go">OneHotEncoder(categorical_features=&#39;all&#39;, dtype=&lt;... &#39;numpy.float64&#39;&gt;,</span>
-<span class="go">       handle_unknown=&#39;error&#39;, n_values=&#39;auto&#39;, sparse=True)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">enc</span><span class="o">.</span><span class="n">n_values_</span>
-<span class="go">array([2, 3, 4])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">enc</span><span class="o">.</span><span class="n">feature_indices_</span>
-<span class="go">array([0, 2, 5, 9])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">enc</span><span class="o">.</span><span class="n">transform</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
-<span class="go">array([[ 1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.]])</span>
-</pre></div>
-</div>
-<dl class="docutils">
-<dt>sklearn.feature_extraction.DictVectorizer <span class="classifier-delimiter">:</span> <span class="classifier">performs a one-hot encoding of</span></dt>
-<dd>dictionary items (also handles string-valued features).</dd>
-<dt>sklearn.feature_extraction.FeatureHasher <span class="classifier-delimiter">:</span> <span class="classifier">performs an approximate one-hot</span></dt>
-<dd>encoding of dictionary items or strings.</dd>
-<dt>sklearn.preprocessing.LabelBinarizer <span class="classifier-delimiter">:</span> <span class="classifier">binarizes labels in a one-vs-all</span></dt>
-<dd>fashion.</dd>
-<dt>sklearn.preprocessing.MultiLabelBinarizer <span class="classifier-delimiter">:</span> <span class="classifier">transforms between iterable of</span></dt>
-<dd>iterables and a multilabel format, e.g. a (samples x classes) binary
-matrix indicating the presence of a class label.</dd>
-<dt>sklearn.preprocessing.LabelEncoder <span class="classifier-delimiter">:</span> <span class="classifier">encodes labels with values between 0</span></dt>
-<dd>and n_classes-1.</dd>
-</dl>
-</div></blockquote>
-<dl class="method">
-<dt id="ibex.sklearn.preprocessing.OneHotEncoder.fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/data.html#OneHotEncoder.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.OneHotEncoder.fit" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit OneHotEncoder to X.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape [n_samples, n_feature]</span></dt>
-<dd>Input array of type int.</dd>
-</dl>
-<p>self</p>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.preprocessing.OneHotEncoder.fit_transform">
-<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/data.html#OneHotEncoder.fit_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.OneHotEncoder.fit_transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit OneHotEncoder to X, then transform X.</p>
-<blockquote>
-<div><p>Equivalent to self.fit(X).transform(X), but more convenient and more
-efficient. See fit for the parameters, transform for the return value.</p>
-<dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape [n_samples, n_feature]</span></dt>
-<dd>Input array of type int.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.preprocessing.OneHotEncoder.transform">
-<code class="descname">transform</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/preprocessing/data.html#OneHotEncoder.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.preprocessing.OneHotEncoder.transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Transform X using one-hot encoding.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape [n_samples, n_features]</span></dt>
-<dd>Input array of type int.</dd>
-</dl>
-<dl class="docutils">
-<dt>X_out <span class="classifier-delimiter">:</span> <span class="classifier">sparse matrix if sparse=True else a 2-d array, dtype=int</span></dt>
-<dd>Transformed input.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 
 
@@ -237,26 +52,7 @@ are some changes, in particular:</p>
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -288,7 +84,7 @@ are some changes, in particular:</p>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

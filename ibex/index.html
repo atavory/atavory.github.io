@@ -47,7 +47,7 @@
 <a class="reference external image-reference" href="https://travis-ci.org/atavory/ibex"><img alt="https://travis-ci.org/atavory/ibex.svg?branch=master" src="https://travis-ci.org/atavory/ibex.svg?branch=master" /></a>
 <a class="reference external image-reference" href="https://landscape.io/github/atavory/ibex/master"><img alt="https://landscape.io/github/atavory/ibex/master/landscape.svg?style=flat" src="https://landscape.io/github/atavory/ibex/master/landscape.svg?style=flat" /></a>
 <a class="reference external image-reference" href="https://codecov.io/gh/atavory/ibex/"><img alt="https://img.shields.io/codecov/c/github/atavory/ibex/master.svg" src="https://img.shields.io/codecov/c/github/atavory/ibex/master.svg" /></a>
-<a class="reference external image-reference" href="https://atavory.github.io/ibex/"><img alt="http://readthedocs.org/projects/ibex/badge/?version=latest" src="http://readthedocs.org/projects/ibex/badge/?version=latest" /></a>
+<a class="reference external image-reference" href="http://ibex.readthedocs.io/en/latest/index.html"><img alt="http://readthedocs.org/projects/ibex/badge/?version=latest" src="http://readthedocs.org/projects/ibex/badge/?version=latest" /></a>
 <a class="reference external image-reference" href="https://raw.githubusercontent.com/atavory/ibex/master/LICENSE.txt"><img alt="https://img.shields.io/badge/license-BSD--3--Clause-brightgreen.svg" src="https://img.shields.io/badge/license-BSD--3--Clause-brightgreen.svg" /></a>
 <a class="reference external image-reference" href="https://badge.fury.io/py/ibex"><img alt="https://badge.fury.io/py/ibex.svg" src="https://badge.fury.io/py/ibex.svg" /></a>
 <p>This library aims for two (somewhat independent) goals:</p>
@@ -57,7 +57,7 @@
 </ul>
 <p>(You might also want to check out the excellent <a class="reference external" href="https://pypi.python.org/pypi/sklearn-pandas">pandas-sklearn</a> which has the same aims, but takes a very different
 approach.)</p>
-<p>The full documentation at <a class="reference external" href="https://atavory.github.io/ibex/"><img alt="github_pages_ibex" src="http://ibex.readthedocs.io/en/latest/_static/github-pages.png" /></a> defines these matters in detail, but the library has an extremely-small <a class="reference external" href="https://atavory.github.io/ibex/overview.html">interface</a>.</p>
+<p>The full documentation at <a class="reference external" href="https://atavory.github.io/ibex/"><img alt="rtd_ibex" src="http://ibex.readthedocs.io/en/latest/_static/read_the_docs.png" /></a> defines these matters in detail, but the library has an extremely-small <a class="reference external" href="https://atavory.github.io/ibex/overview.html">interface</a>.</p>
 <div class="section" id="tl-dr">
 <h2>TL;DR<a class="headerlink" href="#tl-dr" title="Permalink to this headline">¶</a></h2>
 <p>The following short example shows the main points of the library. It is an adaptation of the scikit-learn example <a class="reference external" href="http://scikit-learn.org/stable/auto_examples/plot_feature_stacker.html#sphx-glr-auto-examples-plot-feature-stacker-py">Concatenating multiple feature extraction methods</a>. In this example, we build a classifier for the <a class="reference external" href="http://scikit-learn.org/stable/auto_examples/datasets/plot_iris_dataset.html">iris dataset</a> using a combination of <a class="reference external" href="https://en.wikipedia.org/wiki/Principal_component_analysis">PCA</a>, <a class="reference external" href="https://en.wikipedia.org/wiki/Feature_selection#Subset_selection">univariate feature selection</a>, and a <a class="reference external" href="https://en.wikipedia.org/wiki/Support_vector_machine">support vecor machine classifier</a>.</p>
@@ -229,7 +229,7 @@ approach.)</p>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api.html#ibex"><code class="docutils literal"><span class="pre">ibex</span></code></a><ul>
-<li class="toctree-l3"><a class="reference internal" href="api.html#module-ibex">Module Doc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-doc">Module Doc</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api.html#members">Members</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api.html#sklearn"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="api.html#tensorflow"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
@@ -260,22 +260,15 @@ approach.)</p>
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
             </a></p>
   <h3><a href="#">Table Of Contents</a></h3>
-  <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Ibex</a></li>
+  <ul>
+<li><a class="reference internal" href="#">Ibex</a><ul>
+<li><a class="reference internal" href="#tl-dr">TL;DR</a></li>
 </ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</li>
+<li><a class="reference internal" href="#contents">Contents</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#indexes-and-tables">Indexes and tables</a></li>
 </ul>
 <div class="relations">
 <h3>Related Topics</h3>
@@ -310,7 +303,7 @@ approach.)</p>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

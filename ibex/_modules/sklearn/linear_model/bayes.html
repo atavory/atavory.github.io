@@ -63,7 +63,7 @@
 <span class="c1">###############################################################################</span>
 <span class="c1"># BayesianRidge regression</span>
 
-<div class="viewcode-block" id="BayesianRidge"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_bayesianridge.html#ibex.sklearn.linear_model.BayesianRidge">[docs]</a><span class="k">class</span> <span class="nc">BayesianRidge</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">BayesianRidge</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Bayesian ridge regression</span>
 
 <span class="sd">    Fit a Bayesian ridge model and optimize the regularization parameters</span>
@@ -183,7 +183,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">copy_X</span> <span class="o">=</span> <span class="n">copy_X</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
 
-<div class="viewcode-block" id="BayesianRidge.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_bayesianridge.html#ibex.sklearn.linear_model.BayesianRidge.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+<div class="viewcode-block" id="BayesianRidge.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_linear_model_bayesianridge.html#ibex.sklearn.linear_model.BayesianRidge.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Fit the model</span>
 
 <span class="sd">        Parameters</span>
@@ -285,7 +285,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_set_intercept</span><span class="p">(</span><span class="n">X_offset_</span><span class="p">,</span> <span class="n">y_offset_</span><span class="p">,</span> <span class="n">X_scale_</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="BayesianRidge.predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_bayesianridge.html#ibex.sklearn.linear_model.BayesianRidge.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">return_std</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="BayesianRidge.predict"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_linear_model_bayesianridge.html#ibex.sklearn.linear_model.BayesianRidge.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">return_std</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Predict using the linear model.</span>
 
 <span class="sd">        In addition to the mean of the predictive distribution, also its</span>
@@ -315,14 +315,14 @@
                 <span class="n">X</span> <span class="o">=</span> <span class="p">(</span><span class="n">X</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_offset_</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_scale_</span>
             <span class="n">sigmas_squared_data</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_</span><span class="p">)</span> <span class="o">*</span> <span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
             <span class="n">y_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">sigmas_squared_data</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span><span class="p">))</span>
-            <span class="k">return</span> <span class="n">y_mean</span><span class="p">,</span> <span class="n">y_std</span></div></div>
+            <span class="k">return</span> <span class="n">y_mean</span><span class="p">,</span> <span class="n">y_std</span></div>
 
 
 <span class="c1">###############################################################################</span>
 <span class="c1"># ARD (Automatic Relevance Determination) regression</span>
 
 
-<div class="viewcode-block" id="ARDRegression"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ardregression.html#ibex.sklearn.linear_model.ARDRegression">[docs]</a><span class="k">class</span> <span class="nc">ARDRegression</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">ARDRegression</span><span class="p">(</span><span class="n">LinearModel</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Bayesian ARD regression.</span>
 
 <span class="sd">    Fit the weights of a regression model, using an ARD prior. The weights of</span>
@@ -451,7 +451,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">copy_X</span> <span class="o">=</span> <span class="n">copy_X</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
 
-<div class="viewcode-block" id="ARDRegression.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ardregression.html#ibex.sklearn.linear_model.ARDRegression.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+<div class="viewcode-block" id="ARDRegression.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_linear_model_ardregression.html#ibex.sklearn.linear_model.ARDRegression.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Fit the ARDRegression model according to the given training data</span>
 <span class="sd">        and parameters.</span>
 
@@ -544,7 +544,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_set_intercept</span><span class="p">(</span><span class="n">X_offset_</span><span class="p">,</span> <span class="n">y_offset_</span><span class="p">,</span> <span class="n">X_scale_</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="ARDRegression.predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_linear_model_ardregression.html#ibex.sklearn.linear_model.ARDRegression.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">return_std</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="ARDRegression.predict"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_linear_model_ardregression.html#ibex.sklearn.linear_model.ARDRegression.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">return_std</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Predict using the linear model.</span>
 
 <span class="sd">        In addition to the mean of the predictive distribution, also its</span>
@@ -575,7 +575,7 @@
             <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lambda_</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold_lambda</span><span class="p">]</span>
             <span class="n">sigmas_squared_data</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_</span><span class="p">)</span> <span class="o">*</span> <span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
             <span class="n">y_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">sigmas_squared_data</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_</span><span class="p">))</span>
-            <span class="k">return</span> <span class="n">y_mean</span><span class="p">,</span> <span class="n">y_std</span></div></div>
+            <span class="k">return</span> <span class="n">y_mean</span><span class="p">,</span> <span class="n">y_std</span></div>
 </pre></div>
 
           </div>
@@ -585,26 +585,7 @@
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../index.html">
               <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="../../../index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../../../index.html">Documentation overview</a><ul>
@@ -631,7 +612,7 @@
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
     </div>

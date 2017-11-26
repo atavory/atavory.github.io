@@ -46,13 +46,13 @@
 <span id="id1"></span><h1><code class="docutils literal"><span class="pre">sklearn</span></code><a class="headerlink" href="#sklearn" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="general-idea">
 <h2>General Idea<a class="headerlink" href="#general-idea" title="Permalink to this headline">¶</a></h2>
-<p>Ibex lazily wraps <code class="xref py py-mod docutils literal"><span class="pre">sklearn</span></code>. When a module starting with <code class="docutils literal"><span class="pre">ibex.sklearn</span></code> is <code class="docutils literal"><span class="pre">import</span></code>-ed, Ibex will load the corresponding module from <code class="docutils literal"><span class="pre">sklearn</span></code>, wrap the estimator classes using <a class="reference internal" href="api_ibex_frame.html#ibex.frame" title="ibex.frame"><code class="xref py py-func docutils literal"><span class="pre">ibex.frame()</span></code></a>, and load the result. For example say we start with</p>
+<p>Ibex lazily wraps <code class="xref py py-mod docutils literal"><span class="pre">sklearn</span></code>. When a module starting with <code class="docutils literal"><span class="pre">ibex.sklearn</span></code> is <code class="docutils literal"><span class="pre">import</span></code>-ed, Ibex will load the corresponding module from <code class="docutils literal"><span class="pre">sklearn</span></code>, wrap the estimator classes using <code class="xref py py-func docutils literal"><span class="pre">ibex.frame()</span></code>, and load the result. For example say we start with</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">sklearn</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ibex</span>
 </pre></div>
 </div>
 <p><a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.linear_model" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.linear_model</span></code></a> is part of <code class="docutils literal"><span class="pre">sklearn</span></code>,
-therefore <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> will have a counterpart.</p>
+therefore <code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code> will have a counterpart.</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;linear_model&#39;</span> <span class="ow">in</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">__all__</span>
 <span class="go">True</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;linear_model&#39;</span> <span class="ow">in</span> <span class="n">ibex</span><span class="o">.</span><span class="n">sklearn</span><span class="o">.</span><span class="n">__all__</span>
@@ -61,7 +61,7 @@ therefore <a class="reference internal" href="api_ibex.html#module-ibex.sklearn"
 </pre></div>
 </div>
 <p><code class="docutils literal"><span class="pre">foo</span></code> is not part of <code class="docutils literal"><span class="pre">sklearn</span></code>,
-therefore <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> will not have a counterpart.</p>
+therefore <code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code> will not have a counterpart.</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;foo&#39;</span> <span class="ow">in</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">__all__</span>
 <span class="go">False</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;foo&#39;</span> <span class="ow">in</span> <span class="n">ibex</span><span class="o">.</span><span class="n">sklearn</span><span class="o">.</span><span class="n">__all__</span>
@@ -85,8 +85,8 @@ therefore <a class="reference internal" href="api_ibex.html#module-ibex.sklearn"
 </div>
 <div class="section" id="differences-from-sklearn">
 <h2>Differences From <code class="docutils literal"><span class="pre">sklearn</span></code><a class="headerlink" href="#differences-from-sklearn" title="Permalink to this headline">¶</a></h2>
-<p>Since <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> and <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a> are not identical to <code class="xref py py-class docutils literal"><span class="pre">numpy.array</span></code> s (which is the reason to use the former), some changes are made in <code class="docutils literal"><span class="pre">ibex.sklearn</span></code> relative to the corresponding elements in <code class="docutils literal"><span class="pre">sklearn</span></code>. <a class="reference internal" href="api_ibex.html#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> in
-<a class="reference internal" href="api.html#api"><span class="std std-ref">API</span></a> lists the differences.</p>
+<p>Since <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> and <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a> are not identical to <code class="xref py py-class docutils literal"><span class="pre">numpy.array</span></code> s (which is the reason to use the former), some changes are made in <code class="docutils literal"><span class="pre">ibex.sklearn</span></code> relative to the corresponding elements in <code class="docutils literal"><span class="pre">sklearn</span></code>. <code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code> in
+<a class="reference internal" href="tmp/api.html#api"><span class="std std-ref">API</span></a> lists the differences.</p>
 </div>
 </div>
 
@@ -101,25 +101,11 @@ therefore <a class="reference internal" href="api_ibex.html#module-ibex.sklearn"
             </a></p>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="docutils literal"><span class="pre">sklearn</span></code></a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#general-idea">General Idea</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#differences-from-sklearn">Differences From <code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
+<li><a class="reference internal" href="#"><code class="docutils literal"><span class="pre">sklearn</span></code></a><ul>
+<li><a class="reference internal" href="#general-idea">General Idea</a></li>
+<li><a class="reference internal" href="#differences-from-sklearn">Differences From <code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
 </ul>
 <div class="relations">
 <h3>Related Topics</h3>
@@ -155,7 +141,7 @@ therefore <a class="reference internal" href="api_ibex.html#module-ibex.sklearn"
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

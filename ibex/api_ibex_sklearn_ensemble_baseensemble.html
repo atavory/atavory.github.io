@@ -42,43 +42,6 @@
             
   <div class="section" id="baseensemble">
 <h1><code class="docutils literal"><span class="pre">BaseEnsemble</span></code><a class="headerlink" href="#baseensemble" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="ibex.sklearn.ensemble.BaseEnsemble">
-<em class="property">class </em><code class="descclassname">ibex.sklearn.ensemble.</code><code class="descname">BaseEnsemble</code><span class="sig-paren">(</span><em>base_estimator</em>, <em>n_estimators=10</em>, <em>estimator_params=()</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.ensemble.BaseEnsemble" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.ensemble.base.BaseEnsemble</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Base class for all ensemble classes.</p>
-<blockquote>
-<div><p>Warning: This class should not be used directly. Use derived classes
-instead.</p>
-<dl class="docutils">
-<dt>base_estimator <span class="classifier-delimiter">:</span> <span class="classifier">object, optional (default=None)</span></dt>
-<dd>The base estimator from which the ensemble is built.</dd>
-<dt>n_estimators <span class="classifier-delimiter">:</span> <span class="classifier">integer</span></dt>
-<dd>The number of estimators in the ensemble.</dd>
-<dt>estimator_params <span class="classifier-delimiter">:</span> <span class="classifier">list of strings</span></dt>
-<dd>The list of attributes to use as parameters when instantiating a
-new base estimator. If none are given, default parameters are used.</dd>
-</dl>
-<dl class="docutils">
-<dt><a href="#id1"><span class="problematic" id="id2">base_estimator_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">estimator</span></dt>
-<dd>The base estimator from which the ensemble is grown.</dd>
-<dt><a href="#id3"><span class="problematic" id="id4">estimators_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">list of estimators</span></dt>
-<dd>The collection of fitted base estimators.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
 </div>
 
 
@@ -89,26 +52,7 @@ new base estimator. If none are given, default parameters are used.</dd>
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -140,7 +84,7 @@ new base estimator. If none are given, default parameters are used.</dd>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

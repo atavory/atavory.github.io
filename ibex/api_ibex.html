@@ -40,64 +40,29 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="module-ibex">
-<span id="ibex"></span><h1><code class="docutils literal"><span class="pre">ibex</span></code><a class="headerlink" href="#module-ibex" title="Permalink to this headline">¶</a></h1>
-<p>Pandas adapters for sklearn-type estimators</p>
-<p><a class="reference internal" href="api_ibex_frame_mixin.html#ibex.FrameMixin" title="ibex.FrameMixin"><code class="xref py py-class docutils literal"><span class="pre">ibex.FrameMixin</span></code></a></p>
-<p><a class="reference internal" href="api_ibex_frame.html#ibex.frame" title="ibex.frame"><code class="xref py py-func docutils literal"><span class="pre">ibex.frame()</span></code></a></p>
-<p><a class="reference internal" href="api_ibex_trans.html#ibex.trans" title="ibex.trans"><code class="xref py py-func docutils literal"><span class="pre">ibex.trans()</span></code></a></p>
+  <div class="section" id="ibex">
+<h1><code class="docutils literal"><span class="pre">ibex</span></code><a class="headerlink" href="#ibex" title="Permalink to this headline">¶</a></h1>
+<p><code class="xref py py-class docutils literal"><span class="pre">ibex.FrameMixin</span></code></p>
+<p><code class="xref py py-func docutils literal"><span class="pre">ibex.frame()</span></code></p>
+<p><code class="xref py py-func docutils literal"><span class="pre">ibex.trans()</span></code></p>
 <div class="section" id="sklearn">
 <h2><code class="docutils literal"><span class="pre">sklearn</span></code><a class="headerlink" href="#sklearn" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
 </div>
-<span class="target" id="module-ibex.sklearn"></span><p>Wrappers for <code class="xref py py-mod docutils literal"><span class="pre">sklearn</span></code>.</p>
-<p>This module loads corresponding modules in <code class="docutils literal"><span class="pre">sklearn</span></code> on demand, just
-as <code class="docutils literal"><span class="pre">sklearn</span></code> does. Its contents depend on those of the <code class="docutils literal"><span class="pre">sklearn</span></code>
-in your system when it is loaded.</p>
-<p class="rubric">Example</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">sklearn</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ibex</span>
-</pre></div>
+<div class="section" id="preprocessing">
+<h3><code class="docutils literal"><span class="pre">preprocessing</span></code><a class="headerlink" href="#preprocessing" title="Permalink to this headline">¶</a></h3>
+<p><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.preprocessing.FunctionTransformer</span></code></p>
 </div>
-<p><a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.linear_model" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.linear_model</span></code></a> is part of <code class="docutils literal"><span class="pre">sklearn</span></code>,
-therefore <a class="reference internal" href="#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> will have a counterpart.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;linear_model&#39;</span> <span class="ow">in</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">__all__</span>
-<span class="go">True</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;linear_model&#39;</span> <span class="ow">in</span> <span class="n">ibex</span><span class="o">.</span><span class="n">sklearn</span><span class="o">.</span><span class="n">__all__</span>
-<span class="go">True</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">linear_model</span> 
-</pre></div>
-</div>
-<p><code class="docutils literal"><span class="pre">foo</span></code> is not part of <code class="docutils literal"><span class="pre">sklearn</span></code>,
-therefore <a class="reference internal" href="#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> will not have a counterpart.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;foo&#39;</span> <span class="ow">in</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">__all__</span>
-<span class="go">False</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;foo&#39;</span> <span class="ow">in</span> <span class="n">ibex</span><span class="o">.</span><span class="n">sklearn</span><span class="o">.</span><span class="n">__all__</span>
-<span class="go">False</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">try</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">foo</span>
-<span class="gp">... </span><span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;caught&#39;</span><span class="p">)</span>
-<span class="go">caught</span>
-</pre></div>
-</div>
-<div class="section" id="module-ibex.sklearn.preprocessing">
-<span id="preprocessing"></span><h3><code class="docutils literal"><span class="pre">preprocessing</span></code><a class="headerlink" href="#module-ibex.sklearn.preprocessing" title="Permalink to this headline">¶</a></h3>
-<p>Auto-generated <a class="reference internal" href="#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.preprocessing" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.preprocessing</span></code></a>.</p>
-<p><a class="reference internal" href="api_ibex_sklearn_preprocessing_functiontransformer.html#ibex.sklearn.preprocessing.FunctionTransformer" title="ibex.sklearn.preprocessing.FunctionTransformer"><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.preprocessing.FunctionTransformer</span></code></a></p>
-</div>
-<div class="section" id="module-ibex.sklearn.pipeline">
-<span id="pipeline"></span><h3><code class="docutils literal"><span class="pre">pipeline</span></code><a class="headerlink" href="#module-ibex.sklearn.pipeline" title="Permalink to this headline">¶</a></h3>
-<p>Auto-generated <a class="reference internal" href="#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.pipeline" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.pipeline</span></code></a>.</p>
+<div class="section" id="pipeline">
+<h3><code class="docutils literal"><span class="pre">pipeline</span></code><a class="headerlink" href="#pipeline" title="Permalink to this headline">¶</a></h3>
 <p><code class="xref py py-func docutils literal"><span class="pre">ibex.sklearn.pipeline.make_union()</span></code></p>
-<p><a class="reference internal" href="api_ibex_sklearn_pipeline_make_pipeline.html#ibex.sklearn.pipeline.make_pipeline" title="ibex.sklearn.pipeline.make_pipeline"><code class="xref py py-func docutils literal"><span class="pre">ibex.sklearn.pipeline.make_pipeline()</span></code></a></p>
-<p><a class="reference internal" href="api_ibex_sklearn_pipeline_featureunion.html#ibex.sklearn.pipeline.FeatureUnion" title="ibex.sklearn.pipeline.FeatureUnion"><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.pipeline.FeatureUnion</span></code></a></p>
-<p><a class="reference internal" href="api_ibex_sklearn_pipeline_pipeline.html#ibex.sklearn.pipeline.Pipeline" title="ibex.sklearn.pipeline.Pipeline"><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.pipeline.Pipeline</span></code></a></p>
+<p><code class="xref py py-func docutils literal"><span class="pre">ibex.sklearn.pipeline.make_pipeline()</span></code></p>
+<p><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.pipeline.FeatureUnion</span></code></p>
+<p><code class="xref py py-class docutils literal"><span class="pre">ibex.sklearn.pipeline.Pipeline</span></code></p>
 </div>
-<div class="section" id="module-ibex.sklearn.model_selection">
-<span id="model-selection"></span><h3><code class="docutils literal"><span class="pre">model_selection</span></code><a class="headerlink" href="#module-ibex.sklearn.model_selection" title="Permalink to this headline">¶</a></h3>
-<p>Auto-generated <a class="reference internal" href="#module-ibex.sklearn" title="ibex.sklearn"><code class="xref py py-mod docutils literal"><span class="pre">ibex.sklearn</span></code></a> wrapper for <a class="reference external" href="http://scikit-learn.org/stable/modules/classes.html#module-sklearn.model_selection" title="(in scikit-learn v0.19.1)"><code class="xref py py-mod docutils literal"><span class="pre">sklearn.model_selection</span></code></a>.</p>
-<p><a class="reference internal" href="api_ibex_sklearn_model_selection_cross_val_predict.html#ibex.sklearn.model_selection.cross_val_predict" title="ibex.sklearn.model_selection.cross_val_predict"><code class="xref py py-func docutils literal"><span class="pre">ibex.sklearn.model_selection.cross_val_predict()</span></code></a></p>
+<div class="section" id="model-selection">
+<h3><code class="docutils literal"><span class="pre">model_selection</span></code><a class="headerlink" href="#model-selection" title="Permalink to this headline">¶</a></h3>
+<p><code class="xref py py-func docutils literal"><span class="pre">ibex.sklearn.model_selection.cross_val_predict()</span></code></p>
 </div>
 </div>
 </div>
@@ -113,21 +78,15 @@ therefore <a class="reference internal" href="#module-ibex.sklearn" title="ibex.
             </a></p>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
+<li><a class="reference internal" href="#"><code class="docutils literal"><span class="pre">ibex</span></code></a><ul>
+<li><a class="reference internal" href="#sklearn"><code class="docutils literal"><span class="pre">sklearn</span></code></a><ul>
+<li><a class="reference internal" href="#preprocessing"><code class="docutils literal"><span class="pre">preprocessing</span></code></a></li>
+<li><a class="reference internal" href="#pipeline"><code class="docutils literal"><span class="pre">pipeline</span></code></a></li>
+<li><a class="reference internal" href="#model-selection"><code class="docutils literal"><span class="pre">model_selection</span></code></a></li>
 </ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</li>
+</ul>
+</li>
 </ul>
 <div class="relations">
 <h3>Related Topics</h3>
@@ -161,7 +120,7 @@ therefore <a class="reference internal" href="#module-ibex.sklearn" title="ibex.
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

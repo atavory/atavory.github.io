@@ -42,114 +42,6 @@
             
   <div class="section" id="cross-val-predict">
 <h1><code class="docutils literal"><span class="pre">cross_val_predict</span></code><a class="headerlink" href="#cross-val-predict" title="Permalink to this headline">¶</a></h1>
-<dl class="function">
-<dt id="ibex.sklearn.model_selection.cross_val_predict">
-<code class="descclassname">ibex.sklearn.model_selection.</code><code class="descname">cross_val_predict</code><span class="sig-paren">(</span><em>estimator</em>, <em>X</em>, <em>y=None</em>, <em>groups=None</em>, <em>cv=None</em>, <em>n_jobs=1</em>, <em>verbose=0</em>, <em>fit_params=None</em>, <em>pre_dispatch='2*n_jobs'</em>, <em>method='predict'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibex/sklearn/_cross_val_predict.html#cross_val_predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.model_selection.cross_val_predict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Generate cross-validated estimates for each input data point.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>estimator</strong> – estimator object implementing ‘fit’ and ‘predict’
-The object to use to fit the data.</li>
-<li><strong>X</strong> – <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>
-The data to fit.</li>
-<li><strong>y</strong> – The target variable to try to predict in the case of
-supervised learning.</li>
-<li><strong>groups</strong> – array-like, with shape (n_samples,), optional
-Group labels for the samples used while splitting the dataset into
-train/test set.</li>
-<li><strong>cv</strong> – <p>int, cross-validation generator or an iterable, optional
-Determines the cross-validation splitting strategy.
-Possible inputs for cv are:</p>
-<ul>
-<li><code class="docutils literal"><span class="pre">None</span></code>, to use the default 3-fold cross validation,</li>
-<li>integer, to specify the number of folds in a <cite>(Stratified)KFold</cite>,</li>
-<li>An object to be used as a cross-validation generator.</li>
-<li>An iterable yielding train, test splits.</li>
-</ul>
-<p>For integer/<code class="docutils literal"><span class="pre">None</span></code> inputs, if the estimator is a classifier and <code class="docutils literal"><span class="pre">y</span></code> is
-either binary or multiclass, <code class="xref py py-class docutils literal"><span class="pre">StratifiedKFold</span></code> is used. In all
-other cases, <code class="xref py py-class docutils literal"><span class="pre">KFold</span></code> is used.
-Refer <a class="reference external" href="http://scikit-learn.org/stable/modules/cross_validation.html#cross-validation" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a> for the various
-cross-validation strategies that can be used here.</p>
-</li>
-<li><strong>n_jobs</strong> – integer, optional
-The number of CPUs to use to do the computation. -1 means
-‘all CPUs’.</li>
-<li><strong>verbose</strong> – integer, optional
-The verbosity level.</li>
-<li><strong>fit_params</strong> – dict, optional
-Parameters to pass to the fit method of the estimator.</li>
-<li><strong>pre_dispatch</strong> – <p>int, or string, optional
-Controls the number of jobs that get dispatched during parallel
-execution. Reducing this number can be useful to avoid an
-explosion of memory consumption when more jobs get dispatched
-than CPUs can process. This parameter can be:</p>
-<blockquote>
-<div><ul>
-<li><dl class="first docutils">
-<dt><code class="docutils literal"><span class="pre">None</span></code>, in which case all the jobs are immediately</dt>
-<dd>created and spawned. Use this for lightweight and
-fast-running jobs, to avoid delays due to on-demand
-spawning of the jobs</dd>
-</dl>
-</li>
-<li><dl class="first docutils">
-<dt>An int, giving the exact number of total jobs that are</dt>
-<dd>spawned</dd>
-</dl>
-</li>
-<li><dl class="first docutils">
-<dt>A string, giving an expression as a function of n_jobs,</dt>
-<dd>as in ‘2*n_jobs’</dd>
-</dl>
-</li>
-</ul>
-</div></blockquote>
-</li>
-<li><strong>method</strong> – string, optional, default: ‘predict’
-Invokes the passed method name of the passed estimator.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> or <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a> (depending on <code class="docutils literal"><span class="pre">y</span></code>).</p>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Example</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn.linear_model</span> <span class="k">import</span> <span class="n">LinearRegression</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">try</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="kn">from</span> <span class="nn">ibex.sklearn.model_selection</span> <span class="k">import</span> <span class="n">cross_val_predict</span>
-<span class="gp">... </span><span class="k">except</span><span class="p">:</span> <span class="c1"># Older sklearn versions</span>
-<span class="gp">... </span>    <span class="kn">from</span> <span class="nn">ibex.sklearn.cross_validation</span> <span class="k">import</span> <span class="n">cross_val_predict</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
-<span class="gp">... </span>        <span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span>
-<span class="gp">... </span>        <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span>
-<span class="gp">... </span>    <span class="p">},</span>
-<span class="gp">... </span>    <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;i</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">)])</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">cross_val_predict</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">LinearRegression</span><span class="p">(),</span>
-<span class="gp">... </span>    <span class="n">df</span><span class="p">[[</span><span class="s1">&#39;x&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span>
-<span class="go">i0     ...</span>
-<span class="go">i1     ...</span>
-<span class="go">i2     ...</span>
-<span class="go">i3     ...</span>
-<span class="go">i4     ...</span>
-<span class="go">i5     ...</span>
-<span class="gp">...</span>
-</pre></div>
-</div>
-</dd></dl>
-
 </div>
 
 
@@ -160,26 +52,7 @@ Invokes the passed method name of the passed estimator.</li>
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -211,7 +84,7 @@ Invokes the passed method name of the passed estimator.</li>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

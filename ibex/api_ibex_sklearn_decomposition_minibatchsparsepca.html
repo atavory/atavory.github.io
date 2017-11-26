@@ -42,174 +42,6 @@
             
   <div class="section" id="minibatchsparsepca">
 <h1><code class="docutils literal"><span class="pre">MiniBatchSparsePCA</span></code><a class="headerlink" href="#minibatchsparsepca" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="ibex.sklearn.decomposition.MiniBatchSparsePCA">
-<em class="property">class </em><code class="descclassname">ibex.sklearn.decomposition.</code><code class="descname">MiniBatchSparsePCA</code><span class="sig-paren">(</span><em>n_components=None</em>, <em>alpha=1</em>, <em>ridge_alpha=0.01</em>, <em>n_iter=100</em>, <em>callback=None</em>, <em>batch_size=3</em>, <em>verbose=False</em>, <em>shuffle=True</em>, <em>n_jobs=1</em>, <em>method='lars'</em>, <em>random_state=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.decomposition.MiniBatchSparsePCA" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.decomposition.sparse_pca.MiniBatchSparsePCA</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Mini-batch Sparse Principal Components Analysis</p>
-<blockquote>
-<div><p>Finds the set of sparse components that can optimally reconstruct
-the data.  The amount of sparseness is controllable by the coefficient
-of the L1 penalty, given by the parameter alpha.</p>
-<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/decomposition.html#sparsepca" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
-<dl class="docutils">
-<dt>n_components <span class="classifier-delimiter">:</span> <span class="classifier">int,</span></dt>
-<dd>number of sparse atoms to extract</dd>
-<dt>alpha <span class="classifier-delimiter">:</span> <span class="classifier">int,</span></dt>
-<dd>Sparsity controlling parameter. Higher values lead to sparser
-components.</dd>
-<dt>ridge_alpha <span class="classifier-delimiter">:</span> <span class="classifier">float,</span></dt>
-<dd>Amount of ridge shrinkage to apply in order to improve
-conditioning when calling the transform method.</dd>
-<dt>n_iter <span class="classifier-delimiter">:</span> <span class="classifier">int,</span></dt>
-<dd>number of iterations to perform for each mini batch</dd>
-<dt>callback <span class="classifier-delimiter">:</span> <span class="classifier">callable or None, optional (default: None)</span></dt>
-<dd>callable that gets invoked every five iterations</dd>
-<dt>batch_size <span class="classifier-delimiter">:</span> <span class="classifier">int,</span></dt>
-<dd>the number of features to take in each mini batch</dd>
-<dt>verbose <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
-<dd>Controls the verbosity; the higher, the more messages. Defaults to 0.</dd>
-<dt>shuffle <span class="classifier-delimiter">:</span> <span class="classifier">boolean,</span></dt>
-<dd>whether to shuffle the data before splitting it in batches</dd>
-<dt>n_jobs <span class="classifier-delimiter">:</span> <span class="classifier">int,</span></dt>
-<dd>number of parallel jobs to run, or -1 to autodetect.</dd>
-<dt>method <span class="classifier-delimiter">:</span> <span class="classifier">{‘lars’, ‘cd’}</span></dt>
-<dd>lars: uses the least angle regression method to solve the lasso problem
-(linear_model.lars_path)
-cd: uses the coordinate descent method to compute the
-Lasso solution (linear_model.Lasso). Lars will be faster if
-the estimated components are sparse.</dd>
-<dt>random_state <span class="classifier-delimiter">:</span> <span class="classifier">int, RandomState instance or None, optional (default=None)</span></dt>
-<dd>If int, random_state is the seed used by the random number generator;
-If RandomState instance, random_state is the random number generator;
-If None, the random number generator is the RandomState instance used
-by <cite>np.random</cite>.</dd>
-</dl>
-<dl class="docutils">
-<dt><a href="#id1"><span class="problematic" id="id2">components_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array, [n_components, n_features]</span></dt>
-<dd>Sparse components extracted from the data.</dd>
-<dt><a href="#id3"><span class="problematic" id="id4">error_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
-<dd>Vector of errors at each iteration.</dd>
-<dt><a href="#id5"><span class="problematic" id="id6">n_iter_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
-<dd>Number of iterations run.</dd>
-</dl>
-<p>PCA
-SparsePCA
-DictionaryLearning</p>
-</div></blockquote>
-<dl class="method">
-<dt id="ibex.sklearn.decomposition.MiniBatchSparsePCA.fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/decomposition/sparse_pca.html#MiniBatchSparsePCA.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.decomposition.MiniBatchSparsePCA.fit" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit the model from data in X.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape (n_samples, n_features)</span></dt>
-<dd>Training vector, where n_samples in the number of samples
-and n_features is the number of features.</dd>
-</dl>
-<dl class="docutils">
-<dt>self <span class="classifier-delimiter">:</span> <span class="classifier">object</span></dt>
-<dd>Returns the instance itself.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.decomposition.MiniBatchSparsePCA.fit_transform">
-<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em>, <em>**fit_params</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.decomposition.MiniBatchSparsePCA.fit_transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit to data, then transform it.</p>
-<blockquote>
-<div><p>Fits transformer to X and y with optional parameters fit_params
-and returns a transformed version of X.</p>
-<dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_features]</span></dt>
-<dd>Training set.</dd>
-<dt>y <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples]</span></dt>
-<dd>Target values.</dd>
-</dl>
-<dl class="docutils">
-<dt>X_new <span class="classifier-delimiter">:</span> <span class="classifier">numpy array of shape [n_samples, n_features_new]</span></dt>
-<dd>Transformed array.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.decomposition.MiniBatchSparsePCA.transform">
-<code class="descname">transform</code><span class="sig-paren">(</span><em>X</em>, <em>ridge_alpha='deprecated'</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.decomposition.MiniBatchSparsePCA.transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Least Squares projection of the data onto the sparse components.</p>
-<blockquote>
-<div><p>To avoid instability issues in case the system is under-determined,
-regularization can be applied (Ridge regression) via the
-<cite>ridge_alpha</cite> parameter.</p>
-<p>Note that Sparse PCA components orthogonality is not enforced as in PCA
-hence one cannot use a simple linear projection.</p>
-<dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">array of shape (n_samples, n_features)</span></dt>
-<dd>Test data to be transformed, must have the same number of
-features as the data used to train the model.</dd>
-<dt>ridge_alpha <span class="classifier-delimiter">:</span> <span class="classifier">float, default: 0.01</span></dt>
-<dd><p class="first">Amount of ridge shrinkage to apply in order to improve
-conditioning.</p>
-<div class="last deprecated">
-<p><span class="versionmodified">Deprecated since version 0.19: </span>This parameter will be removed in 0.21.
-Specify <code class="docutils literal"><span class="pre">ridge_alpha</span></code> in the <code class="docutils literal"><span class="pre">SparsePCA</span></code> constructor.</p>
-</div>
-</dd>
-</dl>
-<dl class="docutils">
-<dt>X_new array, shape (n_samples, n_components)</dt>
-<dd>Transformed data.</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 
 
@@ -220,26 +52,7 @@ Specify <code class="docutils literal"><span class="pre">ridge_alpha</span></cod
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -271,7 +84,7 @@ Specify <code class="docutils literal"><span class="pre">ridge_alpha</span></cod
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

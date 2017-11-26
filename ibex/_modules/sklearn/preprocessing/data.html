@@ -336,7 +336,7 @@
             <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_max_</span>
             <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_range_</span>
 
-<div class="viewcode-block" id="MinMaxScaler.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_minmaxscaler.html#ibex.sklearn.preprocessing.MinMaxScaler.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="MinMaxScaler.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_minmaxscaler.html#ibex.sklearn.preprocessing.MinMaxScaler.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Compute the minimum and maximum to be used for later scaling.</span>
 
 <span class="sd">        Parameters</span>
@@ -350,7 +350,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">partial_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="MinMaxScaler.partial_fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_minmaxscaler.html#ibex.sklearn.preprocessing.MinMaxScaler.partial_fit">[docs]</a>    <span class="k">def</span> <span class="nf">partial_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="MinMaxScaler.partial_fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_minmaxscaler.html#ibex.sklearn.preprocessing.MinMaxScaler.partial_fit">[docs]</a>    <span class="k">def</span> <span class="nf">partial_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Online computation of min and max on X for later scaling.</span>
 <span class="sd">        All of X is processed as a single batch. This is intended for cases</span>
 <span class="sd">        when `fit` is not feasible due to very large number of `n_samples`</span>
@@ -397,7 +397,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">data_range_</span> <span class="o">=</span> <span class="n">data_range</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="MinMaxScaler.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_minmaxscaler.html#ibex.sklearn.preprocessing.MinMaxScaler.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="MinMaxScaler.transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_minmaxscaler.html#ibex.sklearn.preprocessing.MinMaxScaler.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Scaling features of X according to feature_range.</span>
 
 <span class="sd">        Parameters</span>
@@ -413,7 +413,7 @@
         <span class="n">X</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_</span>
         <span class="k">return</span> <span class="n">X</span></div>
 
-<div class="viewcode-block" id="MinMaxScaler.inverse_transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_minmaxscaler.html#ibex.sklearn.preprocessing.MinMaxScaler.inverse_transform">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="MinMaxScaler.inverse_transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_minmaxscaler.html#ibex.sklearn.preprocessing.MinMaxScaler.inverse_transform">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Undo the scaling of X according to feature_range.</span>
 
 <span class="sd">        Parameters</span>
@@ -616,7 +616,7 @@
             <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span>
             <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">var_</span>
 
-<div class="viewcode-block" id="StandardScaler.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_standardscaler.html#ibex.sklearn.preprocessing.StandardScaler.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="StandardScaler.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_standardscaler.html#ibex.sklearn.preprocessing.StandardScaler.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Compute the mean and std to be used for later scaling.</span>
 
 <span class="sd">        Parameters</span>
@@ -632,7 +632,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">partial_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="StandardScaler.partial_fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_standardscaler.html#ibex.sklearn.preprocessing.StandardScaler.partial_fit">[docs]</a>    <span class="k">def</span> <span class="nf">partial_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="StandardScaler.partial_fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_standardscaler.html#ibex.sklearn.preprocessing.StandardScaler.partial_fit">[docs]</a>    <span class="k">def</span> <span class="nf">partial_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Online computation of mean and std on X for later scaling.</span>
 <span class="sd">        All of X is processed as a single batch. This is intended for cases</span>
 <span class="sd">        when `fit` is not feasible due to very large number of `n_samples`</span>
@@ -699,7 +699,7 @@
 
         <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="StandardScaler.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_standardscaler.html#ibex.sklearn.preprocessing.StandardScaler.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="StandardScaler.transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_standardscaler.html#ibex.sklearn.preprocessing.StandardScaler.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Perform standardization by centering and scaling</span>
 
 <span class="sd">        Parameters</span>
@@ -737,7 +737,7 @@
                 <span class="n">X</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span>
         <span class="k">return</span> <span class="n">X</span></div>
 
-<div class="viewcode-block" id="StandardScaler.inverse_transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_standardscaler.html#ibex.sklearn.preprocessing.StandardScaler.inverse_transform">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="StandardScaler.inverse_transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_standardscaler.html#ibex.sklearn.preprocessing.StandardScaler.inverse_transform">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Scale back the data to the original representation</span>
 
 <span class="sd">        Parameters</span>
@@ -838,7 +838,7 @@
             <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_samples_seen_</span>
             <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_abs_</span>
 
-<div class="viewcode-block" id="MaxAbsScaler.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_maxabsscaler.html#ibex.sklearn.preprocessing.MaxAbsScaler.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="MaxAbsScaler.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_maxabsscaler.html#ibex.sklearn.preprocessing.MaxAbsScaler.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Compute the maximum absolute value to be used for later scaling.</span>
 
 <span class="sd">        Parameters</span>
@@ -852,7 +852,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">partial_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="MaxAbsScaler.partial_fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_maxabsscaler.html#ibex.sklearn.preprocessing.MaxAbsScaler.partial_fit">[docs]</a>    <span class="k">def</span> <span class="nf">partial_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="MaxAbsScaler.partial_fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_maxabsscaler.html#ibex.sklearn.preprocessing.MaxAbsScaler.partial_fit">[docs]</a>    <span class="k">def</span> <span class="nf">partial_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Online computation of max absolute value of X for later scaling.</span>
 <span class="sd">        All of X is processed as a single batch. This is intended for cases</span>
 <span class="sd">        when `fit` is not feasible due to very large number of `n_samples`</span>
@@ -887,7 +887,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span> <span class="o">=</span> <span class="n">_handle_zeros_in_scale</span><span class="p">(</span><span class="n">max_abs</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="MaxAbsScaler.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_maxabsscaler.html#ibex.sklearn.preprocessing.MaxAbsScaler.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="MaxAbsScaler.transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_maxabsscaler.html#ibex.sklearn.preprocessing.MaxAbsScaler.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Scale the data</span>
 
 <span class="sd">        Parameters</span>
@@ -905,7 +905,7 @@
             <span class="n">X</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span>
         <span class="k">return</span> <span class="n">X</span></div>
 
-<div class="viewcode-block" id="MaxAbsScaler.inverse_transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_maxabsscaler.html#ibex.sklearn.preprocessing.MaxAbsScaler.inverse_transform">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="MaxAbsScaler.inverse_transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_maxabsscaler.html#ibex.sklearn.preprocessing.MaxAbsScaler.inverse_transform">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Scale back the data to the original representation</span>
 
 <span class="sd">        Parameters</span>
@@ -1075,7 +1075,7 @@
                     <span class="s2">&quot; instead. See docstring for motivation and alternatives.&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">X</span>
 
-<div class="viewcode-block" id="RobustScaler.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_robustscaler.html#ibex.sklearn.preprocessing.RobustScaler.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="RobustScaler.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_robustscaler.html#ibex.sklearn.preprocessing.RobustScaler.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Compute the median and quantiles to be used for scaling.</span>
 
 <span class="sd">        Parameters</span>
@@ -1101,7 +1101,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span> <span class="o">=</span> <span class="n">_handle_zeros_in_scale</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="RobustScaler.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_robustscaler.html#ibex.sklearn.preprocessing.RobustScaler.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="RobustScaler.transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_robustscaler.html#ibex.sklearn.preprocessing.RobustScaler.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Center and scale the data.</span>
 
 <span class="sd">        Can be called on sparse input, provided that ``RobustScaler`` has been</span>
@@ -1128,7 +1128,7 @@
                 <span class="n">X</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_</span>
         <span class="k">return</span> <span class="n">X</span></div>
 
-<div class="viewcode-block" id="RobustScaler.inverse_transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_robustscaler.html#ibex.sklearn.preprocessing.RobustScaler.inverse_transform">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="RobustScaler.inverse_transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_robustscaler.html#ibex.sklearn.preprocessing.RobustScaler.inverse_transform">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Scale back the data to the original representation</span>
 
 <span class="sd">        Parameters</span>
@@ -1335,7 +1335,7 @@
             <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">feature_names</span>
 
-<div class="viewcode-block" id="PolynomialFeatures.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_polynomialfeatures.html#ibex.sklearn.preprocessing.PolynomialFeatures.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="PolynomialFeatures.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_polynomialfeatures.html#ibex.sklearn.preprocessing.PolynomialFeatures.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute number of output features.</span>
 
@@ -1357,7 +1357,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">n_output_features_</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">combinations</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="PolynomialFeatures.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_polynomialfeatures.html#ibex.sklearn.preprocessing.PolynomialFeatures.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="PolynomialFeatures.transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_polynomialfeatures.html#ibex.sklearn.preprocessing.PolynomialFeatures.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Transform data to polynomial features</span>
 
 <span class="sd">        Parameters</span>
@@ -1537,7 +1537,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">norm</span> <span class="o">=</span> <span class="n">norm</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">copy</span> <span class="o">=</span> <span class="n">copy</span>
 
-<div class="viewcode-block" id="Normalizer.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_normalizer.html#ibex.sklearn.preprocessing.Normalizer.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Normalizer.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_normalizer.html#ibex.sklearn.preprocessing.Normalizer.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Do nothing and return the estimator unchanged</span>
 
 <span class="sd">        This method is just there to implement the usual API and hence</span>
@@ -1550,7 +1550,7 @@
         <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="Normalizer.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_normalizer.html#ibex.sklearn.preprocessing.Normalizer.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Normalizer.transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_normalizer.html#ibex.sklearn.preprocessing.Normalizer.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Scale each non zero row of X to unit norm</span>
 
 <span class="sd">        Parameters</span>
@@ -1662,7 +1662,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="o">=</span> <span class="n">threshold</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">copy</span> <span class="o">=</span> <span class="n">copy</span>
 
-<div class="viewcode-block" id="Binarizer.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_binarizer.html#ibex.sklearn.preprocessing.Binarizer.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Binarizer.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_binarizer.html#ibex.sklearn.preprocessing.Binarizer.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Do nothing and return the estimator unchanged</span>
 
 <span class="sd">        This method is just there to implement the usual API and hence</span>
@@ -1675,7 +1675,7 @@
         <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">accept_sparse</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="Binarizer.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_binarizer.html#ibex.sklearn.preprocessing.Binarizer.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Binarizer.transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_binarizer.html#ibex.sklearn.preprocessing.Binarizer.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Binarize each element of X</span>
 
 <span class="sd">        Parameters</span>
@@ -1711,7 +1711,7 @@
 <span class="sd">    Read more in the :ref:`User Guide &lt;kernel_centering&gt;`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-<div class="viewcode-block" id="KernelCenterer.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_kernelcenterer.html#ibex.sklearn.preprocessing.KernelCenterer.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="KernelCenterer.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_kernelcenterer.html#ibex.sklearn.preprocessing.KernelCenterer.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Fit KernelCenterer</span>
 
 <span class="sd">        Parameters</span>
@@ -1729,7 +1729,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">K_fit_all_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">K_fit_rows_</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="n">n_samples</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="KernelCenterer.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_kernelcenterer.html#ibex.sklearn.preprocessing.KernelCenterer.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<div class="viewcode-block" id="KernelCenterer.transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_kernelcenterer.html#ibex.sklearn.preprocessing.KernelCenterer.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Center kernel matrix.</span>
 
 <span class="sd">        Parameters</span>
@@ -1984,7 +1984,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">sparse</span> <span class="o">=</span> <span class="n">sparse</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">handle_unknown</span> <span class="o">=</span> <span class="n">handle_unknown</span>
 
-<div class="viewcode-block" id="OneHotEncoder.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_onehotencoder.html#ibex.sklearn.preprocessing.OneHotEncoder.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="OneHotEncoder.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_onehotencoder.html#ibex.sklearn.preprocessing.OneHotEncoder.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Fit OneHotEncoder to X.</span>
 
 <span class="sd">        Parameters</span>
@@ -2047,7 +2047,7 @@
 
         <span class="k">return</span> <span class="n">out</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sparse</span> <span class="k">else</span> <span class="n">out</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
 
-<div class="viewcode-block" id="OneHotEncoder.fit_transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_onehotencoder.html#ibex.sklearn.preprocessing.OneHotEncoder.fit_transform">[docs]</a>    <span class="k">def</span> <span class="nf">fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="OneHotEncoder.fit_transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_onehotencoder.html#ibex.sklearn.preprocessing.OneHotEncoder.fit_transform">[docs]</a>    <span class="k">def</span> <span class="nf">fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Fit OneHotEncoder to X, then transform X.</span>
 
 <span class="sd">        Equivalent to self.fit(X).transform(X), but more convenient and more</span>
@@ -2101,7 +2101,7 @@
 
         <span class="k">return</span> <span class="n">out</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sparse</span> <span class="k">else</span> <span class="n">out</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
 
-<div class="viewcode-block" id="OneHotEncoder.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_onehotencoder.html#ibex.sklearn.preprocessing.OneHotEncoder.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="OneHotEncoder.transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_onehotencoder.html#ibex.sklearn.preprocessing.OneHotEncoder.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Transform X using one-hot encoding.</span>
 
 <span class="sd">        Parameters</span>
@@ -2281,7 +2281,7 @@
                     <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">column_data</span><span class="p">,</span> <span class="n">references</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">quantiles_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">quantiles_</span><span class="p">)</span>
 
-<div class="viewcode-block" id="QuantileTransformer.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_quantiletransformer.html#ibex.sklearn.preprocessing.QuantileTransformer.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="QuantileTransformer.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_quantiletransformer.html#ibex.sklearn.preprocessing.QuantileTransformer.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Compute the quantiles used for transforming.</span>
 
 <span class="sd">        Parameters</span>
@@ -2447,7 +2447,7 @@
 
         <span class="k">return</span> <span class="n">X</span>
 
-<div class="viewcode-block" id="QuantileTransformer.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_quantiletransformer.html#ibex.sklearn.preprocessing.QuantileTransformer.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="QuantileTransformer.transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_quantiletransformer.html#ibex.sklearn.preprocessing.QuantileTransformer.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Feature-wise transformation of the data.</span>
 
 <span class="sd">        Parameters</span>
@@ -2468,7 +2468,7 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">inverse</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="QuantileTransformer.inverse_transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_preprocessing_quantiletransformer.html#ibex.sklearn.preprocessing.QuantileTransformer.inverse_transform">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="QuantileTransformer.inverse_transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_preprocessing_quantiletransformer.html#ibex.sklearn.preprocessing.QuantileTransformer.inverse_transform">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Back-projection to the original space.</span>
 
 <span class="sd">        Parameters</span>
@@ -2607,26 +2607,7 @@
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../index.html">
               <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="../../../index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../../../index.html">Documentation overview</a><ul>
@@ -2653,7 +2634,7 @@
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
     </div>

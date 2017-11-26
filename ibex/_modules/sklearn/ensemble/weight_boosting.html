@@ -337,7 +337,7 @@
                               <span class="o">*</span> <span class="n">log_proba</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])</span>
 
 
-<div class="viewcode-block" id="AdaBoostClassifier"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier">[docs]</a><span class="k">class</span> <span class="nc">AdaBoostClassifier</span><span class="p">(</span><span class="n">BaseWeightBoosting</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">AdaBoostClassifier</span><span class="p">(</span><span class="n">BaseWeightBoosting</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;An AdaBoost classifier.</span>
 
 <span class="sd">    An AdaBoost [1] classifier is a meta-estimator that begins by fitting a</span>
@@ -427,7 +427,7 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span> <span class="o">=</span> <span class="n">algorithm</span>
 
-<div class="viewcode-block" id="AdaBoostClassifier.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="AdaBoostClassifier.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Build a boosted classifier from the training set (X, y).</span>
 
 <span class="sd">        Parameters</span>
@@ -625,7 +625,7 @@
 
         <span class="k">return</span> <span class="n">sample_weight</span><span class="p">,</span> <span class="n">estimator_weight</span><span class="p">,</span> <span class="n">estimator_error</span>
 
-<div class="viewcode-block" id="AdaBoostClassifier.predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="AdaBoostClassifier.predict"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Predict classes for X.</span>
 
 <span class="sd">        The predicted class of an input sample is computed as the weighted mean</span>
@@ -649,7 +649,7 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="AdaBoostClassifier.staged_predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.staged_predict">[docs]</a>    <span class="k">def</span> <span class="nf">staged_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="AdaBoostClassifier.staged_predict"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.staged_predict">[docs]</a>    <span class="k">def</span> <span class="nf">staged_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Return staged predictions for X.</span>
 
 <span class="sd">        The predicted class of an input sample is computed as the weighted mean</span>
@@ -681,7 +681,7 @@
                 <span class="k">yield</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">classes</span><span class="o">.</span><span class="n">take</span><span class="p">(</span>
                     <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="AdaBoostClassifier.decision_function"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.decision_function">[docs]</a>    <span class="k">def</span> <span class="nf">decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="AdaBoostClassifier.decision_function"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.decision_function">[docs]</a>    <span class="k">def</span> <span class="nf">decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Compute the decision function of ``X``.</span>
 
 <span class="sd">        Parameters</span>
@@ -722,7 +722,7 @@
             <span class="k">return</span> <span class="n">pred</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">pred</span></div>
 
-<div class="viewcode-block" id="AdaBoostClassifier.staged_decision_function"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.staged_decision_function">[docs]</a>    <span class="k">def</span> <span class="nf">staged_decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="AdaBoostClassifier.staged_decision_function"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.staged_decision_function">[docs]</a>    <span class="k">def</span> <span class="nf">staged_decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Compute decision function of ``X`` for each boosting iteration.</span>
 
 <span class="sd">        This method allows monitoring (i.e. determine error on testing set)</span>
@@ -775,7 +775,7 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">yield</span> <span class="n">pred</span> <span class="o">/</span> <span class="n">norm</span></div>
 
-<div class="viewcode-block" id="AdaBoostClassifier.predict_proba"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="AdaBoostClassifier.predict_proba"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Predict class probabilities for X.</span>
 
 <span class="sd">        The predicted class probabilities of an input sample is computed as</span>
@@ -819,7 +819,7 @@
 
         <span class="k">return</span> <span class="n">proba</span></div>
 
-<div class="viewcode-block" id="AdaBoostClassifier.staged_predict_proba"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.staged_predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">staged_predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="AdaBoostClassifier.staged_predict_proba"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.staged_predict_proba">[docs]</a>    <span class="k">def</span> <span class="nf">staged_predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Predict class probabilities for X.</span>
 
 <span class="sd">        The predicted class probabilities of an input sample is computed as</span>
@@ -871,7 +871,7 @@
 
             <span class="k">yield</span> <span class="n">real_proba</span></div>
 
-<div class="viewcode-block" id="AdaBoostClassifier.predict_log_proba"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.predict_log_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="AdaBoostClassifier.predict_log_proba"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_adaboostclassifier.html#ibex.sklearn.ensemble.AdaBoostClassifier.predict_log_proba">[docs]</a>    <span class="k">def</span> <span class="nf">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Predict class log-probabilities for X.</span>
 
 <span class="sd">        The predicted class log-probabilities of an input sample is computed as</span>
@@ -890,10 +890,10 @@
 <span class="sd">            The class probabilities of the input samples. The order of</span>
 <span class="sd">            outputs is the same of that of the `classes_` attribute.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div></div>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
 
 
-<div class="viewcode-block" id="AdaBoostRegressor"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_adaboostregressor.html#ibex.sklearn.ensemble.AdaBoostRegressor">[docs]</a><span class="k">class</span> <span class="nc">AdaBoostRegressor</span><span class="p">(</span><span class="n">BaseWeightBoosting</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">AdaBoostRegressor</span><span class="p">(</span><span class="n">BaseWeightBoosting</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;An AdaBoost regressor.</span>
 
 <span class="sd">    An AdaBoost [1] regressor is a meta-estimator that begins by fitting a</span>
@@ -973,7 +973,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">loss</span> <span class="o">=</span> <span class="n">loss</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
 
-<div class="viewcode-block" id="AdaBoostRegressor.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_adaboostregressor.html#ibex.sklearn.ensemble.AdaBoostRegressor.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="AdaBoostRegressor.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_adaboostregressor.html#ibex.sklearn.ensemble.AdaBoostRegressor.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Build a boosted regressor from the training set (X, y).</span>
 
 <span class="sd">        Parameters</span>
@@ -1116,7 +1116,7 @@
         <span class="c1"># Return median predictions</span>
         <span class="k">return</span> <span class="n">predictions</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">median_estimators</span><span class="p">]</span>
 
-<div class="viewcode-block" id="AdaBoostRegressor.predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_adaboostregressor.html#ibex.sklearn.ensemble.AdaBoostRegressor.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="AdaBoostRegressor.predict"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_adaboostregressor.html#ibex.sklearn.ensemble.AdaBoostRegressor.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Predict regression value for X.</span>
 
 <span class="sd">        The predicted regression value of an input sample is computed</span>
@@ -1138,7 +1138,7 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_median_predict</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimators_</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="AdaBoostRegressor.staged_predict"><a class="viewcode-back" href="../../../api_ibex_sklearn_ensemble_adaboostregressor.html#ibex.sklearn.ensemble.AdaBoostRegressor.staged_predict">[docs]</a>    <span class="k">def</span> <span class="nf">staged_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="AdaBoostRegressor.staged_predict"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_ensemble_adaboostregressor.html#ibex.sklearn.ensemble.AdaBoostRegressor.staged_predict">[docs]</a>    <span class="k">def</span> <span class="nf">staged_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Return staged predictions for X.</span>
 
 <span class="sd">        The predicted regression value of an input sample is computed</span>
@@ -1163,7 +1163,7 @@
         <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_X_predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimators_</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
-            <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_median_predict</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="n">i</span><span class="p">)</span></div></div>
+            <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_median_predict</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="n">i</span><span class="p">)</span></div>
 </pre></div>
 
           </div>
@@ -1173,26 +1173,7 @@
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../index.html">
               <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="../../../index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../../../index.html">Documentation overview</a><ul>
@@ -1219,7 +1200,7 @@
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
     </div>

@@ -42,108 +42,6 @@
             
   <div class="section" id="kerasregressor">
 <h1><code class="docutils literal"><span class="pre">KerasRegressor</span></code><a class="headerlink" href="#kerasregressor" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor">
-<em class="property">class </em><code class="descclassname">ibex.tensorflow.contrib.keras.wrappers.scikit_learn.</code><code class="descname">KerasRegressor</code><span class="sig-paren">(</span><em>build_fn</em>, <em>**sk_params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibex/tensorflow/contrib/keras/wrappers/scikit_learn.html#KerasRegressor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasEstimator</span></code>, <a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.base.RegressorMixin.html#sklearn.base.RegressorMixin" title="(in scikit-learn v0.19.1)"><code class="xref py py-class docutils literal"><span class="pre">sklearn.base.RegressorMixin</span></code></a></p>
-<p>A tensorflow/keras regressor.</p>
-<p class="rubric">Example</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.sklearn</span> <span class="k">import</span> <span class="n">datasets</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ibex.tensorflow.contrib.keras.wrappers.scikit_learn</span> <span class="k">import</span> <span class="n">KerasRegressor</span> <span class="k">as</span> <span class="n">PdKerasRegressor</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">tensorflow</span>
-<span class="gp">...</span>
-<span class="gp">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_iris</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">iris</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]],</span>
-<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="n">features</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="gp">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">build_regressor_nn</span><span class="p">():</span>
-<span class="gp">... </span>    <span class="n">model</span> <span class="o">=</span> <span class="n">tensorflow</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Sequential</span><span class="p">()</span>
-<span class="gp">... </span>    <span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
-<span class="gp">... </span>        <span class="n">tensorflow</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Dense</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="n">input_dim</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;relu&#39;</span><span class="p">))</span>
-<span class="gp">... </span>    <span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
-<span class="gp">... </span>        <span class="n">tensorflow</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Dense</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
-<span class="gp">... </span>    <span class="n">model</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s1">&#39;mean_squared_error&#39;</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;adagrad&#39;</span><span class="p">)</span>
-<span class="gp">... </span>    <span class="k">return</span> <span class="n">model</span>
-<span class="gp">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span> <span class="o">=</span> <span class="n">PdKerasRegressor</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">build_fn</span><span class="o">=</span><span class="n">build_regressor_nn</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span>
-<span class="go">Adapter[KerasRegressor](...build_fn=&lt;function build_regressor_nn at ...)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span><span class="o">.</span><span class="n">history_</span>
-<span class="go">&lt;tensorflow.contrib.keras.python.keras.callbacks.History object at ...&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">prd</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">],</span> <span class="n">iris</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">iris</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
-<span class="go">0      ...</span>
-<span class="go">1      ...</span>
-<span class="go">2      ...</span>
-<span class="go">3      ...</span>
-<span class="go">4      ...</span>
-</pre></div>
-</div>
-<dl class="method">
-<dt id="ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor.fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y</em>, <em>**fit_params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibex/tensorflow/contrib/keras/wrappers/scikit_learn.html#KerasRegressor.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor.fit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Fits the transformer using <code class="docutils literal"><span class="pre">X</span></code> <code class="docutils literal"><span class="pre">y</span></code>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>X</strong> – A <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a> object.</li>
-<li><strong>y</strong> – A <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a> object.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><code class="docutils literal"><span class="pre">self</span></code></p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor.predict">
-<code class="descname">predict</code><span class="sig-paren">(</span><em>x</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorflow/contrib/keras/python/keras/wrappers/scikit_learn.html#KerasRegressor.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.tensorflow.contrib.keras.wrappers.scikit_learn.KerasRegressor.predict" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Returns predictions for the given test data.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>Arguments:</dt>
-<dd><dl class="first last docutils">
-<dt>x: array-like, shape <cite>(n_samples, n_features)</cite></dt>
-<dd>Test samples where n_samples in the number of samples
-and n_features is the number of features.</dd>
-<dt><a href="#id1"><span class="problematic" id="id2">**</span></a>kwargs: dictionary arguments</dt>
-<dd>Legal arguments are the arguments of <cite>Sequential.predict</cite>.</dd>
-</dl>
-</dd>
-<dt>Returns:</dt>
-<dd><dl class="first last docutils">
-<dt>preds: array-like, shape <cite>(n_samples,)</cite></dt>
-<dd>Predictions.</dd>
-</dl>
-</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 
 
@@ -154,26 +52,7 @@ and n_features is the number of features.</dd>
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -205,7 +84,7 @@ and n_features is the number of features.</dd>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

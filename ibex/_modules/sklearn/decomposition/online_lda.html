@@ -508,7 +508,7 @@
         <span class="n">check_non_negative</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">whom</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">X</span>
 
-<div class="viewcode-block" id="LatentDirichletAllocation.partial_fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_decomposition_latentdirichletallocation.html#ibex.sklearn.decomposition.LatentDirichletAllocation.partial_fit">[docs]</a>    <span class="k">def</span> <span class="nf">partial_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="LatentDirichletAllocation.partial_fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_decomposition_latentdirichletallocation.html#ibex.sklearn.decomposition.LatentDirichletAllocation.partial_fit">[docs]</a>    <span class="k">def</span> <span class="nf">partial_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Online VB with Mini-Batch update.</span>
 
 <span class="sd">        Parameters</span>
@@ -547,7 +547,7 @@
 
         <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="LatentDirichletAllocation.fit"><a class="viewcode-back" href="../../../api_ibex_sklearn_decomposition_latentdirichletallocation.html#ibex.sklearn.decomposition.LatentDirichletAllocation.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="LatentDirichletAllocation.fit"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_decomposition_latentdirichletallocation.html#ibex.sklearn.decomposition.LatentDirichletAllocation.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Learn model for the data X with variational Bayes method.</span>
 
 <span class="sd">        When `learning_method` is &#39;online&#39;, use mini-batch update.</span>
@@ -653,7 +653,7 @@
 
         <span class="k">return</span> <span class="n">doc_topic_distr</span>
 
-<div class="viewcode-block" id="LatentDirichletAllocation.transform"><a class="viewcode-back" href="../../../api_ibex_sklearn_decomposition_latentdirichletallocation.html#ibex.sklearn.decomposition.LatentDirichletAllocation.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<div class="viewcode-block" id="LatentDirichletAllocation.transform"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_decomposition_latentdirichletallocation.html#ibex.sklearn.decomposition.LatentDirichletAllocation.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Transform data X according to the fitted model.</span>
 
 <span class="sd">           .. versionchanged:: 0.18</span>
@@ -749,7 +749,7 @@
 
         <span class="k">return</span> <span class="n">score</span>
 
-<div class="viewcode-block" id="LatentDirichletAllocation.score"><a class="viewcode-back" href="../../../api_ibex_sklearn_decomposition_latentdirichletallocation.html#ibex.sklearn.decomposition.LatentDirichletAllocation.score">[docs]</a>    <span class="k">def</span> <span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="LatentDirichletAllocation.score"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_decomposition_latentdirichletallocation.html#ibex.sklearn.decomposition.LatentDirichletAllocation.score">[docs]</a>    <span class="k">def</span> <span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Calculate approximate log-likelihood as score.</span>
 
 <span class="sd">        Parameters</span>
@@ -818,7 +818,7 @@
 
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">perword_bound</span><span class="p">)</span>
 
-<div class="viewcode-block" id="LatentDirichletAllocation.perplexity"><a class="viewcode-back" href="../../../api_ibex_sklearn_decomposition_latentdirichletallocation.html#ibex.sklearn.decomposition.LatentDirichletAllocation.perplexity">[docs]</a>    <span class="k">def</span> <span class="nf">perplexity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">doc_topic_distr</span><span class="o">=</span><span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="n">sub_sampling</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="LatentDirichletAllocation.perplexity"><a class="viewcode-back" href="../../../tmp/api_ibex_sklearn_decomposition_latentdirichletallocation.html#ibex.sklearn.decomposition.LatentDirichletAllocation.perplexity">[docs]</a>    <span class="k">def</span> <span class="nf">perplexity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">doc_topic_distr</span><span class="o">=</span><span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="n">sub_sampling</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Calculate approximate perplexity for data X.</span>
 
 <span class="sd">        Perplexity is defined as exp(-1. * log-likelihood per word)</span>
@@ -862,26 +862,7 @@
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../index.html">
               <img class="logo" src="../../../_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="../../../index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../../../index.html">Documentation overview</a><ul>
@@ -908,7 +889,7 @@
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
     </div>

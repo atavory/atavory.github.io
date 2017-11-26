@@ -42,159 +42,6 @@
             
   <div class="section" id="isomap">
 <h1><code class="docutils literal"><span class="pre">Isomap</span></code><a class="headerlink" href="#isomap" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="ibex.sklearn.manifold.Isomap">
-<em class="property">class </em><code class="descclassname">ibex.sklearn.manifold.</code><code class="descname">Isomap</code><span class="sig-paren">(</span><em>n_neighbors=5</em>, <em>n_components=2</em>, <em>eigen_solver='auto'</em>, <em>tol=0</em>, <em>max_iter=None</em>, <em>path_method='auto'</em>, <em>neighbors_algorithm='auto'</em>, <em>n_jobs=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ibex.sklearn.manifold.Isomap" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">sklearn.manifold.isomap.Isomap</span></code>, <code class="xref py py-class docutils literal"><span class="pre">ibex._base.FrameMixin</span></code></p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Isomap Embedding</p>
-<blockquote>
-<div><p>Non-linear dimensionality reduction through Isometric Mapping</p>
-<p>Read more in the <a class="reference external" href="http://scikit-learn.org/stable/modules/manifold.html#isomap" title="(in scikit-learn v0.19.1)"><span class="xref std std-ref">User Guide</span></a>.</p>
-<dl class="docutils">
-<dt>n_neighbors <span class="classifier-delimiter">:</span> <span class="classifier">integer</span></dt>
-<dd>number of neighbors to consider for each point.</dd>
-<dt>n_components <span class="classifier-delimiter">:</span> <span class="classifier">integer</span></dt>
-<dd>number of coordinates for the manifold</dd>
-<dt>eigen_solver <span class="classifier-delimiter">:</span> <span class="classifier">[‘auto’|’arpack’|’dense’]</span></dt>
-<dd><p class="first">‘auto’ : Attempt to choose the most efficient solver
-for the given problem.</p>
-<p>‘arpack’ : Use Arnoldi decomposition to find the eigenvalues
-and eigenvectors.</p>
-<p class="last">‘dense’ : Use a direct solver (i.e. LAPACK)
-for the eigenvalue decomposition.</p>
-</dd>
-<dt>tol <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
-<dd>Convergence tolerance passed to arpack or lobpcg.
-not used if eigen_solver == ‘dense’.</dd>
-<dt>max_iter <span class="classifier-delimiter">:</span> <span class="classifier">integer</span></dt>
-<dd>Maximum number of iterations for the arpack solver.
-not used if eigen_solver == ‘dense’.</dd>
-<dt>path_method <span class="classifier-delimiter">:</span> <span class="classifier">string [‘auto’|’FW’|’D’]</span></dt>
-<dd><p class="first">Method to use in finding shortest path.</p>
-<p>‘auto’ : attempt to choose the best algorithm automatically.</p>
-<p>‘FW’ : Floyd-Warshall algorithm.</p>
-<p class="last">‘D’ : Dijkstra’s algorithm.</p>
-</dd>
-<dt>neighbors_algorithm <span class="classifier-delimiter">:</span> <span class="classifier">string [‘auto’|’brute’|’kd_tree’|’ball_tree’]</span></dt>
-<dd>Algorithm to use for nearest neighbors search,
-passed to neighbors.NearestNeighbors instance.</dd>
-<dt>n_jobs <span class="classifier-delimiter">:</span> <span class="classifier">int, optional (default = 1)</span></dt>
-<dd>The number of parallel jobs to run.
-If <code class="docutils literal"><span class="pre">-1</span></code>, then the number of jobs is set to the number of CPU cores.</dd>
-</dl>
-<dl class="docutils">
-<dt><a href="#id2"><span class="problematic" id="id3">embedding_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape (n_samples, n_components)</span></dt>
-<dd>Stores the embedding vectors.</dd>
-<dt><a href="#id4"><span class="problematic" id="id5">kernel_pca_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">object</span></dt>
-<dd><cite>KernelPCA</cite> object used to implement the embedding.</dd>
-<dt><a href="#id6"><span class="problematic" id="id7">training_data_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape (n_samples, n_features)</span></dt>
-<dd>Stores the training data.</dd>
-<dt><a href="#id8"><span class="problematic" id="id9">nbrs_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">sklearn.neighbors.NearestNeighbors instance</span></dt>
-<dd>Stores nearest neighbors instance, including BallTree or KDtree
-if applicable.</dd>
-<dt><a href="#id10"><span class="problematic" id="id11">dist_matrix_</span></a> <span class="classifier-delimiter">:</span> <span class="classifier">array-like, shape (n_samples, n_samples)</span></dt>
-<dd>Stores the geodesic distance matrix of training data.</dd>
-</dl>
-<table class="docutils footnote" frame="void" id="id1" rules="none">
-<colgroup><col class="label" /><col /></colgroup>
-<tbody valign="top">
-<tr><td class="label">[1]</td><td>Tenenbaum, J.B.; De Silva, V.; &amp; Langford, J.C. A global geometric
-framework for nonlinear dimensionality reduction. Science 290 (5500)</td></tr>
-</tbody>
-</table>
-</div></blockquote>
-<dl class="method">
-<dt id="ibex.sklearn.manifold.Isomap.fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/manifold/isomap.html#Isomap.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.manifold.Isomap.fit" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Compute the embedding vectors for data X</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix, BallTree, KDTree, NearestNeighbors}</span></dt>
-<dd>Sample data, shape = (n_samples, n_features), in the form of a
-numpy array, precomputed tree, or NearestNeighbors
-object.</dd>
-</dl>
-<p>self : returns an instance of self.</p>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.manifold.Isomap.fit_transform">
-<code class="descname">fit_transform</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/manifold/isomap.html#Isomap.fit_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.manifold.Isomap.fit_transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Fit the model from data in X and transform X.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>X <span class="classifier-delimiter">:</span> <span class="classifier">{array-like, sparse matrix, BallTree, KDTree}</span></dt>
-<dd>Training vector, where n_samples in the number of samples
-and n_features is the number of features.</dd>
-</dl>
-<p>X_new : array-like, shape (n_samples, n_components)</p>
-</div></blockquote>
-</dd></dl>
-
-<dl class="method">
-<dt id="ibex.sklearn.manifold.Isomap.transform">
-<code class="descname">transform</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sklearn/manifold/isomap.html#Isomap.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ibex.sklearn.manifold.Isomap.transform" title="Permalink to this definition">¶</a></dt>
-<dd><div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>The documentation following is of the class wrapped by this class. There
-are some changes, in particular:</p>
-<blockquote class="last">
-<div><ul class="simple">
-<li>A parameter <code class="docutils literal"><span class="pre">X</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.DataFrame</span></code></a>.</li>
-<li>A parameter <code class="docutils literal"><span class="pre">y</span></code> denotes a <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.html#pandas.Series" title="(in pandas v0.21.0)"><code class="xref py py-class docutils literal"><span class="pre">pandas.Series</span></code></a>.</li>
-</ul>
-</div></blockquote>
-</div>
-<p>Transform X.</p>
-<blockquote>
-<div><p>This is implemented by linking the points X into the graph of geodesic
-distances of the training data. First the <cite>n_neighbors</cite> nearest
-neighbors of X are found in the training data, and from these the
-shortest geodesic distances from each point in X to each point in
-the training data are computed in order to construct the kernel.
-The embedding of X is the projection of this kernel onto the
-embedding vectors of the training set.</p>
-<p>X : array-like, shape (n_samples, n_features)</p>
-<p>X_new : array-like, shape (n_samples, n_components)</p>
-</div></blockquote>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 
 
@@ -205,26 +52,7 @@ embedding vectors of the training set.</p>
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.jpeg" alt="Logo"/>
-            </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">Ibex</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="frame_adapter.html">Adapting Estimators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input_verification_and_output_processing.html">Verification and Processing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="function_transformer.html">Transforming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelining</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature_union.html">Uniting Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sklearn.html"><code class="docutils literal"><span class="pre">sklearn</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="tensorflow.html"><code class="docutils literal"><span class="pre">tensorflow</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="xgboost.html"><code class="docutils literal"><span class="pre">xgboost</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-</ul>
-<div class="relations">
+            </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
@@ -256,7 +84,7 @@ embedding vectors of the training set.</p>
       &copy;2017, Ami Tavory, Shahar Azulay, Tali Raveh-Sadka.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
