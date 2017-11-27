@@ -1437,7 +1437,21 @@ var StepGroup = function(elems) {
                 </table>
             </div>
         </div>
-        <div class="step slide" data-scale="0.01" data-x="4214" data-y="80" data-z="10">
+        <div class="step slide" data-scale="0.01" data-x="4214" data-y="76" data-z="10">
+            <div class="smaller">
+                <pre class="brush: python; gutter: true; toolbar: false; highlight: [4]">        
+                    forest = PdRandomForestClassifier()
+                    prd = PdSelectKBest(k=1) + PdPCA(n_components=2) | forest
+
+                    >>> prd.fit(iris[features], iris['class']).feature_importances_
+                    sepal length (cm)    0.090375
+                    sepal width (cm)     0.050915
+                    petal length (cm)    0.424982
+                    petal width (cm)     0.433729
+                    dtype: float64
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.01" data-x="4214" data-y="85" data-z="10">
             <h2>Pandas-Based Estimators From Scratch</h2>
             <div class="smaller">
                 <table class="data c17">
@@ -1608,7 +1622,7 @@ var StepGroup = function(elems) {
                 </table>
             </div>
         </div>
-        <div class="step slide smaller" data-scale="0.01" data-x="4214" data-y="87" data-z="10">
+        <div class="step slide smaller" data-scale="0.01" data-x="4214" data-y="92" data-z="10">
             <div class="smaller">
                 <pre class="brush: python; gutter: true; toolbar: false; highlight: [3, 6, 7, 8, 9, 10]">        
                     class UserMovieTransformer(
