@@ -305,7 +305,9 @@ var StepGroup = function(elems) {
         <div class="step slide" data-scale="0.01" data-x="1500" data-y="30" data-z="10">
             <h2>Example 2: Inter-Pipeline Munging</h2>
             <div class="smaller">
-            <table class="data c2">
+            
+			<div style="width: 100%; overflow: hidden;">
+				<div style="width: 600px; float: left;"> <table class="data c2">
                 <tbody>
                     <tr>
                         <th>User</th>
@@ -358,7 +360,13 @@ var StepGroup = function(elems) {
                         <td class="rating">5</td>
                     </tr>
                 </tbody>
-            </table><img class="substep c3" src="generated/grid_search_cv_nmf_random_forest_regressor.png"></div>
+            </table> </div>
+				<div style="margin-left: 620px;"> 
+				<img class="substep c3" style="width:100%;" src="images/field_survey.jpeg"> 
+ </div>
+			</div>
+			</div>
+				<img class="substep c3" src="generated/grid_search_cv_nmf_random_forest_regressor.png"> 
         </div>
         <div class="step slide" data-scale="0.01" data-x="1500" data-y="40" data-z="10">
             <h3>Original</h3>
@@ -1289,6 +1297,107 @@ var StepGroup = function(elems) {
           </div>
         </div>
       </div>
+      <div class="step slide" data-scale="0.01" data-x="4200" data-y="79" data-z="10">
+		<div class="smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">      
+          &gt;&gt;&gt; iris.head()
+          </pre>
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>sepal length (cm)</th>
+                            <th>sepal width (cm)</th>
+                            <th>petal length (cm)</th>
+                            <th>petal width (cm)</th>
+                            <th>class</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th>0</th>
+                            <td>5.1</td>
+                            <td>3.5</td>
+                            <td>1.4</td>
+                            <td>0.2</td>
+                            <td>0.0</td>
+                        </tr>
+                        <tr>
+                            <th>1</th>
+                            <td>4.9</td>
+                            <td>3.0</td>
+                            <td>1.4</td>
+                            <td>0.2</td>
+                            <td>0.0</td>
+                        </tr>
+                        <tr>
+                            <th>2</th>
+                            <td>4.7</td>
+                            <td>3.2</td>
+                            <td>1.3</td>
+                            <td>0.2</td>
+                            <td>0.0</td>
+                        </tr>
+                        <tr>
+                            <th>3</th>
+                            <td>4.6</td>
+                            <td>3.1</td>
+                            <td>1.5</td>
+                            <td>0.2</td>
+                            <td>0.0</td>
+                        </tr>
+                        <tr>
+                            <th>4</th>
+                            <td>5.0</td>
+                            <td>3.6</td>
+                            <td>1.4</td>
+                            <td>0.2</td>
+                            <td>0.0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="substep smaller">
+                <pre class="brush: python; gutter: false; toolbar: false">            
+				clf = PdSVC(kernel="linear", probability=True)
+				>>> clf.fit(iris[features], iris['class']).coef_
+				</pre>
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>sepal length (cm)</th>
+                            <th>sepal width (cm)</th>
+                            <th>petal length (cm)</th>
+                            <th>petal width (cm)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th>setosa</th>
+                            <td>-0.046259</td>
+                            <td>0.521183</td>
+                            <td>-1.003045</td>
+                            <td>-0.46130</td>
+                        </tr>
+                        <tr>
+                            <th>versicolor</th>
+                            <td>-0.007223</td>
+                            <td>0.178941</td>
+                            <td>-0.538365</td>
+                            <td>-0.292393</td>
+                        </tr>
+                        <tr>
+                            <th>virginica</th>
+                            <td>0.595498</td>
+                            <td>0.973900</td>
+                            <td>-2.031000</td>
+                            <td>-2.006303</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+		</div>
       <div class="step slide" data-scale="0.01" data-x="4200" data-y="39" data-z="10">
       </div>
         <div class="step slide" data-scale="0.01" data-x="4214" data-y="47" data-z="10">
@@ -1326,7 +1435,7 @@ var StepGroup = function(elems) {
             <h2>Indexing + Combining Estimators</h2>
             <div class="smaller">
                 <pre class="brush: python; gutter: false; toolbar: false">      
-          &gt;&gt;&gt; iris
+          &gt;&gt;&gt; iris.head()
           </pre>
                 <table class="data">
                     <thead>
@@ -1650,7 +1759,7 @@ var StepGroup = function(elems) {
                 <pre class="brush: python; gutter: false; toolbar: false">            
             PdSelectKBest = frame(SelectKBest)
             PdLinearRegression = frame(LinearRegression)
-            PdRandomForestRegression = frame(RandomForestRegression)
+            PdRandomForestRegressor = frame(RandomForestRegressor)
             PdPCA = frame(PCA)
             PdStandardScaler = frame(StandardScaler)
             ...
@@ -1876,7 +1985,7 @@ var StepGroup = function(elems) {
             </div>
             <div class="smaller substep c20">
                 State-Dependent Properties
-                <pre class='brush: python; gutter: true; toolbar: false'>
+                <pre class='brush: python; gutter: true; toolbar: false; highlight: [2]'>
                 linear_model.LinearRegression().fit(X, y).coef_
                 linear_model.LinearRegression().coef_
                 </pre>
@@ -1885,28 +1994,132 @@ var StepGroup = function(elems) {
         </div>
         <div class="step slide" data-x="5614" data-y="60" data-z="10" data-scale="0.01">
             <h3>2. Local Classes</h3>
-            <div class="smaller">
-                <pre class='brush: python; gutter: false; toolbar: false'>
-                def frame(est):
-                    class _Adaptor(est, FrameMixin):
+            
+            <div class ="abs-box base" style="height: 400px;" >
+                <div class="abs-box smaller">
+                    <pre class="brush: python; gutter: true; toolbar: false highlight: [1]">            
+                    class LogisticRegression(BaseEstimator, ClassifierMixin):
+                        def __init__(self, penalty=’l2’, dual=False, tol=0.0001, C...):
+
                         ...
-                </pre>
+
+                        self.n_iter = ...
+
+
+                    def frame(est):
+                        class _Adaptor(est, FrameMixin):
+                            ...
+
+                        return _Adaptor
+                    </pre>
+                </div>
+                <div class="abs-box substep smaller">
+                    <pre class="brush: python; gutter: true; toolbar: false highlight: [2, 6]">            
+                    class LogisticRegression(BaseEstimator, ClassifierMixin):
+                        def __init__(self, penalty=’l2’, dual=False, tol=0.0001, C...):
+
+                        ...
+
+                        self.n_iter = ...
+
+
+                    def frame(est):
+                        class _Adaptor(est, FrameMixin):
+                            ...
+
+                        return _Adaptor
+                    </pre>
+                </div>
+                <div class="abs-box substep smaller">
+                    <pre class="brush: python; gutter: true; toolbar: false highlight: [9]">            
+                    class LogisticRegression(BaseEstimator, ClassifierMixin):
+                        def __init__(self, penalty=’l2’, dual=False, tol=0.0001, C...):
+
+                        ...
+
+                        self.n_iter = ...
+
+
+                    def frame(est):
+                        class _Adaptor(est, FrameMixin):
+                            ...
+
+                        return _Adaptor
+                    </pre>
+                </div>
+                <div class="abs-box substep smaller">
+                    <pre class="brush: python; gutter: true; toolbar: false highlight: [10]">            
+                    class LogisticRegression(BaseEstimator, ClassifierMixin):
+                        def __init__(self, penalty=’l2’, dual=False, tol=0.0001, C...):
+
+                        ...
+
+                        self.n_iter = ...
+
+
+                    def frame(est):
+                        class _Adaptor(est, FrameMixin):
+                            ...
+
+                        return _Adaptor
+                    </pre>
+                </div>
             </div>
         </div>
         <div class="step slide" data-scale="0.01" data-x="5600" data-y="80" data-z="10">
             <h3 class="baddy">3. Local Classes Idiosyncrasies</h3>
+            <div class="smaller">
+                <pre class="brush: python; gutter: true; toolbar: false highlight: [8]">            
+				import pickle
+
+				def foo():
+					class Foo(object):
+						pass
+					return Foo()
+					
+				>>> pickle.dumps(foo())
+				---------------------------------------------------------------------------
+				AttributeError                            Traceback (most recent call last)
+				<ipython-input-3-774d8759421b> in <module>()
+					6     return Foo()
+					7 
+				----> 8 pickle.dumps(foo())
+
+				AttributeError: Can't pickle local object 'foo.<locals>.Foo'
+                </pre>
+            </div>
             <div class="smaller substep">
-                Serialization
+                <span class="baddy">Omnipresent:</span>
                 <pre class='brush: python; gutter: false; toolbar: false'>
                 model_selection.cross_val_score(prd, ..., n_jobs=-1)
                 </pre>
             </div>
-            <div class="smaller substep">
-                Attributes (<code>__name__</code>, <code>__doc__</code>, etc.)
-            </div>
         </div>
         <div class="step slide" data-x="5614" data-y="80" data-z="10" data-scale="0.01">
-        <h3>3. Various Hacks</h3><img src="images/so-logo.png" class="c10"></div>
+        <h3>3. Pickle Porotcol</h3>
+			<div class="abs-box smaller">
+				<pre class="brush: python; gutter: true; toolbar: false highlight: [4, 5]">            
+		def frame(est):
+			class _Adaptor(est, FrameMixin):
+				...
+				def __reduce__(self):
+					...		
+
+			return _Adaptor
+				</pre>
+			</div>
+		</div>
+        <div class="step slide" data-x="5600" data-y="100" data-z="10" data-scale="0.01">
+            <h3 class="baddy">4. Misc.</h3>
+			<ol>
+				<li>Local-class class name</li>
+				<li>Partially overriding attributes</li>
+				<li>...</li>
+			</ol>   
+		</div>
+        <div class="step slide" data-x="5614" data-y="100" data-z="10" data-scale="0.01"> 
+			<h3>4. Various Hacks</h3><img src="images/so-logo.png" class="c10">
+		</div>
         <div id="outline-conclusions" class="step slide" data-x="7007" data-y="0" data-scale="1">
             <h3>Outline</h3>
             <ul class="outline">
@@ -1914,7 +2127,7 @@ var StepGroup = function(elems) {
                 <li class="other">Interface</li>
                 <li class="other">Implementation</li>
                 <li class="current">Conclusions</li>
-            </ul>
+            </ul>   
         </div>
         <div class="step slide" data-x="7007" data-y="-1" data-z="0" data-scale="0.01">
             <h3>Utilize Pandas Metadata</h3>
@@ -1935,6 +2148,7 @@ var StepGroup = function(elems) {
                 <li class="substep"><code>dir</code></li>
                 <li class="substep"><code>inspect</code></li>
                 <li class="substep">Local Classes</li>
+                <li class="substep">Pickle Protocol</li>
             </ul>
         </div>
         <div class="step slide" data-x="7007" data-y="22" data-z="0" data-scale="0.01">
