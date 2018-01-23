@@ -843,7 +843,7 @@ var StepGroup = function(elems) {
             </pre><img height="300px" src="generated/sklearn_linear_model_linear_regression_after.png" width="400px"></div>
         </div>
         <div class="step slide" data-scale="0.01" data-x="4200" data-y="47" data-z="10">
-            <h3>Indexing</h3>
+            <h3>Metadata</h3>
             <div class="smaller">
                 <pre class="brush: python; gutter: false; toolbar: false">
             import pandas as pd
@@ -1976,7 +1976,7 @@ var StepGroup = function(elems) {
             <h3 class="baddy">2. Scikit-Learn Estimator Idiosyncrasies</h3>
             <div class="smaller substep c20" style="margin-bottom: 30px">
                 Stringent <code>__init__</code> Requirements:
-                <pre class='brush: python; gutter: false; toolbar: false'>
+                <pre class='brush: python; gutter: false; toolbar: false; highlight: [2]'>
                 class FooTransformer(BaseEstimator, TransformerMixin):
                     def __init__(self, *args, **kwargs):
                         ...
@@ -2001,9 +2001,9 @@ var StepGroup = function(elems) {
                     class LogisticRegression(BaseEstimator, ClassifierMixin):
                         def __init__(self, penalty=’l2’, dual=False, tol=0.0001, C...):
 
-                        ...
+                        	...
 
-                        self.n_iter = ...
+                        	self.n_iter = ...
 
 
                     def frame(est):
@@ -2135,7 +2135,7 @@ var StepGroup = function(elems) {
                 <li>Interpretability</li>
                 <li>Safety</li>
                 <li>Data-Munging</li>
-                <li>Index-Aware Operations (Stacking, Nested Stratified &amp; Labeled CV)</li>
+                <li>Index-Aware Operations (Stacking, Nested / Stratified / Labeled CV)</li>
                 <li>Combinations Of The Above</li>
             </ul>
         </div>

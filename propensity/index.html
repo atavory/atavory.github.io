@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta content="HTML Tidy for HTML5 for Mac OS X version 5.4.0" name="generator">
+    <meta charset="utf-8">
+    <meta content="width=1024" name="viewport">
+    <meta content="yes" name="apple-mobile-web-app-apable">
+    <title>Propensity Scores</title>
+    <meta content="reweighting" name="description"> <meta content="Ami Tavory" name="author">
+    <link href="../css/impress.css" rel="stylesheet">
+    <link href="../css/shThemeDefault.css" rel="stylesheet">
+    <link href="../css/flow_chart.css" rel="stylesheet">
+    <link href="css/pres.css" rel="stylesheet">
+    <style>
+      .node circle {
+        fill                : #999;
+      }
+      .node text {
+        font                : 10px sans-serif;
+      }
+      .node--internal circle {
+        fill                : #555;
+      }
+      .node--internal text {
+        text-shadow         : 0 1px 0 #fff, 0 -1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff;
+      }
+      .link {
+        fill                : none;
+        stroke              : #555;
+        stroke-opacity      : 0.4;
+        stroke-width        : 1.5px;
+      }
+    </style>
+    <script src="../js/jquery-3.2.1.min.js"></script>
+    <script src="../js/d3.v4.js"></script>
+    <script src="../js/cola.js"></script>
+    <script src="../js/flow_chart.js"></script>
+    <script type="text/javascript" async
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+    <script>
+var StepGroup = function(elems) {
+    var comp = {
+        "_steps": [],
+        "_substeps": []
+    };
+
+    comp.elems = function() {
+        return elems;
+    }
+
+    comp.addStep = function(id, activeInd) {
+        comp._steps.push({"id": id, "activeInd": activeInd});
+
+        return comp;
+    }
+
+    comp.addSubstep = function(id, step, activeInd) {
+        comp._substeps.push({"id": id, "step": step, "activeInd": activeInd});
+
+        return comp;
+    }
+
+    comp.notifyStepEnter = function(id) {
+        console.log(id, comp._steps);
+        var activeInds = comp
+            ._steps
+            .filter(function (e) {return e["id"].localeCompare(id) == 0; })
+            .map(function (e) {return e["activeInd"]; });
+        if (activeInds.length == 0)
+            return;
+        console.log(activeInds);
+
+        for (var i = 0; i < elems.length; ++i) {
+            d3.select("#" + elems[i])
+                .transition()
+                .duration(220)
+                .style(
+                    "opacity", 
+                    activeInds.indexOf(i) == -1? 0: 1);
+        }
+
+        return comp;
+    }
+
+    comp.notifySubstepActive = function(id, step) {
+        var activeInds = comp
+            ._substeps
+            .filter(function (e) {return e["id"].localeCompare(id) == 0 && e["step"] == step; })
+            .map(function (e) {return e["activeInd"]; });
+        console.log(activeInds);
+
+        for (var i = 0; i < elems.length; ++i) {
+            d3.select("#" + elems[i])
+                .transition()
+                .duration(220)
+                .style(
+                    "opacity", 
+                    activeInds.indexOf(i) == -1? 0: 1);
+        }
+
+        return comp;
+    }
+
+    return comp;
+};
+    </script>
+    <script type="text/javascript">
+    </script>
+    <style type="text/css">
+    div.c20 {background: url('images/baddy_bg.png'); background-repeat: no-repeat; background-position: 50% 80%;}
+    table.c19 {width:30%; float: bottom}
+    table.c18 {width:30%; float: right}
+    table.c17 {width:30%; float: left}
+    tr.c16 {text-align: right;}
+    span.c15 {text-decoration: underline}
+    div.c14 {background: url('images/baddy_bg.png'); background-repeat: no-repeat; background-position: 50% 20%;}
+    div.c13 {width:40%; float: left}
+    div.c12 {width: 100%; margin-top: 240px}
+    div.c11 {width:30%; float: left}
+    img.c10 {float: left}
+    div.c9 {float: left}
+    div.c8 {width: 350px; border-left: 1px solid grey; border-right: 1px solid grey}
+    p.c7 {text-align: center}
+    div.c6 {display: inline-block; margin-right: 40px}
+    div.c5 {display: inline-block}
+    div.c4 {align: center}
+    img.c3 {display: inline-block}
+    table.c2 {display: inline-block}
+    </style>
+</head>
+<body class="impress-not-supported">
+    <div class="fallback-message">
+        <p>Your browser <b>doesn&#39;t support the features required</b> by impress.js, so you are presented with a simplified
+        version of this presentation.</p>
+        <p>For the best experience please use the latest <b>Chrome</b> , <b>Safari</b> or <b>Firefox</b> browser.</p>
+    </div>
+    <div id="impress">
+        <div class="step" data-scale="0.001" data-x="0" data-y="0">
+            <center>
+            <h1>Propensity Scores</h1>
+            </center>
+
+            <ol>
+                <li> <em>The Central Role of the Propensity Score in Observational Studies for Causal Effects</em>, Rosenbaum and Rubin, 83</li>
+                <li> Other works by Vovk, Cover, Rissanen</li>
+            </ol>
+        </div>
+        <div class="step slide" data-scale="1" data-x="0" data-y="0">
+        </div>
+        <div class="step slide" data-scale="0.5" data-x="-300" data-y="-200">
+            <h2>Introduction</h2>
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="-600" data-y="-200">
+            <h2>Definitions</h2>
+            <ol>
+                <li>\(n\) study participants
+                <li>Two treatments, \(1\) and \(0\)
+                    <ul>
+                        <li>\(z_i = 1\) (\(z_i = 0\)) if participant \(i\) received (didn't receive) treatment</li>
+                    </ul>
+                </li>
+                <li>\(x_i\) a vector of observed pre-treatment <i>covariates</i></li>
+                <li>\(r_{1, i}\) and \(r_{0, i}\) are the response of participant \(i\).
+                    <ul>
+                        <li>In principle</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="-660" data-y="-200">
+            <img src="images/basic.png">
+        </div>
+
+        <div class="step slide" data-scale="0.05" data-x="-600" data-y="-160">
+            <h1>Goal</h2>
+            Assess
+                    $$
+                    E\left[r_1\right] - E\left[r_0\right].
+                    $$
+                Given
+                    $$
+                    E\left[r_1 \;|\; z=1\right] - E\left[r_0 \;|\; z=0\right].
+                    $$
+        </div>
+
+        <div class="step slide" data-scale="0.05" data-x="-600" data-y="-120">
+            <h2>Observational Setup Challenges</h2>
+            <ol>
+                <li> \(r_1, r_0 \not\perp z\)
+                    <ul>
+                        <li> Example: long/expensive smoking-addiction treatment
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="substep">\(z \not\perp x\)
+                    <ul>
+                        <li> Example: adds targeting an ineffective age-group
+                        </li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="step slide" data-scale="0.05" data-x="-600" data-y="-80">
+            <h2>Strongly-Ignorable Assignment</h2>
+            Need some minimal requirements for avoiding GIGO.
+
+            <div class="substep">
+                An assignment \(z\) is <i>strongly ignorable</i> if
+                <ol>
+                    <li> \(r_1, r_0 \perp z \;|\; x\)
+                    </li>
+
+                    <li class="substep">\(0 \lneq P(z = 1 \;|\; x) \lneq 1 \)
+                    </li>
+                </ol>
+            </div>
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="-660" data-y="-80">
+            <img src="images/ignorable.png">
+        </div>
+        <div class="step slide" data-scale="0.5" data-x="300" data-y="-200">
+            <h2>Theory</h2>
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="300" data-y="-40">
+            <h2>Balancing Scores &amp; Propensity Scores</h2>
+            <ol>
+                <li>A covariate function \(b(x)\) is a <em>balancing score</em> if
+                    $$
+                    r_1, r_0 \perp x \;|\; b(x).
+                    $$
+                </li>
+                <li>The <em>propensity score</em> is the covariate function
+                    $$
+                    e(x) = P(z = 1 \;|\; x).
+                    $$
+                </li>
+            </ol>
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="360" data-y="-40">
+            <img src="images/propensity.png">
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="300" data-y="-0">
+            <h2>Theorem: Relationship Balancing Scores &amp; Propensity Scores</h2>
+            <ol>
+                <li>Any refinement \( x \subseteq b(x) \subseteq e(x)\) is a balancing score.                 </li>
+                <li>Any balancing score is a refinement \( x \subseteq b(x) \subseteq e(x)\).                  </li>
+            </ol>
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="360" data-y="-0">
+            <img src="images/refinement.png">
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="300" data-y="40">
+            <h2>Theorem: Balancing Scores Preserve Assignment Strongly-Ignorability</h2>
+            $$
+            r_1, r_0 \perp z \;|\; x, \;\; 0 \lneq P(z = 1 \;|\; x) \lneq 1 
+            \Rightarrow
+            \\
+            r_1, r_0 \perp z \;|\; b(x), \;\; 0 \lneq P(z = 1 \;|\; b(x)) \lneq 1 
+            $$
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="360" data-y="40">
+            <img src="images/clean_refinement.png">
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="420" data-y="40">
+            <img src="images/preserves.png">
+        </div>
+        <div class="step slide" data-scale="0.5" data-x="-300" data-y="200">
+            <h2>Applications</h2>
+        </div>
+        <div class="step slide" data-scale="0.5" data-x="300" data-y="200">
+            <h2>Conclusions</h2>
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="300" data-y="260">
+            <h2>Counterfactual</h2>
+            Something contrary to the fact, specifically, contrary to an event that happened.
+            <ul>
+                <li class="substep">
+                    The fact is that \(z_i = 1\) or \(z_i = 0\), but we would like to assess both \(y_i \;|\; z = 1\) and \(y_i \;|\; z = 0\).
+                </li>
+            </ul>
+
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="300" data-y="300">
+            <h2>MCAR</h2>
+        </div>
+    </div>
+    <script src="../js/shCore.js" type="text/javascript"></script> 
+    <script src="../js/shBrushPython.js" type="text/javascript"></script> 
+    <script src="../js/shBrushBash.js" type="text/javascript"></script> 
+    <script type="text/javascript">
+
+
+
+      SyntaxHighlighter.all();
+    </script> 
+    <script src="../js/impress.js" type="text/javascript"></script> 
+    <script type="text/javascript">
+
+
+
+      impress().init();
+    </script> 
+    
+    <script>
+        var switchImage = function (id, src) {
+            d3.select(id)
+                .transition()
+                .delay(220)
+                .attr("src", src);
+        }
+
+        var example1Group = StepGroup([
+            "example_1_substeps_img_1",
+            "example_1_substeps_img_2",
+            "example_1_substeps_img_3",
+            "example_1_substeps_img_4",
+        ]);
+        example1Group
+            .addSubstep("example_1_substeps", 1, 1)
+            .addSubstep("example_1_substeps", 3, 2)
+            .addSubstep("example_1_substeps", 5, 3)
+            .addSubstep("example_1_substeps", 7, 0)
+
+        var wrapperWrappedGroup = StepGroup([
+            "wrapper_wrapped_1",
+            "wrapper_wrapped_2",
+            "wrapper_wrapped_3",
+            "wrapper_wrapped_4",
+            "wrapper_wrapped_5",
+            "wrapper_wrapped_6",
+        ]);
+        wrapperWrappedGroup
+            .addSubstep("wrapper_wrapped_generated", 3, 0)
+            .addSubstep("wrapper_wrapped_generated", 5, 1)
+            .addSubstep("wrapper_wrapped_generated", 7, 2)
+            .addSubstep("wrapper_wrapped_generated", 9, 3)
+            .addSubstep("wrapper_wrapped_generated", 11, 4)
+            .addSubstep("wrapper_wrapped_generated", 13, 5)
+
+        var outlineClsGroup = StepGroup([
+            "outlineClsGroup_img_1",
+            "outlineClsGroup_img_2",
+            "outlineClsGroup_img_3"]);
+        outlineClsGroup
+            .addSubstep("outline-intro-4", 7, 1)
+            .addSubstep("outline-intro-4", 9, 2);
+
+        var importSeq0Group = StepGroup([
+            "import_seq_1_img", "import_seq_2_img",
+            "import_seq_3_img",
+            "import_seq_4_img",
+        ]);
+        importSeq0Group
+            .addStep("import_seq_0", 0)
+            .addSubstep("import_seq_0", 5, 1)
+            .addSubstep("import_seq_0", 7, 2)
+            .addSubstep("import_seq_0", 9, 3);
+
+        var importSeq1Group = StepGroup([
+            "import_seq_5_img",
+            "import_seq_6_img",
+            "import_seq_7_img",
+        ]);
+        importSeq1Group
+            .addStep("import_seq_1", 0)
+            .addSubstep("import_seq_1", 5, 1)
+            .addSubstep("import_seq_1", 7, 2)
+            .addSubstep("import_seq_1", 9, 3);
+
+        var importSeq2Group = StepGroup([
+            "import_seq_8_img",
+        ]);
+        importSeq2Group
+            .addStep("import_seq_2", 0);
+
+        var importSeq3Group = StepGroup([
+            "import_seq_9_img",
+        ]);
+        importSeq3Group
+            .addStep("import_seq_3", 0);
+
+      $(document).ready(function() {
+            document.addEventListener('impress:stepenter', function(event) {
+
+            var parentId = event.target.id;
+
+          console.log(parentId, event.forward);
+
+         importSeq0Group.notifyStepEnter(parentId);
+         importSeq1Group.notifyStepEnter(parentId);
+         importSeq2Group.notifyStepEnter(parentId);
+         importSeq3Group.notifyStepEnter(parentId);
+
+          if (event.target.id.search('outline') != -1) {
+                $(".other").fadeTo("slow", 0.33);
+          }
+          if (event.target.id.search("example_1_substeps") != -1) {
+          }
+        }, false);
+        document.addEventListener('impress:stepleave', function(event) {
+          $(".other").fadeTo("slow", 1);
+        }, false);
+      });
+
+      $(document).ready(function() {
+        document.addEventListener('impress:substepactive', function(event) {
+            var parentId = event.target.parentNode.id,
+                ind =Array.prototype.indexOf.call(event.target.parentNode.childNodes, event.target);
+
+            console.log(parentId, ind);
+
+            example1Group
+                .notifySubstepActive(parentId, ind);
+            outlineClsGroup
+                .notifySubstepActive(parentId, ind);
+            wrapperWrappedGroup
+                .notifySubstepActive(parentId, ind);
+            importSeq0Group
+                .notifySubstepActive(parentId, ind);
+            importSeq1Group
+                .notifySubstepActive(parentId, ind);
+            importSeq2Group
+                .notifySubstepActive(parentId, ind);
+            importSeq3Group
+                .notifySubstepActive(parentId, ind);
+        })
+      });
+</script>
+</body>

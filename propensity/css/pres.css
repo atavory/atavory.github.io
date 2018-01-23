@@ -1,0 +1,58 @@
+table.data {
+    border: 1px solid black;
+    border-collapse: collapse;
+    text-align: center; 
+}
+
+table.data th {
+    border-collapse: collapse;
+    border: 2px solid black;
+}
+
+table.data td {
+    border-collapse: collapse;
+    border: 1px solid black;
+}
+
+.roni {
+    background: grey;
+}
+
+.yarden {
+    background: lightgrey;
+}
+
+.anat {
+    background: darkgrey;
+}
+
+.frozen {
+    background: repeating-linear-gradient(
+        45deg,
+        white,
+        white 5px,
+        darkgrey 5px,
+        darkgrey 10px
+        );
+}
+
+.shrek {
+    background: repeating-linear-gradient(
+        135deg,
+        white,
+        white 5px,
+        darkgrey 5px,
+        darkgrey 10px
+        );
+}
+
+.mulan {
+    background: repeating-linear-gradient(
+        90deg,
+        white,
+        white 5px,
+        darkgrey 5px,
+        darkgrey 10px
+        );
+}
+

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <link rel="stylesheet" type="text/css" media="screen, projection, print" href=
+    "http://www.w3.org/Talks/Tools/Slidy/w3c-blue.css" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>
+      Slidy template for W3C Meetings
+    </title>
+    <link rel="stylesheet" href="slidy.css" type="text/css" media="screen, projection, print" />
+    <script src="ASCIIMathML.js" type="text/javascript">
+</script>
+    <script src="slidy.js" type="text/javascript">
+</script>
+  </head>
+  <body>
+    <div class="background">
+      </object>
+    </div>
+    <div class="slide cover title">
+      <h1>
+        Dynamically Reweighting Experts' Advice
+      </h1><br />
+      <em>With A Recursive Least Squares Example</em>
+      <p></p>
+    </div>
+    <div class="background"></div>
+    <div class="slide">
+      <h1>
+        What is this talk about?
+      </h1>
+      <ul>
+        <li>Suppose we have a number of different "experts"
+        </li>
+        <li class="c1">
+          <ul>
+            <li>Different prediction algorithms
+            </li>
+            <li>Prediction algorithms suitable for different settings (<i>e.g.</i>, low/high volatility)
+            </li>
+          </ul>
+        </li>
+        <li>How can we dynamically combine the advice?
+        </li>
+      </ul>
+    </div>
+    <div class="slide">
+      <h1>
+        Standard Disclaimer
+      </h1>
+      <ul>
+        <li>Other peoples' work
+        </li>
+        <li class="c1">
+          <ul>
+            <li>Tracking the Best Expert, M. Herbster and M. K. Warmuth, Machine Learning, 1998
+            </li>
+            <li>Tracking the Best Expert, M. Herbster and M. K. Warmuth, Machine Learning, 1998
+            </li>
+          </ul>
+        </li>
+        <li>Math would make a 4-year old giggle
+        </li>
+        <li>You will learn nothing new
+        </li>
+      </ul>
+    </div>
+    <div class="slide">
+      <h1>
+        Prediction Definitions
+      </h1>
+      <ul>
+        <li>Batch Linear Prediction `y[t] ~ \hat{y}[t] = \sum_{i = 1}^pc_k x[t - k]`
+        </li>
+        <li>Sequential Linear Prediction `y[t] ~ \hat{y}[t] = \sum_{i = 1}^pc_k^{t-1} x[t - k]`
+        </li>
+        <li>Square Loss `l_n\left(y, \hat{y}\right) = \sum_{i = 1}^n (y[i] - \hat{y}[i] )^2`
+        </li>
+        <li>Experts `\hat{y}_1, \ldots, \hat{y}_m`
+        </li>
+      </ul>
+    </div>
+    <div class="slide">
+      <h1>
+        Reweighing
+      </h1>
+      <ul>
+        <li>`\hat{y}_u[t] = \sum_{k = 1}^m u_k[t] \hat{y}_k[t]`
+        </li>
+      </ul>
+    </div>
+    <div class="slide">
+      <h1>
+        Expert's "Probability"
+      </h1>
+      <ul>
+        <li>An expert's probability is `P_k(y^n) = B \exp(-\frac{1}{2c}l_n(y, \hat{y}_k))`
+          <ul>
+            <li>"Unlikely" sequences are high-loss ones
+            </li>
+          </ul>
+        </li>
+        <li>Analogous conditional probability `P_k(y[n]|y^n) = \frac{}{} = B \exp(-\frac{1}{2c}l_n(y, \hat{y}_k))`
+        </li>
+      </ul>
+    </div>
+  </body>
+</html>
