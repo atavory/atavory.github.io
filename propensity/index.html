@@ -136,19 +136,19 @@ var StepGroup = function(elems) {
         <p>For the best experience please use the latest <b>Chrome</b> , <b>Safari</b> or <b>Firefox</b> browser.</p>
     </div>
     <div id="impress">
-        <div class="step" data-scale="0.001" data-x="0" data-y="0">
+        <div class="step" data-scale="100" data-x="9000" data-y="9000">
             <center>
             <h1>Propensity Scores</h1>
             </center>
 
             <ol>
-                <li> <em>The Central Role of the Propensity Score in Observational Studies for Causal Effects</em>, Rosenbaum and Rubin, 83</li>
-                <li> Other works by Vovk, Cover, Rissanen</li>
+                <li> <i>The Central Role of the Propensity Score in Observational Studies for Causal Effects</i>, Rosenbaum and Rubin, 83</li>
+                <li> <i>Why Propensity Scores Should Not Be Used for Matching</i>, King and Nielsen, 16</li>
             </ol>
         </div>
         <div class="step slide" data-scale="1" data-x="0" data-y="0">
         </div>
-        <div class="step slide" data-scale="0.5" data-x="-300" data-y="-200">
+        <div class="step slide" data-scale="0.5" data-x="-300" data-y="-240">
             <h2>Introduction</h2>
         </div>
         <div class="step slide" data-scale="0.05" data-x="-600" data-y="-200">
@@ -178,7 +178,7 @@ var StepGroup = function(elems) {
                     $$
                     E\left[r_1\right] - E\left[r_0\right].
                     $$
-                Given
+                given
                     $$
                     E\left[r_1 \;|\; z=1\right] - E\left[r_0 \;|\; z=0\right].
                     $$
@@ -205,7 +205,7 @@ var StepGroup = function(elems) {
 
         <div class="step slide" data-scale="0.05" data-x="-600" data-y="-80">
             <h2>Strongly-Ignorable Assignment</h2>
-            Need some minimal requirements for avoiding GIGO.
+            (Minimal requirements for avoiding GIGO)
 
             <div class="substep">
                 An assignment \(z\) is <i>strongly ignorable</i> if
@@ -223,16 +223,19 @@ var StepGroup = function(elems) {
         </div>
         <div class="step slide" data-scale="0.5" data-x="300" data-y="-200">
             <h2>Theory</h2>
+            <ol>
+                <li>Propensity As Coarsest Balancing Covariate</li>
+                <li>Estimating Propensity</li>
         </div>
         <div class="step slide" data-scale="0.05" data-x="300" data-y="-40">
             <h2>Balancing Scores &amp; Propensity Scores</h2>
             <ol>
-                <li>A covariate function \(b(x)\) is a <em>balancing score</em> if
+                <li>A covariate function \(b(x)\) is a <i>balancing score</i> if
                     $$
                     r_1, r_0 \perp x \;|\; b(x).
                     $$
                 </li>
-                <li>The <em>propensity score</em> is the covariate function
+                <li>The <i>propensity score</i> is the covariate function
                     $$
                     e(x) = P(z = 1 \;|\; x).
                     $$
@@ -267,24 +270,158 @@ var StepGroup = function(elems) {
         <div class="step slide" data-scale="0.05" data-x="420" data-y="40">
             <img src="images/preserves.png">
         </div>
-        <div class="step slide" data-scale="0.5" data-x="-300" data-y="200">
-            <h2>Applications</h2>
+        <div class="step slide" data-scale="0.05" data-x="300" data-y="80">
+            <h2>Theorem: Expectation Over Balancing Scores</h2>
+	    $$
+	E_{b(x)}\left[ E[r_1 \;|\; b(x), z = 1] - E[r_0 \;|\; b(x), z = 0]\right]
+	= 
+	\\
+	E[ r_1 - r_0].
+	    $$
         </div>
-        <div class="step slide" data-scale="0.5" data-x="300" data-y="200">
-            <h2>Conclusions</h2>
+        <div class="step slide" data-scale="0.5" data-x="300" data-y="-200">
         </div>
-        <div class="step slide" data-scale="0.05" data-x="300" data-y="260">
-            <h2>Counterfactual</h2>
-            Something contrary to the fact, specifically, contrary to an event that happened.
-            <ul>
-                <li class="substep">
-                    The fact is that \(z_i = 1\) or \(z_i = 0\), but we would like to assess both \(y_i \;|\; z = 1\) and \(y_i \;|\; z = 0\).
-                </li>
-            </ul>
+        <div class="step slide" data-scale="0.05" data-x="540" data-y="-40">
+            <h2>Estimating \(e(x)\) 1 / 4</h2>
+	Must estimate \(e(x)\) by some \(\hat{e}(x)\).
 
+	<ol>
+		<li class="substep">Most direct method: $$\hat{e}(x) = \frac{\#x \;|\; z=1}{\#x}$$
+		</li>
+		<li class="substep">
+			Clearly applicable/useful only for distributions with small, discrete, support
+		</li>
+	</ol>
         </div>
-        <div class="step slide" data-scale="0.05" data-x="300" data-y="300">
-            <h2>MCAR</h2>
+        <div class="step slide" data-scale="0.05" data-x="540" data-y="0">
+            <h2>Estimating \(e(x)\) 2 / 4</h2>
+	<ol>
+		<li>Partition \(x\) into some \(\overline{x}\) with small, discrete, support</li>
+		$$\hat{e}(\overline{x}) = \frac{\#\overline{x} \;|\; z=1}{\#\overline{x}}$$
+		</li>
+		<li class="substep">
+			Much literature about this; personally reminded me of CART / vector quantization.
+		</li>
+	</ol>
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="600" data-y="0">
+            <img src="images/vector_quant.gif">
+	</div>
+        <div class="step slide" data-scale="0.05" data-x="540" data-y="40">
+            <h2>Estimating \(e(x)\) 3 / 4</h2>
+
+	<ol>
+		Use Bayes + estimate \(P(x \;|\; z)\) from parameteric family
+		$$
+		e(z \;|\; x) = P(z = 1 \;|; x) = \\
+		\frac{P(x \;|\; z)}{ P(x \;|\; z = 1) P(z = 1)  +  P(x \;|\; z = 1) P(z = 1)}.
+		$$
+
+	</ol>
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="600" data-y="40">
+            <img src="images/two_gaussians.png">
+	</div>
+        <div class="step slide" data-scale="0.05" data-x="540" data-y="80">
+            <h2>Estimating \(e(x)\) 4 / 4</h2>
+
+            Estimate \(e(x)\) from parametric family, e.g.,
+
+            $$
+    \ln\left( \frac{e(x)}{1 - e(x)} \right) =  \beta^t x.
+            $$
+        </div>
+	<div class="step slide" data-scale="0.5" data-x="-300" data-y="230">
+            <h2>Applications</h2>
+	<ol>
+		<li>Matching</li>
+		<li>Subclassification</li>
+		<li>Inverse Probability Weighting</li>
+		<li>Covariance Adjustment</li>
+	</ol>
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="-520" data-y="350">
+            <h2>Matching</h2>
+            <img src="images/match_by_x.png">
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="-520" data-y="350" data-rotate-x="90">
+            <img src="images/match_by_b_x.png">
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="-390" data-y="380">
+            <h2>Subclassification</h2>
+            <img src="images/clean_clean.png">
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="-390" data-y="380" data-rotate-x="90">
+            <img src="images/clean_refinement.png">
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="-260" data-y="410">
+            <h2>Inverse Probability Reweighting</h2>
+            <ol>
+                <li> Weight each experiment element (black) by $$\frac{1}{e(x)}$$</li>
+                <li> Weight each control element (white) by $$\frac{1}{1 - e(x)}$$</li>
+            </ol>
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="-260" data-y="440">
+            <img src="images/ipw_before.png">
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="-260" data-y="440" data-rotate-x="90">
+            <img src="images/ipw_after.png">
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="-170" data-y="440" data-rotate-x="90">
+            <img src="images/weighted_average.jpeg">
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="-260" data-y="440" data-rotate-x="90">
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="-260" data-y="490">
+            <h2>Covariate Updates</h2>
+            Fit a model $$r_1 - r_0 = f(e(x)).$$
+        </div>
+        <div class="step slide" data-scale="0.5" data-x="300" data-y="170">
+            <h2>Problems With Propensity-Based Matchings</h2>
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="300" data-y="230">
+            <h2>Main Points</h2>
+            <img src="images/match_yes_no.png">
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="300" data-y="280">
+            <h2>Propensity Matching In Theory</h2>
+            <img src="images/match_by_b_x.png">
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="300" data-y="280", data-rotate-x="90">
+            <h2>Propensity Matching In Practice</h2>
+            <img src="images/match_by_b_x_in_practice.png">
+        </div>
+        <div class="step slide" data-scale="0.05" data-x="300" data-y="320">
+            <h2>Experimental Design "Goals"</h2>
+            <table style="width:100%">
+  <tr>
+      <th></th>
+    <th>Matching (Coarse)</th>
+    <th>Matching (Fine)</th>
+    <th>Other (e.g., Subclassing)</th>
+  </tr>
+  <tr>
+      <th>Observational Method</th>
+    <td>
+            <img src="images/match_by_b_x.png" height="200">
+</td>
+    <td>
+            <img src="images/match_by_b_x.png" height="200">
+</td>
+    <td>
+            <img src="images/clean_clean.png" height="200">
+</td>
+  </tr>
+  <tr>
+      <th>Experimental Goal</th>
+    <td>-</td>
+            
+    <td><img src="images/block_matched.png" height="200"></td>
+    <td>
+            <img src="images/randomized.png" height="200">
+    </td>
+  </tr>
+</table>
         </div>
     </div>
     <script src="../js/shCore.js" type="text/javascript"></script> 
