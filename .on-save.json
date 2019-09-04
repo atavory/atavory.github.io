@@ -1,0 +1,6 @@
+[
+  {
+    "files": "*.rst",
+    "command": "hovercraft ${srcFile} html"
+  }
+]
