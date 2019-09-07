@@ -135,6 +135,7 @@ Which :math:`k` Should We Choose?
 Minimize Reconstruction Error?
 =================================
 
+
 ----
 
 :data-x: r-0.1
@@ -158,6 +159,7 @@ Minimize Reconstruction Error?
 
 .. image:: explained_var_ratio.png
   :scale: 1
+
 
 ----
 
@@ -429,5 +431,174 @@ Outline
 * :underline:`MDL Reduction for PCA`
 
 * Results
+
+* Conclusions
+
+----
+
+:data-x: r0
+:data-y: r0
+:data-scale: 0.0001
+
+Mathematical Difficulty of Calculating the NML
+==============================================
+
+.. image:: plate1.png
+  :class: center
+  :height: 400px
+
+.. math::
+
+  {f\left( X \;;\; \hat{k}\left(X\right), \hat{\Gamma}\left(X\right)\right) \over \int f\left( Y \;;\; \hat{k}\left(Y\right), \hat{\Gamma}\left(Y\right)\right) dY }
+
+
+----
+
+:data-x: r0.0
+:data-y: r0.052
+:data-z: r0.05
+:data-rotate-y: r0
+
+* Numerator easy (Eckart-Young-Mirsky)
+
+* Denominator very difficult
+
+
+----
+
+:data-x: r0
+:data-y: r0.15
+:data-z: r0.0
+:data-rotate-y: r0
+
+Comparison with Linear Regression
+=======================================================
+
+.. image:: generative_pca_linreg.png
+  :class: center
+  :height: 400px
+
+* Right process has a few more fixed parameters
+
+* Sufficient for analytical solution for its denominator (Rissanen)
+
+
+----
+
+:data-x: r0
+:data-y: r0.15
+:data-z: r0.0
+:data-rotate-y: r0
+
+Eliminating Denominator Terms
+=======================================================
+
+For a parameter set :math:`\Phi = A \bigcup \{b\}`, consider
+
+.. image:: opt_by.png
+  :class: center
+  :height: 400px
+
+.. math::
+
+  \int f\left( X \;;\; \hat{A}\left(X\right), \hat{b}\left(X\right)\right) dX
+
+
+----
+
+:data-x: r0.0
+:data-y: r0.052
+:data-z: r0.05
+:data-rotate-y: r0
+
+Can we bound this by expressions of the form
+
+.. math::
+
+  \int f\left( X \;;\; \hat{A}\left(X\right), b\right) dX
+
+(for fixed :math:`b`)?
+
+
+----
+
+:data-x: r0
+:data-y: r0.15
+:data-z: r0.0
+:data-rotate-y: r0
+:data-rotate-z: r-30
+
+Original Problem
+=================
+
+.. image:: opt_by.png
+  :class: center
+  :height: 400px
+
+
+----
+
+:data-x: r-0.13
+:data-y: r0.13
+:data-z: r0.0
+:data-rotate-y: r0
+:data-rotate-z: r0
+
+Lower Bound
+============
+
+.. image:: lower_bound.png
+  :scale: 1
+
+
+----
+
+:data-x: r0.26
+:data-y: r-0.26
+:data-z: r0.0
+:data-rotate-y: r0
+:data-rotate-z: r0
+
+Upper Bound
+============
+
+.. image:: upper_bound.png
+  :scale: 1
+
+
+----
+
+:data-x: r-0.1
+:data-y: r0.22
+:data-z: r0.0
+:data-rotate-y: r0
+:data-rotate-z: r0
+
+Reducing PCA to Linear Regression
+=================================
+
+.. image:: plate3.png
+    :height: 450px
+
+Most analysis involves properties of quantized unary matrices.
+
+
+----
+
+:data-x: 20000
+:data-y: 48000
+:data-rotate-y: 0
+:data-scale: r100
+
+Outline
+========================
+
+* Introduction
+
+* MDL
+
+* MDL Reduction for PCA
+
+* :underline:`Results`
 
 * Conclusions
