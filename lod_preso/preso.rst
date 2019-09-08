@@ -10,7 +10,6 @@
 .. |rarr| raw:: html
 
   &rarr;
-
 .. role:: underline
     :class: underline
 
@@ -47,9 +46,7 @@ Outline
 
 * MDL Reduction for PCA
 
-* Results
-
-* Conclusions
+* Results and Conclusions
 
 
 ----
@@ -227,9 +224,7 @@ Outline
 
 * MDL Reduction for PCA
 
-* Results
-
-* Conclusions
+* Results and Conclusions
 
 
 ----
@@ -430,9 +425,8 @@ Outline
 
 * :underline:`MDL Reduction for PCA`
 
-* Results
+* Results and Conclusions
 
-* Conclusions
 
 ----
 
@@ -586,7 +580,7 @@ Most analysis involves properties of quantized unary matrices.
 ----
 
 :data-x: 20000
-:data-y: 48000
+:data-y: 70000
 :data-rotate-y: 0
 :data-scale: r100
 
@@ -599,6 +593,38 @@ Outline
 
 * MDL Reduction for PCA
 
-* :underline:`Results`
+* :underline:`Results and Conclusions`
 
-* Conclusions
+
+----
+
+:data-x: r0
+:data-y: r0
+:data-scale: 0.0001
+
+Main Result
+===========
+
+
+Let :math:`s\left(X \;;\; k\right)` be the stochastic complexity of a :math:`k`-dimensional PCA reduction of :math:`X`. Then
+
+.. math::
+
+  s(X \;;\; k)
+  \simeq
+  \left( nm - kn \right) \ln\left(\sum_{i = k + 1}\left[\lambda_i^2\right]\right)
+  + nk \ln\left( \left| X^T X\right|_2^2 \right)
+  +
+  \\
+  (mn - kn - 1) \ln\left( mn \over mn - kn \right)
+  -
+  (nk + 1) \ln\left(nk\right)
+  + \Delta s
+  ,
+
+where
+
+.. math::
+
+  0 &\leq \Delta s \leq mk \ln\left(2 \over m \epsilon\right)
+  .
