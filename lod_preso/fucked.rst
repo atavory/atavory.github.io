@@ -80,6 +80,16 @@ PCA |br| (Principal Components Analysis) Approximation
 
 ----
 
+:data-x: r0
+:data-y: r0
+:data-rotate-y: r90
+
+.. image:: pca_orig_2.png
+  :scale: 1
+
+
+----
+
 :data-y: r0.1
 :data-rotate-y: -90
 
@@ -104,7 +114,7 @@ Focus Only on Dimensions
 
 :data-x: r0.0
 :data-y: r0.1
-:data-rotate-y: r-90
+:data-rotate-y: r-45
 
 Which :math:`k` Should We Choose?
 =================================
@@ -141,11 +151,11 @@ Minimize Reconstruction Error?
 ----
 
 :data-x: r-0.1
-:data-y: r0.06
+:data-y: r0.05
 :data-rotate-y: r0
 
 .. image:: explained_var_ratio.png
-  :height: 500px
+  :scale: 1
 
 
 ----
@@ -284,10 +294,10 @@ Inherent Tradeoff
 
 ----
 
-:data-x: r0.2
+:data-x: r0.0
 :data-y: r0.0
 :data-z: r0.0
-:data-rotate-y: r45
+:data-rotate-y: r90
 
 .. image:: pca_reduced_2_comm.png
   :scale: 1
@@ -295,10 +305,10 @@ Inherent Tradeoff
 
 ----
 
-:data-x: r-0.2
+:data-x: r0.0
 :data-y: r1.0
 :data-z: r0.0
-:data-rotate-y: r-45
+:data-rotate-y: r-90
 
 How to Find the Description Length?
 =====================================
@@ -520,9 +530,9 @@ Upper Bound
 
 ----
 
-:data-x: r-0
-:data-y: r0.2
-:data-z: r0.15
+:data-x: r-0.26
+:data-y: r0.312
+:data-z: r0.05
 :data-rotate-y: r0
 
 Bounded by expressions of the form
@@ -608,7 +618,7 @@ where
 ----
 
 :data-x: r0
-:data-y: r100000
+:data-y: r0.15
 
 Numerical Experiments
 =====================
