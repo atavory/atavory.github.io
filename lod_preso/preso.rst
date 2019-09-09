@@ -598,15 +598,16 @@ Outline
 
 ----
 
-:data-x: r0
-:data-y: r0
-:data-scale: 0.0001
+:data-x: r50000
+:data-y: r90000
+:data-rotate-y: 0
+:data-scale: r1
 
 Main Result
 ===========
 
 
-Let :math:`s\left(X \;;\; k\right)` be the stochastic complexity of a :math:`k`-dimensional PCA reduction of :math:`X`. Then
+Let :math:`s\left(X \;;\; k\right)` be the stochastic complexity of a :math:`k`-dimensional PCA reduction of :math:`X`.
 
 .. math::
 
