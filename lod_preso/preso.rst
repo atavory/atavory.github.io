@@ -397,7 +397,7 @@ PCA As a Generative Model
     :class: center
     :height: 400px
 
-:math:`\Phi \equiv k, \Gamma`
+:math:`\Phi \equiv k, \Upsilon`
 
 
 ----
@@ -433,7 +433,7 @@ Mathematical Difficulty of Calculating the NML
 
 .. math::
 
-  {f\left( X \;;\; \hat{k}\left(X\right), \hat{\Gamma}\left(X\right)\right) \over \int f\left( Y \;;\; \hat{k}\left(Y\right), \hat{\Gamma}\left(Y\right)\right) dY }
+  {f\left( X \;;\; \hat{k}\left(X\right), \hat{\Upsilon}\left(X\right)\right) \over \int f\left( Y \;;\; \hat{k}\left(Y\right), \hat{\Upsilon}\left(Y\right)\right) dY }
 
 
 ----
@@ -502,6 +502,9 @@ Lower Bound
 .. image:: lower_bound.png
   :scale: 1
 
+.. math::
+
+  b = \arg \min_{b'} f\left( X \;;\; \hat{A}\left(X\right), b'\right)
 
 ----
 
@@ -622,3 +625,64 @@ Numerical Experiments
   * Lin10 - 10 assets, 20 random linear combination + noise
 
   * Lin50 - 5 assets, 25 random linear combination + noise
+
+
+----
+
+:data-x: r0
+:data-y: r100000
+
+Explained Variance
+=====================
+
+.. image:: explained_variance.png
+  :class: center
+  :height: 500px
+
+
+----
+
+:data-x: r130000
+:data-y: r0
+
+Knee Results
+=====================
+
+.. image:: knee_sim.png
+  :class: center
+  :height: 500px
+
+
+----
+
+:data-x: r130000
+:data-y: r0
+
+MDL Results
+=====================
+
+.. image:: mdl_sim.png
+  :class: center
+  :height: 500px
+
+
+----
+
+:data-x: r450000
+:data-y: r350000
+:data-scale: r1000
+
+Main Points
+=====================
+
+* MDL - approach to unsupervised model selection
+
+  * Theoretically justified
+
+* NML is difficult to calculate
+
+  * NML for embeddings, e.g.
+
+* Saw a technique for NML reduction
+
+* Applied technique to PCA
