@@ -150,7 +150,7 @@ Minimize Reconstruction Error?
 
 ----
 
-:data-x: r-0.1
+:data-x: r-0.1001
 :data-y: r0.05
 :data-rotate-y: r0
 
