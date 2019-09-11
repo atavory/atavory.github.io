@@ -679,10 +679,23 @@ Main Points
 
   * Theoretically justified
 
-* NML is difficult to calculate
+  * Very common problem: e.g., NML for embeddings
 
-  * NML for embeddings, e.g.
+* NML - modern MDL - is difficult to calculate
 
-* Saw a technique for NML reduction
+* This work:
 
-* Applied technique to PCA
+  * A technique for NML reduction
+
+  * Application to PCA NML
+
+
+----
+
+:data-x: r0
+:data-y: r900000
+:data-scale: r0
+
+.. image:: thanks.jpg
+  :class: center
+  :height: 500px
