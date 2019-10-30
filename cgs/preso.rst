@@ -68,8 +68,19 @@ Classic Control-Group Solution
 
 ----
 
+:data-x: r0
+:data-y: r4
+:data-scale: 0.01
+
+.. image:: img/assess_objective.png
+    :class: center
+    :width: 500px
+
+
+----
+
 :data-x: r30
-:data-y: r0
+:data-y: r-4
 :data-scale: 0.01
 
 Standard Problems
@@ -96,3 +107,28 @@ Standard Problems
 .. image:: img/importance_problem.png
     :class: center
     :width: 500px
+
+
+----
+
+:data-x: r30
+:data-y: r1
+:data-scale: 0.01
+
+Unique Problem
+=================================
+
+.. image:: img/system_classic_problem_cost.png
+    :class: center
+    :width: 500px
+
+
+----
+
+:data-x: r18
+:data-y: r3
+:data-scale: 0.01
+
+.. image:: img/nietsche.png
+    :class: center
+    :width: 1300px
