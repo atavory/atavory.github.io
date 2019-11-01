@@ -346,3 +346,95 @@ Outline
 * Explore Exploit
 
 * :underline:`Feature Space and Gaming`
+
+
+----
+
+:data-x: r0
+:data-y: r0
+:data-scale: 0.0001
+
+The Feature Space
+==========================================
+
+.. image:: img/feature_space.png
+    :class: center
+    :width: 600px
+
+
+----
+
+:data-x: r-0.2
+:data-y: r0.2
+:data-scale: 0.0001
+
+Interesting Region Example |br| (High Cost)
+============================================
+
+.. image:: img/feature_space_high_cost.png
+    :class: center
+    :width: 600px
+
+
+----
+
+:data-x: r0.2
+:data-y: r0
+:data-scale: 0.0001
+
+Interesting Region Example |br| (Little Interference)
+=====================================================
+
+.. image:: img/feature_space_high_history.png
+    :class: center
+    :width: 600px
+
+
+----
+
+:data-x: r0.2
+:data-y: r-0.2
+:data-scale: 0.0001
+
+.. image:: img/nietsche2.png
+    :class: center
+    :width: 1300px
+
+
+----
+
+:data-x: r0.2
+:data-y: r0
+:data-scale: 0.0001
+
+Probability Chain-Adjustment
+=====================================================
+
+.. image:: img/chain.png
+    :class: center
+    :height: 100px
+
+
+----
+
+:data-x: r0
+:data-y: r0.05
+:data-scale: 0.0001
+
+.. image:: img/adjusted_chain.png
+    :class: center
+    :height: 100px
+
+
+----
+
+:data-x: r0
+:data-y: r0.05
+:data-scale: 0.0001
+
+.. math::
+
+  &P(c_{u, 1}, \ldots, c_{u, n}) = \\
+  &P(c_{u, 1}) {P(c_{u, 1} + c_{u, 2}) \over P(c_{u, 1})} \cdots
+  {P(c_{u, 1} + \cdots + c_{u, n - 1} + c_{u, n}) \over P(c_{u, 1} + \cdots + c_{u, n - 1})} =\\
+  &P(c_{u, 1} + \cdots + c_{u, n - 1} + c_{u, n})
