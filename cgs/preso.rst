@@ -41,7 +41,7 @@ Ami Tavory, |br| |space| Facebook Research, Core Data Science
 ----
 
 :data-x: r-20
-:data-y: r-100
+:data-y: r300
 :data-scale: 0.01
 
 Online Fraud Detection |br| and Its Assessment
@@ -191,13 +191,11 @@ General Principles
 Outline
 =================================
 
-* :underline:`Borrowing via Gaussian Processes`
+* :underline:`Borrowing Via Gaussian Processes`
 
 * Explore Exploit
 
 * Feature Space and Gaming
-
-* Conclusions & Further Work
 
 
 ----
@@ -236,3 +234,115 @@ Estimating log(Fraud Counts) As Gaussians
 .. image:: img/assess_objective_borrow_objective.png
     :class: center
     :width: 600px
+
+
+----
+
+:data-x: r0.5
+:data-y: r-0.53
+:data-rotate-x: 0
+:data-scale: 0.0001
+
+System Based on Gaussian-Process Regression
+============================================
+
+.. image:: img/system_with_gps.png
+    :class: center
+    :width: 600px
+
+
+----
+
+:data-x: r15
+:data-y: r0
+:data-scale: 0.01
+
+Outline
+=================================
+
+* Borrowing Via Gaussian Processes
+
+* :underline:`Explore Exploit`
+
+* Feature Space and Gaming
+
+
+----
+
+:data-x: r0
+:data-y: r0
+:data-scale: 0.0001
+
+Should We Choose this Transaction?
+==========================================
+
+.. image:: img/much_wow.png
+    :class: center
+    :width: 700px
+
+
+----
+
+:data-x: r0.5
+:data-y: r0
+:data-scale: 0.0001
+
+Assessing "High Learnings"
+==========================================
+
+* How much will overall fraud-rate estimate improve, if we take this transaction.
+
+* Suppose for :math:`(\underline{x_i, c_i})`, the current fraud estimate is 0.3
+
+
+----
+
+:data-x: r0
+:data-y: r0.04
+:data-scale: 0.0001
+
+.. image:: img/should_take_cases.png
+    :class: center
+    :width: 700px
+
+
+----
+
+:data-x: r0.5
+:data-y: r0
+:data-scale: 0.0001
+
+Reducing Comp. Complex. with Preprocessing
+==========================================
+
+.. image:: img/added_assessment.png
+    :class: center
+    :width: 700px
+
+
+----
+
+:data-x: r0
+:data-y: r0.11
+:data-rotate-x: 45
+:data-scale: 0.0005
+
+.. image:: img/removed_assessment.png
+    :class: center
+    :width: 700px
+
+
+----
+
+:data-x: r30
+:data-y: r1
+:data-scale: 0.01
+
+Outline
+=================================
+
+* Borrowing Via Gaussian Processes
+
+* Explore Exploit
+
+* :underline:`Feature Space and Gaming`
