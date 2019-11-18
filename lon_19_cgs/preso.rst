@@ -1,4 +1,4 @@
-:title: Holdout Groups for Expensive and Adversarial Settings
+:title: Control Groups for Expensive and Adversarial Settings
 :data-transition-duration: 800
 :css: preso.css
 
@@ -21,7 +21,7 @@
 
 ----
 
-Holdout Groups for |br| Expensive and Adversarial Settings
+Control Groups for |br| Expensive and Adversarial Settings
 ===========================================================
 
 .. image:: img/tlv.png
@@ -49,6 +49,7 @@ Attributes+Const Online System
 .. image:: img/system_ads.png
     :class: center
     :height: 500px
+
 
 ----
 
@@ -83,7 +84,7 @@ Online Fraud Detection |br| and Its Assessment
 :data-rotate-x: 0
 :data-scale: 0.01
 
-Classic Holdout Group Solution
+Classic Control Group Solution
 =================================
 
 .. image:: img/system_classic.png
@@ -485,7 +486,7 @@ Outline
 Conclusions
 ==========================================
 
-* Holdout setting for adaptive adverserial setting
+* Control setting for adaptive adverserial setting
 
 * GPs
 
